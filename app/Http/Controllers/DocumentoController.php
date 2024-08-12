@@ -150,6 +150,17 @@ class DocumentoController extends Controller
         return view('documentos.showlocal', compact('documento', 'fileUrl', 'fileExtension'));
     }
 
+    public function aprobar($id)
+    {
+        $documento = Documento::findOrFail($id);
+        $documento->estado = 'aprobado';
+        $documento->fecha_aprobacion = now();
+        $documento->save();
+    
+        return redirect()->back()->with('success', 'El documento ha sido aprobado.');
+    }
+    
+
     // public function show($id)
     // {
     //     $documento = Documento::findOrFail($id);

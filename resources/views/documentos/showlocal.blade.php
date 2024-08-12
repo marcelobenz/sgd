@@ -89,25 +89,49 @@
         @endforeach    
     </table>
 
-    <!-- Modal -->
+    <!-- Modal para actualizar documento-->
     <div class="modal fade" id="uploadModal" tabindex="-1" role="dialog" aria-labelledby="uploadModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title" id="uploadModalLabel">Seleccionar nuevo archivo</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-        <div class="modal-body">
-            <input type="file" name="nuevoArchivo" id="nuevoArchivo" class="form-control">
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-primary" id="uploadBtn">Aceptar</button>
-        </div>
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadModalLabel">Seleccionar nuevo archivo</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="file" name="nuevoArchivo" id="nuevoArchivo" class="form-control">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="uploadBtn">Aceptar</button>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Modal de Confirmación para Aprobar documento -->
+    <div class="modal fade" id="aprobarModal" tabindex="-1" role="dialog" aria-labelledby="aprobarModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aprobarModalLabel">Confirmar Aprobación</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro de que deseas aprobar este documento?
+                </div>
+                <div class="modal-footer">
+                    <form action="{{ route('documentos.aprobar', $documento->id) }}" method="POST">
+                        @csrf
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Aprobar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     </form>
@@ -137,7 +161,7 @@ document.getElementById('uploadBtn').addEventListener('click', function() {
     }
 });
 
-<!-- Para el manejo  del revertir version-->
+// Para el manejo  del revertir version
 function submitForm(link) {
     var formId = link.getAttribute('data-form-id');
     console.log('Form ID:', formId);
