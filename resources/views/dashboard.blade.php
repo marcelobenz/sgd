@@ -1,4 +1,5 @@
-@extends('main')
+@extends('layouts.main')
+
 
 @section('heading')
 @endsection

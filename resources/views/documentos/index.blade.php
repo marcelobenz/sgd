@@ -1,4 +1,4 @@
-@extends('main')
+@extends('layouts.main')
 
 @section('heading')
 <!-- Incluir DataTables CSS -->
@@ -6,7 +6,8 @@
 @endsection
 
 @section('contenidoPrincipal')
-<div class="container-fluid px-3" style="margin-top: 20px;">
+<div class="container-fluid px-3" style="margin-top: 40px;">
+    <div style="margin-top: 40px;"></div>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <a href="{{ route('documentos.create') }}" class="btn btn-primary" style="margin-bottom: 20px; margin-top: 20px;">Crear Documento</a>
         @if(session('success'))
@@ -91,8 +92,8 @@
             </div>
         </div>
     </div>
-
 </div>
+
 @endsection
 
 @section('scripting')
@@ -108,9 +109,6 @@ $(document).ready(function() {
             [8, 20, 50, -1], // Opciones de número de entradas
             [8, 20, 50, "Todos"] // Texto que se mostrará en el menú
         ],
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/Spanish.json' // Traducción al español
-        },
         order: [[0, 'asc']], // Ordena por la primera columna (Título) de forma ascendente por defecto
     });
 });
@@ -127,10 +125,6 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', function()
         deleteForm.submit(); // Envía el formulario cuando se confirme la acción
     }
 });
-
-// function confirmDelete() {
-//     return confirm('¿Estás seguro de que deseas eliminar este documento? Esta acción no se puede deshacer.');
-// }
 
 // Para el manejo del tiempo del mensaje de alerta
 // Espera a que el DOM se haya cargado completamente

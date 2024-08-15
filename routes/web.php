@@ -55,7 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::post('documentos/{documento}/revert/{version}', [DocumentoController::class, 'revertToVersion'])->name('documentos.revert');
     Route::get('/documentos/download/{id}', [DocumentoController::class, 'download'])->name('documentos.download');
     Route::resource('documentos', DocumentoController::class);
-    Route::view('/','main')->name('main');
+    Route::view('/','layouts/main')->name('main');
     Route::get('/documentos', [DocumentoController::class, 'index'])->name('documentos.index');
     Route::view('/dashboard','dashboard')->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

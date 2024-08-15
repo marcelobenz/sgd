@@ -6,6 +6,12 @@
     <title>Sistema de Tramites Online</title>
     <!-- Incluye Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Incluye jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Incluye Popper.js y Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
     @yield('heading')
     <style>
         /* Añadir margen superior para evitar superposición con la barra de navegación */
@@ -29,7 +35,7 @@
                         Documentos
                     </a>
                     <div class="dropdown-menu" aria-labelledby="bandejasDropdown">
-                        <a class="dropdown-item" href="documentos">Mis Documentos</a>
+                        <a class="dropdown-item" href="{{ route('documentos.index') }}">Mis Documentos</a>
                     </div>
                 </li>
                 <li class="nav-item">
@@ -65,9 +71,7 @@
         @yield('contenidoPrincipal')
     </div>
 
-    <!-- Incluye jQuery y Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
     @yield('scripting')
+
 </body>
 </html>

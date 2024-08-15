@@ -3,13 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\HistorialDocumento; // Importa el modelo HistorialDocumento
-use PhpOffice\PhpWord\IOFactory;
 use App\Models\Documento;
 use App\Models\Categoria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; 
-use PhpOffice\PhpSpreadsheet\IOFactory as ExcelIOFactory;
-
+use Symfony\Component\HttpFoundation\StreamedResponse;
 class DocumentoController extends Controller
 {
     /**
@@ -53,92 +51,6 @@ class DocumentoController extends Controller
         return redirect()->route('documentos.index')->with('success', 'Documento creado exitosamente.');
     }
 
-    
-    // public function show_x_extension($id)
-    // {
-    //     $documento = Documento::findOrFail($id);
-        
-    //     // Obtener el contenido del archivo desde S3
-    //     $filePath = $documento->path;
-    //     $fileExtension = pathinfo($filePath, PATHINFO_EXTENSION);
-    //     $fileContent = '';
-    //     $htmlContent = '';
-        
-    //     try {
-    //         $s3Client = Storage::disk('s3');
-    //         $fileStream = $s3Client->getDriver()->readStream($filePath);
-    
-    //         if ($fileStream === false) {
-    //             throw new \Exception('El archivo no se encuentra en S3.');
-    //         }
-    
-    //         switch (strtolower($fileExtension)) {
-    //             case 'pdf':
-    //                 $fileContent = base64_encode(stream_get_contents($fileStream)); // Para mostrar como embed PDF
-    //                 break;
-    //             case 'doc':
-    //             case 'docx':
-    //                 $phpWord = IOFactory::load($fileStream);
-    //                 $htmlWriter = IOFactory::createWriter($phpWord, 'HTML');
-    //                 ob_start();
-    //                 $htmlWriter->save('php://output');
-    //                 $htmlContent = ob_get_clean();
-    //                 break;
-    //             case 'xls':
-    //             case 'xlsx':
-    //                 $spreadsheet = ExcelIOFactory::load($fileStream);
-    //                 $sheetData = $spreadsheet->getActiveSheet()->toArray();
-    //                 $fileContent = $sheetData;
-    //                 break;
-    //         }
-            
-    //         // Asegúrate de cerrar el stream después de usarlo
-    //         fclose($fileStream);
-    
-    //     } catch (\Exception $e) {
-    //         // Manejar excepciones, tal vez registrar el error o mostrar un mensaje
-    //         return response()->view('errors.404', [], 404);
-    //     }
-    
-    //     return view('documentos.show', compact('documento', 'fileContent', 'htmlContent', 'fileExtension'));
-    // }
-    
-    /**
-     * Display the specified resource.
-     */
-    // public function show($id)
-    // {
-    //     $documento = Documento::findOrFail($id);
-
-    //     // Obtener el contenido del archivo si es necesario para el preview
-    //     $filePath = storage_path('app/' . $documento->path);
-    //     $fileExtension = pathinfo($filePath, PATHINFO_EXTENSION);
-    //     $fileContent = '';
-    
-    //     switch (strtolower($fileExtension)) {
-    //         case 'pdf':
-    //             $fileContent = base64_encode(file_get_contents($filePath)); // Para mostrar como embed PDF
-    //             break;
-    //         case 'doc':
-    //         case 'docx':
-    //             $phpWord = IOFactory::load($filePath);
-    //             $htmlWriter = IOFactory::createWriter($phpWord, 'HTML');
-    //             $htmlContent = '';
-    //             ob_start();
-    //             $htmlWriter->save('php://output');
-    //             $htmlContent = ob_get_clean();
-    //             break;
-    //         case 'xls':
-    //         case 'xlsx':
-    //             $spreadsheet = ExcelIOFactory::load($filePath);
-    //             $sheetData = $spreadsheet->getActiveSheet()->toArray();
-    //             $fileContent = $sheetData;
-    //             break;
-    //     }
-    //     return view('documentos.showlocal', compact('documento', 'fileContent', 'htmlContent', 'fileExtension'));
-    // }
-
-
     public function show($id)
     {
         $documento = Documento::findOrFail($id);
@@ -161,29 +73,49 @@ class DocumentoController extends Controller
     }
     
 
-    // public function show($id)
-    // {
-    //     $documento = Documento::findOrFail($id);
-
-    //     // Generar una URL temporal para acceder al archivo
-    //     $fileUrl = Storage::disk('s3')->temporaryUrl($documento->path, now()->addMinutes(10));
-
-    //     $fileExtension = pathinfo($documento->path, PATHINFO_EXTENSION);
-        
-    //     return view('documentos.showlocal', compact('documento', 'fileUrl', 'fileExtension'));
-    // }
-
-
     public function download($id)
     {
+        // Obtén el documento desde la base de datos
         $documento = Documento::findOrFail($id);
-        $filePath = storage_path('app/' . $documento->path);
+
+        // Ruta del archivo en S3
+        $filePath = $documento->path;
+        // Determinar el tipo MIME manualmente
+        $mimeType = $this->getMimeType(pathinfo($filePath, PATHINFO_EXTENSION));
+        // Nombre de archivo para la descarga
+        $fileName = basename($filePath);
+        $disk = Storage::disk('s3');
     
-        if (!Storage::disk('local')->exists($documento->path)) {
-            abort(404, 'File not found.');
+        if (!$disk->exists($filePath)) {
+            abort(404, 'File not found');
         }
     
-        return response()->download($filePath, $documento->titulo);
+        $file = $disk->get($filePath);
+        
+        $response = new StreamedResponse(function() use ($file) {
+            echo $file;
+        });
+    
+        $response->headers->set('Content-Type', $mimeType);
+        $response->headers->set('Content-Disposition', 'attachment; filename="'.$fileName.'"');
+        
+        return $response;
+    }
+
+    private function getMimeType($extension)
+    {
+        $mimeTypes = [
+            'pdf'  => 'application/pdf',
+            'doc'  => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls'  => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'jpg'  => 'image/jpeg',
+            'png'  => 'image/png',
+            // Agrega más tipos MIME según sea necesario
+        ];
+
+        return $mimeTypes[$extension] ?? 'application/octet-stream'; // Valor por defecto si el tipo MIME no está en el arreglo
     }
 
     //Versionado
@@ -280,103 +212,15 @@ class DocumentoController extends Controller
 
     }
 
-    public function show_googledocs(string $id)
-    {
-        //Para ver los documentos con googledocs
-        $documento = Documento::findOrFail($id);
-        $baseUrl="https://repositorio-sgd.s3.amazonaws.com/";
-        //dd($documento->path);
-        //dd(env('AWS_ACCESS_KEY_ID'), env('AWS_SECRET_ACCESS_KEY'), env('AWS_DEFAULT_REGION'), env('AWS_BUCKET'), Storage::disk('s3')->exists('documentos/OIVWqbtyMNDZdZXSnUtyvHleA9lNxxOtbS48O7pr.xlsx'));
-
-        // Obtener la URL del archivo
-        if (Storage::disk('s3')->exists($documento->path)) {
-            //$fileUrl = Storage::disk('s3')->get($documento->url);
-
-            //$fileUrl = Storage::disk('s3')->temporaryUrl($documento->path, now()->addMinutes(5));
-            $fileUrl = $baseUrl . $documento->path;
-
-            //$fileUrl = 'https://repositorio-sgd.s3.amazonaws.com/documentos/OIVWqbtyMNDZdZXSnUtyvHleA9lNxxOtbS48O7pr.xlsx';
-            return view('documentos.showxlsgoogle', compact('documento', 'fileUrl'));
-        } else {
-            return "Archivo no encontrado.";
-        }
-
-        // Obtener la URL pública del archivo en S3
-        // $fileUrl = Storage::disk('s3')->url($documento->path);
-        // return view('documentos.show', compact('documento', 'fileUrl'));
-
-    }
-
     // Editar
     public function edit(string $id)
     {
-        $documento = Documento::findOrFail($id);
-        $tempFilePath = sys_get_temp_dir() . '/' . basename($documento->path);
+        //Aca va el codigo para eliminar los metadatos del documento
+        // Mensaje de alerta
+        session()->flash('alert_message', 'Esta funcionalidad aún no está desarrollada.');
 
-        // Descargar el archivo desde S3
-        try {
-            $content = Storage::disk('s3')->get($documento->path);
-            file_put_contents($tempFilePath, $content);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al leer el archivo desde S3: ' . $e->getMessage()], 500);
-        }
-
-        // Convertir el archivo DOCX a HTML
-        try {
-            $phpWord = IOFactory::load($tempFilePath);
-            $htmlWriter = IOFactory::createWriter($phpWord, 'HTML');
-            ob_start();
-            $htmlWriter->save('php://output');
-            $fullHtml = ob_get_clean();
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al convertir el archivo con PHPWord: ' . $e->getMessage()], 500);
-        }
-
-        // Eliminar el archivo temporal
-        unlink($tempFilePath);
-
-        // Extraer solo el contenido dentro de <body> ... </body>
-        preg_match('/<body>(.*?)<\/body>/is', $fullHtml, $matches);
-        $htmlContent = $matches[1] ?? 'No se pudo extraer el contenido';
-
-        return view('documentos.edit', ['htmlContent' => $htmlContent, 'documento' => $documento]);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-     public function edit2(string $id)
-    {
-        $documento = Documento::findOrFail($id);
-        $tempFilePath = sys_get_temp_dir() . '/' . basename($documento->path);
-        //dd("id:" . $id, "PATH:" . $documento->path, "tempFilePath" . $tempFilePath);
-    
-        // Descargar el archivo desde S3
-        try {
-            $content = Storage::disk('s3')->get($documento->path);
-            file_put_contents($tempFilePath, $content);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al leer el archivo desde S3: ' . $e->getMessage()], 500);
-        }
-
-        if (!file_exists($tempFilePath)) {
-            return response()->json(['error' => 'Archivo temporal no encontrado.'], 404);
-        }
-        
-        // Cargar el archivo en PHPWord
-        $phpWord = IOFactory::load($tempFilePath);
-        
-        // Convertir el documento a HTML
-        $htmlWriter = IOFactory::createWriter($phpWord, 'HTML');
-        $htmlContent = '';
-        ob_start();
-        $htmlWriter->save('php://output');
-        $htmlContent = ob_get_clean();
-        
-        // Eliminar el archivo temporal
-        unlink($tempFilePath);
-    
-        return view('documentos.edit', compact('htmlContent', 'documento'));
+        // Redirige de vuelta a la página anterior
+        return redirect()->back();        
     }
 
     /**
