@@ -48,11 +48,10 @@
                     </a>
                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
                         <span class="dropdown-item-text">
-                            <strong>Nombre Apellido</strong><br>
-                            Nro Legajo: 12345
+                            <strong>{{ auth()->user()->name }}</strong><br>
                         </span>
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">Perfil</a>
+                        <a class="dropdown-item" href="{{ route('profile.show') }}">Perfil</a>
                         <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Cerrar sesión</a>
                             <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
                                 @csrf

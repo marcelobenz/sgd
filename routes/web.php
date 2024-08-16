@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -61,7 +62,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    //Route::view('/main','main')->name('main');
+    // Ruta para mostrar el perfil del usuario
+    Route::get('/perfil', [UserProfileController::class, 'show'])->name('profile.show')->middleware('auth');
+    // Ruta para actualizar el perfil del usuario
+    Route::post('/perfil/update', [UserProfileController::class, 'update'])->name('profile.update')->middleware('auth');
 });
 
 require __DIR__.'/auth.php';
