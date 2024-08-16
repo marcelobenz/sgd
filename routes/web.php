@@ -50,11 +50,11 @@ Route::get('/upload-test', function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::resource('documentos', DocumentoController::class);
     Route::post('/documentos/{id}/aprobar', [DocumentoController::class, 'aprobar'])->name('documentos.aprobar');
     Route::put('/documentos/{id}', [DocumentoController::class, 'update'])->name('documentos.update');
     Route::post('documentos/{documento}/revert/{version}', [DocumentoController::class, 'revertToVersion'])->name('documentos.revert');
     Route::get('/documentos/download/{id}', [DocumentoController::class, 'download'])->name('documentos.download');
-    Route::resource('documentos', DocumentoController::class);
     Route::view('/','layouts/main')->name('main');
     Route::get('/documentos', [DocumentoController::class, 'index'])->name('documentos.index');
     Route::view('/dashboard','dashboard')->name('dashboard');

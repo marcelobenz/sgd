@@ -52,7 +52,11 @@
                         <td>Documento:</td><td>{{ $documento->titulo }}</td>
                     </tr>
                     <tr>
-                        <td>Versión: </td><td>{{ $documento->version }}</td>
+                        <td>Versión: </td><td>{{ $documento->version }}
+                            <button type="button" class="text-info btn btn-link p-0" onclick="viewVersion('https://repositorio-sgd.s3.us-west-2.amazonaws.com/{{ $documento->path }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </td>
                     </tr>
                     <tr>
                         <td>Categoría: </td><td>{{ $documento->categoria->nombre_categoria }}</td>

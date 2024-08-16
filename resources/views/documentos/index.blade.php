@@ -1,8 +1,18 @@
 @extends('layouts.main')
 
 @section('heading')
-<!-- Incluir DataTables CSS -->
+<!-- Incluir DataTables CSS y RowGroup CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.dataTables.min.css">
+
+<style>
+tr.dtrg-group {
+    background-color: #f1f1f1;
+    font-weight: bold;
+    cursor: pointer; /* Esto añade un cursor de mano para indicar que es interactivo */
+}
+</style>
+
 @endsection
 
 @section('contenidoPrincipal')
@@ -30,7 +40,7 @@
         </thead>
         <tbody>
             @foreach ($documentos as $documento)
-                <tr>
+                <tr data-category="{{ $documento->categoria->nombre_categoria }}">
                     <td>{{ $documento->titulo }}</td>
                     <td>
                         @php
@@ -61,7 +71,7 @@
                         <a href="{{ route('documentos.show', $documento) }}" class="btn btn-info">Ver</a>
                         <a href="{{ route('documentos.edit', $documento) }}" class="btn btn-warning">Editar</a>
                         <!-- Botón de eliminación con confirmación -->
-                        <form action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;" onsubmit="event.preventDefault(); confirmDelete(this);">
+                        <form action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este documento?');">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger">Eliminar</button>
@@ -98,56 +108,80 @@
 
 @section('scripting')
 <script>
-//Manejo de datatable
+// Manejo de datatable
 $(document).ready(function() {
-    $('#documentosTable').DataTable({
-        paging: true, // Activa el paginado
-        ordering: true, // Activa el ordenamiento
-        searching: true, // Activa la búsqueda
-        pageLength: 8, // Número de filas por página
+    var table = $('#documentosTable').DataTable({
+        paging: true,
+        ordering: true,
+        searching: true,
+        pageLength: 8,
         lengthMenu: [
-            [8, 20, 50, -1], // Opciones de número de entradas
-            [8, 20, 50, "Todos"] // Texto que se mostrará en el menú
+            [8, 20, 50, -1],
+            [8, 20, 50, "Todos"]
         ],
-        order: [[0, 'asc']], // Ordena por la primera columna (Título) de forma ascendente por defecto
+        order: [[2, 'asc']], // Ordena por la columna de categoría
+        rowGroup: {
+            dataSrc: 2 // Agrupa por la columna de categoría (índice 2)
+        }
+    });
+
+    // Manejador para expandir/cerrar filas al hacer clic en la fila agrupada
+    $('#documentosTable tbody').on('click', 'tr.dtrg-group', function() {
+        var groupName = $(this).children('td').text(); // Obtener el nombre del grupo (categoría)
+        var rows = table.rows().nodes(); // Obtener todas las filas de la tabla
+
+        $(rows).each(function() {
+            var data = table.row(this).data();
+            if (data && data[2] === groupName) { // Si la fila pertenece a la categoría clicada
+                $(this).toggle(); // Alternar la visibilidad de la fila
+            }
+        });
+
+        $(this).toggleClass('expanded'); // Alternar la clase para indicar que está expandido/colapsado
+    });
+
+    // Inicialmente ocultar todas las filas agrupadas
+    table.rows().every(function() {
+        var row = this.node();
+        if ($(row).hasClass('dtrg-group')) {
+            return; // No ocultar las filas de grupo
+        }
+        $(row).hide();
+    });
+
+    // Manejo de borrado de documentos
+    let deleteForm;
+    function confirmDelete(form) {
+        deleteForm = form; // Guarda el formulario que se va a enviar
+        $('#confirmDeleteModal').modal('show'); // Muestra el modal de confirmación
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (deleteForm) {
+            deleteForm.submit(); // Envía el formulario cuando se confirme la acción
+        }
+    });
+
+    // Para el manejo del tiempo del mensaje de alerta
+    document.addEventListener("DOMContentLoaded", function() {
+        var alert = document.getElementById('success-alert');
+        if (alert) {
+            setTimeout(function() {
+                alert.style.transition = 'opacity 1s ease';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    alert.style.display = 'none';
+                }, 1000);
+            }, 2000);
+        }
     });
 });
-
-// Manejo de borrado de documentos
-let deleteForm;
-function confirmDelete(form) {
-    deleteForm = form; // Guarda el formulario que se va a enviar
-    $('#confirmDeleteModal').modal('show'); // Muestra el modal de confirmación
-}
-
-document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-    if (deleteForm) {
-        deleteForm.submit(); // Envía el formulario cuando se confirme la acción
-    }
-});
-
-// Para el manejo del tiempo del mensaje de alerta
-// Espera a que el DOM se haya cargado completamente
-document.addEventListener("DOMContentLoaded", function() {
-    // Selecciona el div de alerta
-    var alert = document.getElementById('success-alert');
-    if (alert) {
-        // Configura un temporizador para ocultar el mensaje después de 5 segundos (5000 milisegundos)
-        setTimeout(function() {
-            alert.style.transition = 'opacity 1s ease';
-            alert.style.opacity = '0';
-            // Después de la transición (1 segundo), oculta el elemento
-            setTimeout(function() {
-                alert.style.display = 'none';
-            }, 1000);
-        }, 2000);
-    }
-});
-
 </script>
-<!-- Incluir jQuery y DataTables JS -->
+
+<!-- Incluir jQuery, DataTables JS y RowGroup JS -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 
 @endsection

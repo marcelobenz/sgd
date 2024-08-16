@@ -28,11 +28,6 @@ class Documento extends Model
         return $this->hasMany(HistorialDocumento::class, 'id_documento');
     }
 
-    // public function versiones()
-    // {
-    //     return $this->hasMany(HistorialDocumento::class, 'id_documento');
-    // }
-
     public function versiones()
     {
         return $this->hasMany(DocumentoVersiones::class);

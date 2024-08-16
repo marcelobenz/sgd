@@ -42,4 +42,17 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    // Para evitar que se eliminen usuarios que existan en documento o historial
+    public static function boot()
+    {
+        parent::boot();
+    
+        static::deleting(function ($user) {
+            if ($user->documentosCreados()->exists() || $user->documentosModificados()->exists() || $user->historialDocumentos()->exists()) {
+                throw new \Exception('No se puede eliminar este usuario porque tiene documentos o registros de historial asociados.');
+            }
+        });
+    }
+
 }

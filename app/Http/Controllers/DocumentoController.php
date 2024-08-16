@@ -215,12 +215,7 @@ class DocumentoController extends Controller
     // Editar
     public function edit(string $id)
     {
-        //Aca va el codigo para eliminar los metadatos del documento
-        // Mensaje de alerta
-        session()->flash('alert_message', 'Esta funcionalidad aún no está desarrollada.');
-
-        // Redirige de vuelta a la página anterior
-        return redirect()->back();        
+        
     }
 
     /**
@@ -230,11 +225,22 @@ class DocumentoController extends Controller
     {
         // Encuentra el documento por su ID
         $documento = Documento::findOrFail($id);
-        // Elimina el archivo del fillesystem local o s3 (reemplazar local por s3)
-        if (Storage::disk('local')->exists($documento->path)) {
-            Storage::disk('local')->delete($documento->path);
+        // Obtiene el historial de documentos asociados
+        $historialDocumentos = $documento->historial;
+
+        // Elimina los archivos asociados en S3 que están en el historial
+        foreach ($historialDocumentos as $historial) {
+            if (Storage::disk('s3')->exists($historial->path)) {
+                Storage::disk('s3')->delete($historial->path);
+            }
         }
-        // Elimina el documento
+
+        // Elimina el archivo del fillesystem local o s3 (reemplazar local por s3)
+        if (Storage::disk('s3')->exists($documento->path)) {
+            Storage::disk('s3')->delete($documento->path);
+        }
+
+        // Elimina el documento 
         $documento->delete();
         // Redirige con un mensaje de éxito
         return redirect()->route('documentos.index')->with('success', 'Documento eliminado exitosamente.');        

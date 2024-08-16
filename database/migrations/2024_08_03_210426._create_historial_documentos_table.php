@@ -29,9 +29,9 @@ return new class extends Migration
         
             // Foreign keys
             $table->foreign('id_documento')->references('id')->on('documentos')->onDelete('cascade');
-            $table->foreign('id_categoria')->references('id')->on('categorias')->onDelete('cascade');
-            $table->foreign('id_usr_creador')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('id_usr_ultima_modif')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('id_categoria')->references('id')->on('categorias')->onDelete('restrict');
+            $table->foreign('id_usr_creador')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('id_usr_ultima_modif')->references('id')->on('users')->onDelete('restrict');
         });
     }
 
