@@ -13,4 +13,5 @@
 @endsection
 
 @section('scripting')
+<!-- Incluir jQuery, DataTables JS y RowGroup JS -->
 @endsection

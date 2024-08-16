@@ -1,9 +1,6 @@
 @extends('layouts.main')
 
 @section('heading')
-<!-- Incluir DataTables CSS y RowGroup CSS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.dataTables.min.css">
 
 <style>
 tr.dtrg-group {
@@ -114,7 +111,7 @@ $(document).ready(function() {
         paging: true,
         ordering: true,
         searching: true,
-        pageLength: 8,
+        pageLength: -1,
         lengthMenu: [
             [8, 20, 50, -1],
             [8, 20, 50, "Todos"]
@@ -140,14 +137,21 @@ $(document).ready(function() {
         $(this).toggleClass('expanded'); // Alternar la clase para indicar que está expandido/colapsado
     });
 
-    // Inicialmente ocultar todas las filas agrupadas
-    table.rows().every(function() {
-        var row = this.node();
-        if ($(row).hasClass('dtrg-group')) {
-            return; // No ocultar las filas de grupo
+    // Ocultar todas las filas de documentos inicialmente
+    $('#documentosTable tbody tr').each(function() {
+        if (!$(this).hasClass('dtrg-group')) {
+            $(this).hide(); // Oculta todas las filas de documentos
         }
-        $(row).hide();
     });
+
+    // Inicialmente ocultar todas las filas agrupadas
+    // table.rows().every(function() {
+    //     var row = this.node();
+    //     if ($(row).hasClass('dtrg-group')) {
+    //         return; // No ocultar las filas de grupo
+    //     }
+    //     $(row).hide();
+    // });
 
     // Manejo de borrado de documentos
     let deleteForm;
@@ -177,11 +181,5 @@ $(document).ready(function() {
     });
 });
 </script>
-
-<!-- Incluir jQuery, DataTables JS y RowGroup JS -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 
 @endsection

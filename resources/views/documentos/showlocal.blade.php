@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('heading')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
 <style>
     /* Reducir tamaño de letra y padding en celdas */
     .table td {
@@ -27,6 +27,10 @@
     .btn-link {
         text-decoration: none;
     }
+    .selected-row {
+    background-color: #d1ecf1; /* Cambia el color según tus preferencias */
+    font-weight: bold; /* Opcional: para resaltar más el texto */
+}
 </style>
 
 @endsection
@@ -236,6 +240,15 @@ function viewVersion(fileUrl, fileExtension) {
     var viewerContainer = document.getElementById('viewer-container');
     var viewerContent;
 
+    // Limpia cualquier selección previa en todas las filas de la tabla de versiones anteriores
+    var rows = document.querySelectorAll('.table-row');
+    rows.forEach(function(row) {
+        row.classList.remove('selected-row');
+    });
+
+    // Aquí puedes añadir el código para resaltar la fila actual si es necesario
+
+    // Configura el visor para mostrar el archivo seleccionado
     if (fileExtension === 'pdf') {
         viewerContent = `<embed id="document-viewer" src="${fileUrl}" type="application/pdf" width="100%" height="600px" />`;
     } else if (fileExtension === 'doc' || fileExtension === 'docx') {
@@ -247,6 +260,44 @@ function viewVersion(fileUrl, fileExtension) {
     }
 
     viewerContainer.innerHTML = viewerContent;
+}
+
+// Para la tabla de arriba (versión actual)
+document.querySelector('.btn-link').addEventListener('click', function() {
+    // Desselecciona todas las filas en la tabla de versiones anteriores
+    var rows = document.querySelectorAll('.table-row');
+    rows.forEach(function(row) {
+        row.classList.remove('selected-row');
+    });
+});
+
+// Asigna el evento click a todas las filas de la tabla de versiones anteriores
+document.querySelectorAll('.table-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+        // Elimina la clase 'selected-row' de todas las filas
+        document.querySelectorAll('.table-row').forEach(function(r) {
+            r.classList.remove('selected-row');
+        });
+
+        // Añade la clase 'selected-row' a la fila actual
+        this.classList.add('selected-row');
+    });
+});
+
+// Para solicitar confirmación antes del revert version
+function submitForm(link) {
+    var formId = link.getAttribute('data-form-id');
+    var form = document.getElementById(formId);
+
+    if (form) {
+        // Usar window.confirm para pedir confirmación
+        var confirmAction = window.confirm("¿Estás seguro de que deseas revertir a esta versión?");
+        if (confirmAction) {
+            form.submit();
+        }
+    } else {
+        console.error('Formulario no encontrado:', formId);
+    }
 }
 
 </script>
