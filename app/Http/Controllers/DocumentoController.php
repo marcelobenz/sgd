@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DocumentoPermiso;
+use App\Models\User;
 use App\Models\HistorialDocumento; // Importa el modelo HistorialDocumento
 use App\Models\Documento;
 use App\Models\Categoria;
@@ -21,24 +23,25 @@ class DocumentoController extends Controller
 
     public function create()
     {
-        $categorias = Categoria::all(); // Obtén todas las categorías para el formulario
-        return view('documentos.create', compact('categorias'));
+        $categorias = Categoria::all();
+        $usuarios = User::all(); // Obtener todos los usuarios
+        return view('documentos.create', compact('categorias', 'usuarios'));
     }
+
     
     public function store(Request $request)
     {
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
             'archivo' => 'required|file',
-            'id_categoria' => 'required|exists:categorias,id'
+            'id_categoria' => 'required|exists:categorias,id',
+            'permisos' => 'array'
         ]);
-
-        // Guarda el archivo en S3 o local
+    
         $file = $request->file('archivo');
-        $path = $file->store('documentos', 's3'); // usar 's3' en lugar de local para guardar en bucket s3
-
-        // Crea un nuevo documento
-        Documento::create([
+        $path = $file->store('documentos', 's3');
+    
+        $documento = Documento::create([
             'titulo' => $validated['titulo'],
             'path' => $path,
             'contenido' => $request->input('contenido'),
@@ -47,17 +50,30 @@ class DocumentoController extends Controller
             'id_usr_creador' => auth()->id(),
             'id_usr_ultima_modif' => auth()->id(),
         ]);
-
+    
+        // Asignar permisos
+        foreach ($validated['permisos'] as $userId => $permisos) {
+            DocumentoPermiso::updateOrCreate(
+                ['documento_id' => $documento->id, 'user_id' => $userId],
+                [
+                    'puede_leer' => isset($permisos['puede_leer']) ? $permisos['puede_leer'] : false,
+                    'puede_escribir' => isset($permisos['puede_escribir']) ? $permisos['puede_escribir'] : false,
+                    'puede_aprobar' => isset($permisos['puede_aprobar']) ? $permisos['puede_aprobar'] : false,
+                    'puede_eliminar' => isset($permisos['puede_eliminar']) ? $permisos['puede_eliminar'] : false,
+                ]
+            );
+        }
+    
         return redirect()->route('documentos.index')->with('success', 'Documento creado exitosamente.');
     }
-
+    
     public function show($id)
     {
         $documento = Documento::findOrFail($id); 
 
-        // if (!$documento->puedeLeer(auth()->user())) {
-        //     return redirect()->route('documentos.index')->with('error', 'No tienes permiso para leer este documento.');
-        // }
+        if (!$documento->puedeLeer(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para leer este documento.');
+        }
 
         // Obtener el contenido del archivo si es necesario para el preview
         $fileUrl = "https://repositorio-sgd.s3.us-west-2.amazonaws.com/" . $documento->path;
@@ -131,43 +147,45 @@ class DocumentoController extends Controller
     //Versionado
     public function update(Request $request, $id)
     {
-        // Encuentra el documento actual
         $documento = Documento::findOrFail($id);
-
+    
         if (!$documento->puedeEscribir(auth()->user())) {
             return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
         }
-        
-        // Verifica si la versión ya existe en el historial
-        $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
-                                            ->where('version', $documento->version)
-                                            ->exists();
-
-        // Solo archiva la versión actual si no existe en el historial
-        if (!$existeEnHistorial) {
-            $this->archiveCurrentVersion($documento);
-        }
     
-        // Subir y almacenar la nueva versión del documento en local u otro almacenamiento
+        $validated = $request->validate([
+            'titulo' => 'required|string|max:255',
+            'nuevoArchivo' => 'file',
+            'id_categoria' => 'required|exists:categorias,id',
+            'permisos' => 'array'
+        ]);
+    
         if ($request->hasFile('nuevoArchivo')) {
             $path = $request->file('nuevoArchivo')->store('documentos', 's3');
             $documento->path = $path;
-        } 
+        }
     
-        // Guardar la nueva versión
         $documento->fill($request->except('nuevoArchivo'));
-        // Obtiene la versión máxima actual de los documentos
         $maxVersion = HistorialDocumento::where('id_documento', $documento->id)
                        ->max('version');
-        // Establece la versión del documento actual como la máxima + 1
         $documento->version = $maxVersion + 1;
-        // Cambia la versión a Pendiente de Aprobacion
         $documento->estado = "pendiente de aprobación";
         $documento->save();
+    
+        // Asignar permisos
+        if ($request->has('permisos')) {
+            foreach ($request->input('permisos') as $userId => $permisos) {
+                DocumentoPermiso::updateOrCreate(
+                    ['documento_id' => $documento->id, 'user_id' => $userId],
+                    $permisos
+                );
+            }
+        }
     
         return redirect()->route('documentos.show', $documento->id)
                          ->with('success', 'Documento actualizado y nueva versión creada');
     }
+    
     
     protected function archiveCurrentVersion($documento)
     {
