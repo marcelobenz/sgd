@@ -39,6 +39,14 @@
 
 <div class="container-fluid" style="margin-top: 20px;">
     <br>
+    @if(session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif    
     <form id="uploadForm" action="{{ route('documentos.update', $documento->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')

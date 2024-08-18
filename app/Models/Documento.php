@@ -38,4 +38,34 @@ class Documento extends Model
         return $this->hasOne(DocumentoVersiones::class)->where('is_active', true);
     }
 
+    public function permisos()
+    {
+        return $this->hasMany(DocumentoPermiso::class);
+    }
+
+    public function puedeLeer(User $user)
+    {
+        return $this->permisos()->where('user_id', $user->id)->where(function ($query) {
+            $query->where('puede_leer', true)
+                ->orWhere('puede_escribir', true)
+                ->orWhere('puede_aprobar', true)
+                ->orWhere('puede_eliminar', true);
+        })->exists();
+    }
+
+    public function puedeEscribir(User $user)
+    {
+        return $this->permisos()->where('user_id', $user->id)->where('puede_escribir', true)->exists();
+    }
+
+    public function puedeAprobar(User $user)
+    {
+        return $this->permisos()->where('user_id', $user->id)->where('puede_aprobar', true)->exists();
+    }
+
+    public function puedeEliminar(User $user)
+    {
+        return $this->permisos()->where('user_id', $user->id)->where('puede_eliminar', true)->exists();
+    }
+
 }

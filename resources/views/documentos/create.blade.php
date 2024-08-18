@@ -34,6 +34,28 @@
             <textarea name="contenido" id="contenido" class="form-control"></textarea>
         </div>
 
+        <div class="form-group">
+            <label for="permisos">Asignar Permisos</label>
+            @foreach($usuarios as $usuario)
+                <div class="form-check">
+                    <input type="checkbox" name="permisos[{{ $usuario->id }}][leer]" class="form-check-input" id="permiso_leer_{{ $usuario->id }}">
+                    <label class="form-check-label" for="permiso_leer_{{ $usuario->id }}">Leer ({{ $usuario->name }})</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="permisos[{{ $usuario->id }}][escribir]" class="form-check-input" id="permiso_escribir_{{ $usuario->id }}">
+                    <label class="form-check-label" for="permiso_escribir_{{ $usuario->id }}">Escribir ({{ $usuario->name }})</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="permisos[{{ $usuario->id }}][aprobar]" class="form-check-input" id="permiso_aprobar_{{ $usuario->id }}">
+                    <label class="form-check-label" for="permiso_aprobar_{{ $usuario->id }}">Aprobar ({{ $usuario->name }})</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="permisos[{{ $usuario->id }}][eliminar]" class="form-check-input" id="permiso_eliminar_{{ $usuario->id }}">
+                    <label class="form-check-label" for="permiso_eliminar_{{ $usuario->id }}">Eliminar ({{ $usuario->name }})</label>
+                </div>
+            @endforeach
+        </div>
+
         <button type="submit" class="btn btn-primary">Guardar</button>
     </form>
 </div>

@@ -53,7 +53,11 @@ class DocumentoController extends Controller
 
     public function show($id)
     {
-        $documento = Documento::findOrFail($id);
+        $documento = Documento::findOrFail($id); 
+
+        // if (!$documento->puedeLeer(auth()->user())) {
+        //     return redirect()->route('documentos.index')->with('error', 'No tienes permiso para leer este documento.');
+        // }
 
         // Obtener el contenido del archivo si es necesario para el preview
         $fileUrl = "https://repositorio-sgd.s3.us-west-2.amazonaws.com/" . $documento->path;
@@ -64,7 +68,13 @@ class DocumentoController extends Controller
 
     public function aprobar($id)
     {
+
         $documento = Documento::findOrFail($id);
+
+        if (!$documento->puedeAprobar(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para Aprobar este documento');
+        }
+
         $documento->estado = 'aprobado';
         $documento->fecha_aprobacion = now();
         $documento->save();
@@ -123,7 +133,11 @@ class DocumentoController extends Controller
     {
         // Encuentra el documento actual
         $documento = Documento::findOrFail($id);
-    
+
+        if (!$documento->puedeEscribir(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
+        }
+        
         // Verifica si la versión ya existe en el historial
         $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
                                             ->where('version', $documento->version)
@@ -178,6 +192,11 @@ class DocumentoController extends Controller
 
         // Encuentra el documento actual
         $documento = Documento::findOrFail($documentoId);
+
+        if (!$documento->puedeEscribir(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar o revertir este documento');
+        }
+
         // Encuentra la version en el historial a restaurar
         $historialDocumento = HistorialDocumento::findOrFail($versionId);
 
@@ -215,7 +234,13 @@ class DocumentoController extends Controller
     // Editar
     public function edit(string $id)
     {
-        
+        // Encuentra el documento actual
+        $documento = Documento::findOrFail($id);
+
+        if (!$documento->puedeEscribir(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
+        }
+
     }
 
     /**
@@ -224,7 +249,12 @@ class DocumentoController extends Controller
     public function destroy(string $id)
     {
         // Encuentra el documento por su ID
-        $documento = Documento::findOrFail($id);
+        $documento = Documento::findOrFail($id); 
+
+        if (!$documento->puedeEliminar(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para eliminar este documento');
+        }
+
         // Obtiene el historial de documentos asociados
         $historialDocumentos = $documento->historial;
 

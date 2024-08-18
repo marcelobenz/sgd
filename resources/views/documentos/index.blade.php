@@ -14,6 +14,14 @@ tr.dtrg-group {
 
 @section('contenidoPrincipal')
 <div class="container-fluid px-3" style="margin-top: 40px;">
+    @if(session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif    
     <div style="margin-top: 40px;"></div>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <a href="{{ route('documentos.create') }}" class="btn btn-primary" style="margin-bottom: 20px; margin-top: 20px;">Crear Documento</a>
@@ -138,11 +146,11 @@ $(document).ready(function() {
     });
 
     // Ocultar todas las filas de documentos inicialmente
-    $('#documentosTable tbody tr').each(function() {
-        if (!$(this).hasClass('dtrg-group')) {
-            $(this).hide(); // Oculta todas las filas de documentos
-        }
-    });
+    // $('#documentosTable tbody tr').each(function() {
+    //     if (!$(this).hasClass('dtrg-group')) {
+    //         $(this).hide(); // Oculta todas las filas de documentos
+    //     }
+    // });
 
     // Inicialmente ocultar todas las filas agrupadas
     // table.rows().every(function() {

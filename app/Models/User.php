@@ -55,4 +55,9 @@ class User extends Authenticatable
         });
     }
 
+    public function permisosDocumentos()
+    {
+        return $this->hasMany(DocumentoPermiso::class);
+    }
+
 }
