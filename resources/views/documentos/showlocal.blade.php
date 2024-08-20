@@ -69,7 +69,7 @@
                 <table class="table table-bordered w-100">
                     <thead>
                         <tr>
-                            <th colspan=2>Versión Actual</th>
+                            <th colspan=2>Versión Actual 99</th>
                         </tr>
                     </thead>
                     <tr>
