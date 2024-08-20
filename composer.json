@@ -12,8 +12,6 @@
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
         "league/flysystem-aws-s3-v3": "^3.28",
-        "phpoffice/phpspreadsheet": "^2.2",
-        "phpoffice/phpword": "^1.2",
         "spatie/laravel-permission": "^6.9"
     },
     "require-dev": {
