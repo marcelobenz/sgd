@@ -153,7 +153,7 @@ class DocumentoController extends Controller
         if (!$documento->puedeEscribir(auth()->user())) {
             return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
         }
-        // Asignar el título y la categoría desde el documento existente
+        //Asignar el título y la categoría desde el documento existente
         // $request->merge([
         //     'titulo' => $documento->titulo,
         //     'id_categoria' => $documento->id_categoria,
