@@ -144,27 +144,26 @@ class DocumentoController extends Controller
         return $mimeTypes[$extension] ?? 'application/octet-stream'; // Valor por defecto si el tipo MIME no está en el arreglo
     }
 
-    //Versionado, cuando se sube una nueva version del documento
+    //Versionado
     public function update(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
-        dd($documento, $request->all());
         
         if (!$documento->puedeEscribir(auth()->user())) {
             return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
         }
         //Asignar el título y la categoría desde el documento existente
-        // $request->merge([
-        //     'titulo' => $documento->titulo,
-        //     'id_categoria' => $documento->id_categoria,
-        // ]);
+        $request->merge([
+            'titulo' => $documento->titulo,
+            'id_categoria' => $documento->id_categoria,
+        ]);
+
+        $validated = $request->validate([
+            'titulo' => 'required|string|max:255',
+            'nuevoArchivo' => 'file',
+            'id_categoria' => 'required|exists:categorias,id'
+        ]);
         
-        //$validated = $request->validate([
-            //'titulo' => 'required|string|max:255',
-            //'nuevoArchivo' => 'file'//,
-            //'id_categoria' => 'required|exists:categorias,id',
-            //'permisos' => 'array'
-        //]);
 
         if ($request->hasFile('nuevoArchivo')) {
             $path = $request->file('nuevoArchivo')->store('documentos', 's3');
@@ -178,7 +177,7 @@ class DocumentoController extends Controller
         $documento->estado = "pendiente de aprobación";
         $documento->save();
     
-        // Pendiente: Asignar permisos
+        // Asignar permisos
         // if ($request->has('permisos')) {
         //     foreach ($request->input('permisos') as $userId => $permisos) {
         //         DocumentoPermiso::updateOrCreate(
