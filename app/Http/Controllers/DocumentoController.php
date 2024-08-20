@@ -159,12 +159,12 @@ class DocumentoController extends Controller
         //     'id_categoria' => $documento->id_categoria,
         // ]);
         
-        $validated = $request->validate([
+        //$validated = $request->validate([
             //'titulo' => 'required|string|max:255',
-            'nuevoArchivo' => 'file'//,
+            //'nuevoArchivo' => 'file'//,
             //'id_categoria' => 'required|exists:categorias,id',
             //'permisos' => 'array'
-        ]);
+        //]);
 
         if ($request->hasFile('nuevoArchivo')) {
             $path = $request->file('nuevoArchivo')->store('documentos', 's3');
