@@ -158,7 +158,7 @@ class DocumentoController extends Controller
         //     'titulo' => $documento->titulo,
         //     'id_categoria' => $documento->id_categoria,
         // ]);
-
+        
         $validated = $request->validate([
             //'titulo' => 'required|string|max:255',
             'nuevoArchivo' => 'file'//,
@@ -178,7 +178,7 @@ class DocumentoController extends Controller
         $documento->estado = "pendiente de aprobación";
         $documento->save();
     
-        // Asignar permisos
+        // Pendiente: Asignar permisos
         // if ($request->has('permisos')) {
         //     foreach ($request->input('permisos') as $userId => $permisos) {
         //         DocumentoPermiso::updateOrCreate(
