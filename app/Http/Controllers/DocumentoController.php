@@ -148,7 +148,7 @@ class DocumentoController extends Controller
     public function update(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
-        //dd($documento, $request->all());
+        dd($documento, $request->all());
         
         if (!$documento->puedeEscribir(auth()->user())) {
             return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
