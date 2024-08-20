@@ -144,22 +144,28 @@ class DocumentoController extends Controller
         return $mimeTypes[$extension] ?? 'application/octet-stream'; // Valor por defecto si el tipo MIME no está en el arreglo
     }
 
-    //Versionado
+    //Versionado, cuando se sube una nueva version del documento
     public function update(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
-    
+        //dd($documento, $request->all());
+        
         if (!$documento->puedeEscribir(auth()->user())) {
             return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
         }
-    
+        // Asignar el título y la categoría desde el documento existente
+        // $request->merge([
+        //     'titulo' => $documento->titulo,
+        //     'id_categoria' => $documento->id_categoria,
+        // ]);
+
         $validated = $request->validate([
-            'titulo' => 'required|string|max:255',
-            'nuevoArchivo' => 'file',
-            'id_categoria' => 'required|exists:categorias,id',
-            'permisos' => 'array'
+            //'titulo' => 'required|string|max:255',
+            'nuevoArchivo' => 'file'//,
+            //'id_categoria' => 'required|exists:categorias,id',
+            //'permisos' => 'array'
         ]);
-    
+
         if ($request->hasFile('nuevoArchivo')) {
             $path = $request->file('nuevoArchivo')->store('documentos', 's3');
             $documento->path = $path;
@@ -173,14 +179,14 @@ class DocumentoController extends Controller
         $documento->save();
     
         // Asignar permisos
-        if ($request->has('permisos')) {
-            foreach ($request->input('permisos') as $userId => $permisos) {
-                DocumentoPermiso::updateOrCreate(
-                    ['documento_id' => $documento->id, 'user_id' => $userId],
-                    $permisos
-                );
-            }
-        }
+        // if ($request->has('permisos')) {
+        //     foreach ($request->input('permisos') as $userId => $permisos) {
+        //         DocumentoPermiso::updateOrCreate(
+        //             ['documento_id' => $documento->id, 'user_id' => $userId],
+        //             $permisos
+        //         );
+        //     }
+        // }
     
         return redirect()->route('documentos.show', $documento->id)
                          ->with('success', 'Documento actualizado y nueva versión creada');
