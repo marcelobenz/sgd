@@ -74,7 +74,7 @@ tr.dtrg-group {
                     <td>{{ $documento->ultimaModificacion->name }}</td>
                     <td>
                         <a href="{{ route('documentos.show', $documento) }}" class="btn btn-info">Ver</a>
-                        <a href="{{ route('documentos.edit', $documento) }}" class="btn btn-warning">Editar</a>
+                        <a href="{{ route('documentos.edit', $documento->id) }}" class="btn btn-warning">Editar</a>
                         <!-- Botón de eliminación con confirmación -->
                         <form action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este documento?');">
                             @csrf

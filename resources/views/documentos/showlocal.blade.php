@@ -59,7 +59,7 @@
             </button>
         </div>
     @endif    
-    <form id="uploadForm" action="{{ route('documentos.update', $documento->id) }}" method="POST" enctype="multipart/form-data">
+    <form id="uploadForm" action="{{ route('documentos.addVersion', $documento->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
         
@@ -69,7 +69,7 @@
                 <table class="table table-bordered w-100">
                     <thead>
                         <tr>
-                            <th colspan=2>Versión Actual 99</th>
+                            <th colspan=2>Versión Actual</th>
                         </tr>
                     </thead>
                     <tr>

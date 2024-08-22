@@ -144,8 +144,48 @@ class DocumentoController extends Controller
         return $mimeTypes[$extension] ?? 'application/octet-stream'; // Valor por defecto si el tipo MIME no está en el arreglo
     }
 
-    //Versionado
+    // PAra editar cabecera y permisos documentos
     public function update(Request $request, $id)
+    {
+        $documento = Documento::findOrFail($id);
+        
+        if (!$documento->puedeEscribir(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
+        }
+    
+        $validated = $request->validate([
+            'titulo' => 'required|string|max:255',
+            'id_categoria' => 'required|exists:categorias,id',
+            'permisos' => 'array'
+        ]);
+    
+        // Actualiza el documento
+        $documento->update([
+            'titulo' => $validated['titulo'],
+            'id_categoria' => $validated['id_categoria'],
+            'id_usr_ultima_modif' => auth()->id(),
+        ]);
+    
+        // Gestionar permisos
+        DocumentoPermiso::where('documento_id', $documento->id)->delete();
+    
+        foreach ($request->input('permisos', []) as $userId => $permisos) {
+            DocumentoPermiso::create([
+                'documento_id' => $documento->id,
+                'user_id' => $userId,
+                'puede_leer' => isset($permisos['puede_leer']),
+                'puede_escribir' => isset($permisos['puede_escribir']),
+                'puede_aprobar' => isset($permisos['puede_aprobar']),
+                'puede_eliminar' => isset($permisos['puede_eliminar']),
+            ]);
+        }
+    
+        return redirect()->route('documentos.show', $documento->id)
+                         ->with('success', 'Documento actualizado y permisos asignados correctamente.');
+    }
+    
+    //Versionado
+    public function AddVersion(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
         
@@ -255,16 +295,23 @@ class DocumentoController extends Controller
     }
 
     // Editar
-    public function edit(string $id)
+    public function edit($id)
     {
-        // Encuentra el documento actual
         $documento = Documento::findOrFail($id);
-
-        if (!$documento->puedeEscribir(auth()->user())) {
-            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
-        }
-
+        $categorias = Categoria::all();
+        $usuarios = User::all();
+        return view('documentos.edit', compact('documento', 'categorias', 'usuarios'));
     }
+    // public function edit(string $id)
+    // {
+    //     // Encuentra el documento actual
+    //     $documento = Documento::findOrFail($id);
+
+    //     if (!$documento->puedeEscribir(auth()->user())) {
+    //         return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
+    //     }
+
+    // }
 
     /**
      * Remove the specified resource from storage.

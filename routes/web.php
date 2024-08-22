@@ -52,15 +52,14 @@ Route::get('/upload-test', function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::resource('documentos', DocumentoController::class);
     Route::post('/documentos/{id}/aprobar', [DocumentoController::class, 'aprobar'])->name('documentos.aprobar');
+    Route::put('/documentos/{id}/addVersion', [DocumentoController::class, 'addVersion'])->name('documentos.addVersion');
     Route::put('/documentos/{id}', [DocumentoController::class, 'update'])->name('documentos.update');
     Route::post('documentos/{documento}/revert/{version}', [DocumentoController::class, 'revertToVersion'])->name('documentos.revert');
     Route::get('/documentos/download/{id}', [DocumentoController::class, 'download'])->name('documentos.download');
     Route::view('/','layouts/main')->name('main');
     Route::get('/documentos', [DocumentoController::class, 'index'])->name('documentos.index');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    //Route::view('/dashboard','dashboard')->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -68,6 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/perfil', [UserProfileController::class, 'show'])->name('profile.show')->middleware('auth');
     // Ruta para actualizar el perfil del usuario
     Route::post('/perfil/update', [UserProfileController::class, 'update'])->name('profile.update')->middleware('auth');
+    Route::resource('documentos', DocumentoController::class);
 });
 
 require __DIR__.'/auth.php';
