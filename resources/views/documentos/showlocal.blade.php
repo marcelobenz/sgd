@@ -77,7 +77,7 @@
                     </tr>
                     <tr>
                         <td>Versión: </td><td>{{ $documento->version }}
-                            <button type="button" class="text-info btn btn-link p-0" onclick="viewVersion('https://repositorio-sgd.s3.us-west-2.amazonaws.com/{{ $documento->path }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')">
+                            <button type="button" class="btn btn-light btn-link p-0" onclick="viewVersion('https://repositorio-sgd.s3.us-west-2.amazonaws.com/{{ $documento->path }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')">
                                 <i class="fa-solid fa-eye"></i>
                             </button>
                         </td>
@@ -103,7 +103,7 @@
                                         $estadoColor = 'black';
                                 }
                             @endphp
-                            <span style="background-color: {{ $estadoColor }}; color: white; font-weight: bold; padding: 5px; border-radius: 4px;">
+                            <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; font-weight: bold; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
                                 {{ $documento->estado }}
                             </span>
                         </td>
@@ -124,30 +124,34 @@
                 <table class="table table-bordered w-100">
                     <thead>
                         <tr>
-                            <th colspan=3>Versiones Anteriores</th>
+                            <th colspan=4>Versiones Anteriores</th>
                         </tr>
                         <tr>
                             <th scope="col">#</th>
-                            <th scope="col" colspan=2>Fecha</th>
+                            <th scope="col">Fecha</th>
+                            <th scope="col" colspan=2>Acciones</th>
                         </tr>
                     </thead>
                     @foreach ($documento->historial as $index => $versionhistorial)
                         <tr class="table-row">
                             <td>{{ $versionhistorial->version }}</td>
                             <td>{{ $versionhistorial->created_at }}</td>
-                            <td class="action-icons">
+
                                 <form id="revert-form-{{ $versionhistorial->id }}" action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}" method="POST" style="display: none;">
                                     @csrf
                                 </form>
+                                <td class="text-center">
                                 <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}" 
                                 data-form-id="revert-form-{{ $versionhistorial->id }}"
-                                onclick="event.preventDefault(); submitForm(this);" class="text-warning">
+                                onclick="event.preventDefault(); submitForm(this);" class="btn btn-light p-0">
                                     <i class="fa-solid fa-repeat"></i>
                                 </a>
-                                <button type="button" class="text-info btn btn-link p-0" onclick="viewVersion('https://repositorio-sgd.s3.us-west-2.amazonaws.com/{{ $versionhistorial->path }}', '{{ pathinfo($versionhistorial->path, PATHINFO_EXTENSION) }}')">
+                                </td>
+                                <td class="text-center">
+                                <button type="button" class="btn btn-light p-0" onclick="viewVersion('https://repositorio-sgd.s3.us-west-2.amazonaws.com/{{ $versionhistorial->path }}', '{{ pathinfo($versionhistorial->path, PATHINFO_EXTENSION) }}')">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
-                            </td>
+                                </td>
                         </tr>
                     @endforeach
                 </table>
@@ -156,11 +160,11 @@
             <!-- Columna B: Botones y visor embebido -->
             <div id="colContenidoDocumento" class="col-12 col-md-9">
                 <div class="d-flex justify-content-end">
-                    <div class="btn-group" role="group" aria-label="Basic mixed styles example">
-                        <a href="{{ route('documentos.download', $documento->id) }}" class="btn btn-secondary">Descargar</a>
-                        <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#uploadModal">Subir Nueva Versión</button>
-                        <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#aprobarModal">Aprobar Documento</button>
-                        <a href="{{ route('documentos.index') }}" class="btn btn-secondary">Volver</a>
+                    <div class="btn-group w-100" role="group" aria-label="Basic mixed styles example">
+                        <a href="{{ route('documentos.download', $documento->id) }}" class="btn btn-secondary"><i class="fa-solid fa-cloud-arrow-down"></i> Descargar</a>
+                        <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#uploadModal"><i class="fa-solid fa-cloud-arrow-up"></i> Subir Nueva Versión</button>
+                        <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#aprobarModal"><i class="fa-regular fa-thumbs-up"></i> Aprobar Documento</button>
+                        <a href="{{ route('documentos.index') }}" class="btn btn-secondary"><i class="fa-regular fa-hand-point-left"></i> Volver</a>
                     </div>
                 </div>
                 

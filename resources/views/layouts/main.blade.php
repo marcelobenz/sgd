@@ -16,12 +16,12 @@
             margin-top: 56px; /* Ajusta este valor según la altura de tu navbar */
         }
         .navbar-brand img {
-            max-height: 40px; /* Ajusta la altura del logo según sea necesario */
+            max-height: 50px; /* Ajusta la altura del logo según sea necesario */
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
         <!-- Logo de la empresa -->
         <a class="navbar-brand" href="/dashboard">
             <img src="{{ asset('images/logo.jpg') }}" alt="Logo">
@@ -45,13 +45,9 @@
             <ul class="navbar-nav ml-auto">
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <img src="https://via.placeholder.com/30" alt="Avatar" class="avatar-img">
+                    <strong>{{ auth()->user()->name }}</strong>
                     </a>
                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                        <span class="dropdown-item-text">
-                            <strong>{{ auth()->user()->name }}</strong><br>
-                        </span>
-                        <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="{{ route('profile.show') }}">Perfil</a>
                         <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Cerrar sesión</a>
                             <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
@@ -72,6 +68,8 @@
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <!-- Incluye sweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @yield('scripting')
 </body>
 </html>

@@ -8,30 +8,31 @@ tr.dtrg-group {
     font-weight: bold;
     cursor: pointer; /* Esto añade un cursor de mano para indicar que es interactivo */
 }
+/* Ajustar el alto de las filas en la DataTable */
 </style>
 
 @endsection
 
 @section('contenidoPrincipal')
 <div class="container-fluid px-3" style="margin-top: 40px;">
-    @if(session('error'))
-        <div class="alert alert-danger">
-            {{ session('error') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    @endif    
     <div style="margin-top: 40px;"></div>
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <a href="{{ route('documentos.create') }}" class="btn btn-primary" style="margin-bottom: 20px; margin-top: 20px;">Crear Documento</a>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <a href="{{ route('documentos.create') }}" class="btn btn-secondary" style="margin-bottom: 5px; margin-top: 20px;"><i class="fa-regular fa-file-lines"></i> Nuevo Documento</a>
         @if(session('success'))
         <div id="success-alert" class="alert alert-success mb-0 ml-3">
             {{ session('success') }}
         </div>
         @endif
+        @if(session('error'))
+        <div class="alert alert-danger mb-0 ml-3">
+            {{ session('error') }}
+            <!-- <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button> -->
+        </div>
+        @endif    
     </div>    
-    <table class="table" id="documentosTable" style="margin-top: 20px;">
+    <table class="display compact" id="documentosTable" style="margin-top: 1px; width:100%">
         <thead>
             <tr>
                 <th>Título</th>
@@ -64,7 +65,8 @@ tr.dtrg-group {
                                     $estadoColor = 'black';
                             }
                         @endphp
-                        <span style="background-color: {{ $estadoColor }}; color: white; font-weight: bold; padding: 5px; border-radius: 4px;">
+                        <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; font-weight: bold; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
+
                             {{ $documento->estado }}
                         </span>
                     </td>
@@ -73,13 +75,15 @@ tr.dtrg-group {
                     <td>{{ $documento->updated_at }}</td>
                     <td>{{ $documento->ultimaModificacion->name }}</td>
                     <td>
-                        <a href="{{ route('documentos.show', $documento) }}" class="btn btn-info">Ver</a>
-                        <a href="{{ route('documentos.edit', $documento->id) }}" class="btn btn-warning">Editar</a>
+                        <a href="{{ route('documentos.show', $documento) }}" class="btn btn-light"><i class="fa-solid fa-eye"></i></a>
+                        <a href="{{ route('documentos.edit', $documento->id) }}" class="btn btn-light"><i class="fa-regular fa-pen-to-square"></i></a>
                         <!-- Botón de eliminación con confirmación -->
-                        <form action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este documento?');">
+                        <!-- <form action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este documento?');"> -->
+                        <form id="delete-form-{{ $documento->id }}" action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger">Eliminar</button>
+                            <button type="submit" class="btn btn-light" onclick="confirmAndRedirect(event,document.getElementById('delete-form-{{ $documento->id }}'));"><i class="fa-regular fa-circle-xmark"></i></button>
+                            <!-- <button type="submit" class="btn btn-light"><i class="fa-regular fa-circle-xmark"></i></button> -->
                         </form>
                     </td>
                 </tr>
@@ -188,6 +192,23 @@ $(document).ready(function() {
         }
     });
 });
+
+function confirmAndRedirect(event, form) {
+    event.preventDefault();
+    Swal.fire({
+        title: 'Confirmación',
+        text: '¿Estás seguro de que deseas eliminar este documento?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+}
+
 </script>
 
 @endsection

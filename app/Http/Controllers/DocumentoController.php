@@ -56,17 +56,17 @@ class DocumentoController extends Controller
             DocumentoPermiso::updateOrCreate(
                 ['documento_id' => $documento->id, 'user_id' => $userId],
                 [
-                    'puede_leer' => isset($permisos['puede_leer']) ? $permisos['puede_leer'] : false,
-                    'puede_escribir' => isset($permisos['puede_escribir']) ? $permisos['puede_escribir'] : false,
-                    'puede_aprobar' => isset($permisos['puede_aprobar']) ? $permisos['puede_aprobar'] : false,
-                    'puede_eliminar' => isset($permisos['puede_eliminar']) ? $permisos['puede_eliminar'] : false,
+                    'puede_leer' => isset($permisos['puede_leer']) ? true : false,
+                    'puede_escribir' => isset($permisos['puede_escribir']) ? true : false,
+                    'puede_aprobar' => isset($permisos['puede_aprobar']) ? true : false,
+                    'puede_eliminar' => isset($permisos['puede_eliminar']) ? true : false,
                 ]
             );
         }
     
         return redirect()->route('documentos.index')->with('success', 'Documento creado exitosamente.');
     }
-    
+        
     public function show($id)
     {
         $documento = Documento::findOrFail($id); 
@@ -217,16 +217,6 @@ class DocumentoController extends Controller
         $documento->estado = "pendiente de aprobación";
         $documento->save();
     
-        // Asignar permisos
-        // if ($request->has('permisos')) {
-        //     foreach ($request->input('permisos') as $userId => $permisos) {
-        //         DocumentoPermiso::updateOrCreate(
-        //             ['documento_id' => $documento->id, 'user_id' => $userId],
-        //             $permisos
-        //         );
-        //     }
-        // }
-    
         return redirect()->route('documentos.show', $documento->id)
                          ->with('success', 'Documento actualizado y nueva versión creada');
     }
@@ -302,16 +292,6 @@ class DocumentoController extends Controller
         $usuarios = User::all();
         return view('documentos.edit', compact('documento', 'categorias', 'usuarios'));
     }
-    // public function edit(string $id)
-    // {
-    //     // Encuentra el documento actual
-    //     $documento = Documento::findOrFail($id);
-
-    //     if (!$documento->puedeEscribir(auth()->user())) {
-    //         return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
-    //     }
-
-    // }
 
     /**
      * Remove the specified resource from storage.

@@ -4,8 +4,10 @@
 @endsection
 
 @section('contenidoPrincipal')
-<div class="container">
-    <h1>Crear Documento</h1>
+<div class="container" style="margin-top: 80px;">
+    <div class="w-100" style="background-color: #f8f9fa;">
+        <h2 class="text-center">Nuevo Documento</h2>
+    </div>
 
     <form action="{{ route('documentos.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
@@ -36,27 +38,52 @@
 
         <div class="form-group">
             <label for="permisos">Asignar Permisos</label>
-            @foreach($usuarios as $usuario)
-                <div class="form-check">
-                    <input type="checkbox" name="permisos[{{ $usuario->id }}][leer]" class="form-check-input" id="permiso_leer_{{ $usuario->id }}">
-                    <label class="form-check-label" for="permiso_leer_{{ $usuario->id }}">Leer ({{ $usuario->name }})</label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" name="permisos[{{ $usuario->id }}][escribir]" class="form-check-input" id="permiso_escribir_{{ $usuario->id }}">
-                    <label class="form-check-label" for="permiso_escribir_{{ $usuario->id }}">Escribir ({{ $usuario->name }})</label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" name="permisos[{{ $usuario->id }}][aprobar]" class="form-check-input" id="permiso_aprobar_{{ $usuario->id }}">
-                    <label class="form-check-label" for="permiso_aprobar_{{ $usuario->id }}">Aprobar ({{ $usuario->name }})</label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" name="permisos[{{ $usuario->id }}][eliminar]" class="form-check-input" id="permiso_eliminar_{{ $usuario->id }}">
-                    <label class="form-check-label" for="permiso_eliminar_{{ $usuario->id }}">Eliminar ({{ $usuario->name }})</label>
-                </div>
-            @endforeach
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Usuario (Correo)</th>
+                        <th>Leer</th>
+                        <th>Escribir</th>
+                        <th>Aprobar</th>
+                        <th>Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($usuarios as $usuario)
+                        <tr>
+                            <td>{{ $usuario->email }}</td>
+                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_leer]" ></td>
+                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_escribir]"></td>
+                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_aprobar]"></td>
+                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_eliminar]"></td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
 
         <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" onclick="confirmAndRedirect();">Volver</button>
+
     </form>
 </div>
+@endsection
+
+@section('scripting')
+<script>
+    function confirmAndRedirect() {
+        Swal.fire({
+            title: 'Confirmación',
+            text: 'Los datos cargados se perderán ¿Estás seguro de que deseas volver?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, volver',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "{{ route('documentos.index') }}";
+            }
+        });
+    }
+</script>
 @endsection
