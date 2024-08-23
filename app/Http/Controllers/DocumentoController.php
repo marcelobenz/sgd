@@ -75,8 +75,15 @@ class DocumentoController extends Controller
             return redirect()->route('documentos.index')->with('error', 'No tienes permiso para leer este documento.');
         }
 
+        $bucket = env('AWS_BUCKET');
+        $region = env('AWS_DEFAULT_REGION'); // Opcional: si necesitas la región para construir la URL
+        $baseUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/";
+        
+        // Construye la URL del archivo
+        $fileUrl = $baseUrl . $documento->path;
+
         // Obtener el contenido del archivo si es necesario para el preview
-        $fileUrl = "https://repositorio-sgd.s3.us-west-2.amazonaws.com/" . $documento->path;
+        // $fileUrl = "https://repositorio-sgd.s3.us-west-2.amazonaws.com/" . $documento->path;
         $fileExtension = pathinfo($documento->path, PATHINFO_EXTENSION);
     
         return view('documentos.showlocal', compact('documento', 'fileUrl', 'fileExtension'));

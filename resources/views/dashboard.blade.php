@@ -81,7 +81,7 @@
         </div>
         @else
         <div class="card-body">
-            <h2 class="text-success">{{ $miTotalSinAprobar }}</h2>
+            <h2 class="text-center text-success">{{ $miTotalSinAprobar }}</h2>
         </div>
         @endif
     </div>
