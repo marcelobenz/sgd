@@ -5,8 +5,12 @@
 @endsection
 
 @section('contenidoPrincipal')
-<div class="container mt-4">
-    <h1>Mi Perfil</h1>
+
+<div class="container" style="margin-top: 40px;">
+    <br>
+    <div class="w-100 mt-4" style="background-color: #f8f9fa;">
+        <h2 class="text-center">Mi Perfil</h2>
+    </div>
 
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>

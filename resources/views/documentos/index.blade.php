@@ -75,8 +75,9 @@ tr.dtrg-group {
                     <td>{{ $documento->updated_at }}</td>
                     <td>{{ $documento->ultimaModificacion->name }}</td>
                     <td>
-                        <a href="{{ route('documentos.show', $documento) }}" class="btn btn-light"><i class="fa-solid fa-eye"></i></a>
-                        <a href="{{ route('documentos.edit', $documento->id) }}" class="btn btn-light"><i class="fa-regular fa-pen-to-square"></i></a>
+                        <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.show', 'permiso' => 'puedeLeer']) }}" class="btn btn-light"><i class="fa-solid fa-eye"></i></a>
+                        <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.edit', 'permiso' => 'puedeEscribir']) }}" class="btn btn-light"><i class="fa-regular fa-pen-to-square"></i></a>
+
                         <!-- Botón de eliminación con confirmación -->
                         <!-- <form action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este documento?');"> -->
                         <form id="delete-form-{{ $documento->id }}" action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;">

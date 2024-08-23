@@ -52,6 +52,7 @@ Route::get('/upload-test', function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/documentos/{id}/validapermiso', [DocumentoController::class, 'validaPermiso'])->name('documentos.validaPermiso');
     Route::post('/documentos/{id}/aprobar', [DocumentoController::class, 'aprobar'])->name('documentos.aprobar');
     Route::put('/documentos/{id}/addVersion', [DocumentoController::class, 'addVersion'])->name('documentos.addVersion');
     Route::put('/documentos/{id}', [DocumentoController::class, 'update'])->name('documentos.update');

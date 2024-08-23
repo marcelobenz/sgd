@@ -27,6 +27,7 @@
 @endsection
 
 @section('contenidoPrincipal')
+<br>
 <div class="dashboard-container">
     <!-- Total de Documentos por Estado -->
     <div class="card bg-light">
@@ -35,11 +36,11 @@
         </div>
         <ul class="list-group list-group-flush">
             @foreach($totalPorEstado as $estado => $total)
-                <li class="list-group-item align-items-center">
-                    {{ ucfirst($estado) }}
-                    <span class="badge badge-primary badge-pill">{{ $total }}</span>
-                </li>
-            @endforeach
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ ucfirst($estado) }}</span>
+                <span class="badge badge-primary badge-pill">{{ $total }}</span>
+            </li>
+           @endforeach
         </ul>
     </div>
 
@@ -61,14 +62,30 @@
     </div>
 
     <!-- Total de Documentos sin Aprobar -->
-    <div class="card bg-light">
+    <!-- <div class="card bg-light">
         <div class="card-header">
             <h5 class="card-title">Total de Documentos sin Aprobar</h5>
         </div>
         <div class="card-body">
             <h2 class="text-center">{{ $totalSinAprobar }}</h2>
         </div>
+    </div> -->
+
+    <div class="card bg-light">
+        <div class="card-header">
+            <h5 class="card-title">Documentos pendientes de tu Aprobación</h5>
+        </div>
+        @if($totalSinAprobar > 0)
+        <div class="card-body">
+            <h2 class="text-center text-danger">{{ $miTotalSinAprobar }}</h2>
+        </div>
+        @else
+        <div class="card-body">
+            <h2 class="text-success">{{ $miTotalSinAprobar }}</h2>
+        </div>
+        @endif
     </div>
+
 </div>
 @endsection
 

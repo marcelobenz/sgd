@@ -25,10 +25,20 @@ class DashboardController extends Controller
         $totalSinAprobar = Documento::where('estado', 'pendiente de aprobación')
             ->count();
 
-        return view('dashboard', [
+        // Total de documentos sin aprobar que el usuario puede aprobar
+        $miTotalSinAprobar = Documento::where('estado', 'pendiente de aprobación')
+            ->whereHas('permisos', function ($query) {
+                $query->where('user_id', auth()->id())
+                      ->where('puede_aprobar', 1);
+            })
+            ->count();
+
+            return view('dashboard', [
             'totalPorEstado' => $totalPorEstado,
             'ultimosDocumentos' => $ultimosDocumentos,
             'totalSinAprobar' => $totalSinAprobar,
+            'miTotalSinAprobar' => $miTotalSinAprobar
         ]);
     }
+
 }

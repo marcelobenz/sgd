@@ -6,7 +6,9 @@
 
 @section('contenidoPrincipal')
 <div class="container">
-    <h1>Editar Documento</h1>
+    <div class="w-100" style="background-color: #f8f9fa;">
+        <h2 class="text-center">Editar Documento</h2>
+    </div>
 
     <form action="{{ route('documentos.update', $documento->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
@@ -58,6 +60,25 @@
         </div>
 
         <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        <button type="button" class="btn btn-secondary" onclick="confirmAndRedirect();">Volver</button>
     </form>
 </div>
+@endsection
+@section('scripting')
+<script>
+    function confirmAndRedirect() {
+        Swal.fire({
+            title: 'Confirmación',
+            text: 'Los datos cargados se perderán ¿Estás seguro de que deseas volver?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, volver',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "{{ route('documentos.index') }}";
+            }
+        });
+    }
+</script>
 @endsection

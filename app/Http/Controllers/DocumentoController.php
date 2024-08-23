@@ -326,4 +326,20 @@ class DocumentoController extends Controller
         return redirect()->route('documentos.index')->with('success', 'Documento eliminado exitosamente.');        
     }
 
+    public function validaPermiso($id, Request $request)
+    {
+        // Encuentra el documento actual
+        $documento = Documento::findOrFail($id);
+        $ruta = $request->input('ruta');
+        $permiso = $request->input('permiso');
+
+        // Verifica si el usuario tiene el permiso específico
+        if (!$documento->{$permiso}(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para realizar esta acción');
+        } else {
+            return redirect()->route($ruta, ['documento' => $id]);
+        }
+    }
+    
+    
 }
