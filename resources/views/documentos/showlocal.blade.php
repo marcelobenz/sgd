@@ -77,7 +77,7 @@
                     </tr>
                     <tr>
                         <td>Versión: </td><td>{{ $documento->version }}
-                            <button type="button" class="btn btn-light btn-link p-0" onclick="viewVersion('https://repositorio-sgd.s3.us-west-2.amazonaws.com/{{ $documento->path }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')">
+                        <button type="button" class="btn btn-light btn-link p-0" onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')">
                                 <i class="fa-solid fa-eye"></i>
                             </button>
                         </td>
@@ -148,7 +148,7 @@
                                 </a>
                                 </td>
                                 <td class="text-center">
-                                <button type="button" class="btn btn-light p-0" onclick="viewVersion('https://repositorio-sgd.s3.us-west-2.amazonaws.com/{{ $versionhistorial->path }}', '{{ pathinfo($versionhistorial->path, PATHINFO_EXTENSION) }}')">
+                                <button type="button" class="btn btn-light p-0" onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $versionhistorial->path) }}', '{{ pathinfo($versionhistorial->path, PATHINFO_EXTENSION) }}')">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
                                 </td>
