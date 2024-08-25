@@ -78,9 +78,11 @@ class DocumentoController extends Controller
         $bucket = env('AWS_BUCKET');
         $region = env('AWS_DEFAULT_REGION'); // Opcional: si necesitas la región para construir la URL
         $baseUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/";
-        
+        //dd($baseUrl);
+
         // Construye la URL del archivo
         $fileUrl = $baseUrl . $documento->path;
+        //dd($fileUrl);
 
         // Obtener el contenido del archivo si es necesario para el preview
         // $fileUrl = "https://repositorio-sgd.s3.us-west-2.amazonaws.com/" . $documento->path;
@@ -199,6 +201,10 @@ class DocumentoController extends Controller
         if (!$documento->puedeEscribir(auth()->user())) {
             return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
         }
+
+        // Registrar la versión actual en el historial antes de realizar cambios
+        $this->archiveCurrentVersion($documento);
+
         //Asignar el título y la categoría desde el documento existente
         $request->merge([
             'titulo' => $documento->titulo,
@@ -210,13 +216,13 @@ class DocumentoController extends Controller
             'nuevoArchivo' => 'file',
             'id_categoria' => 'required|exists:categorias,id'
         ]);
-        
 
         if ($request->hasFile('nuevoArchivo')) {
             $path = $request->file('nuevoArchivo')->store('documentos', 's3');
             $documento->path = $path;
         }
-    
+        //dd($request->file('nuevoArchivo'));
+
         $documento->fill($request->except('nuevoArchivo'));
         $maxVersion = HistorialDocumento::where('id_documento', $documento->id)
                        ->max('version');

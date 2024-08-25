@@ -181,7 +181,6 @@
             </div>
             
         </div>
-    </form>
 
     <!-- Modales -->
     <!-- Modal para actualizar documento -->
@@ -228,6 +227,7 @@
             </div>
         </div>
     </div>
+    </form>
 
 </div>
 
