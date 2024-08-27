@@ -47,7 +47,7 @@ tr.dtrg-group {
         <tbody>
             @foreach ($documentos as $documento)
                 <tr data-category="{{ $documento->categoria->nombre_categoria }}">
-                    <td>{{ $documento->titulo }} (v{{ $documento->version }}) </td>
+                    <td>{{ $documento->titulo }} (v: {{ $documento->version }}) </td>
                     <td>
                         @php
                             $estadoColor = '';
