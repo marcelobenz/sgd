@@ -227,8 +227,8 @@ class DocumentoController extends Controller
             
         }
     
-        return redirect()->route('documentos.show', $documento->id)
-                         ->with('success', 'Documento actualizado y permisos asignados correctamente.');
+        return redirect()->route('documentos.index')->with('success', 'Documento actualizado exitosamente.');
+
     }
     
     //Versionado
