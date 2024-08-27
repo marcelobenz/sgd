@@ -204,6 +204,8 @@
         </div>
     </div>
 
+    </form>
+
     <!-- Modal de Confirmación para Aprobar documento -->
     <div class="modal fade" id="aprobarModal" tabindex="-1" role="dialog" aria-labelledby="aprobarModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -227,7 +229,6 @@
             </div>
         </div>
     </div>
-    </form>
 
 </div>
 

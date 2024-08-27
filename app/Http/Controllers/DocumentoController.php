@@ -10,6 +10,8 @@ use App\Models\Categoria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; 
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Notifications\DocumentoPendienteAprobacion;
+
 class DocumentoController extends Controller
 {
     /**
@@ -28,9 +30,9 @@ class DocumentoController extends Controller
         return view('documentos.create', compact('categorias', 'usuarios'));
     }
 
-    
     public function store(Request $request)
     {
+
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
             'archivo' => 'required|file',
@@ -50,8 +52,19 @@ class DocumentoController extends Controller
             'id_usr_creador' => auth()->id(),
             'id_usr_ultima_modif' => auth()->id(),
         ]);
-    
-        // Asignar permisos
+
+        //Asigna todos los permisos por default al dueño del documento
+        DocumentoPermiso::updateOrCreate(
+            ['documento_id' => $documento->id, 'user_id' => auth()->id()],
+            [
+                'puede_leer' => true,
+                'puede_escribir' => true,
+                'puede_aprobar' => true,
+                'puede_eliminar' => true,
+            ]
+        );
+
+        //Asigna los permisos seleccionados al resto de los usuarios
         foreach ($validated['permisos'] as $userId => $permisos) {
             DocumentoPermiso::updateOrCreate(
                 ['documento_id' => $documento->id, 'user_id' => $userId],
@@ -62,8 +75,15 @@ class DocumentoController extends Controller
                     'puede_eliminar' => isset($permisos['puede_eliminar']) ? true : false,
                 ]
             );
+            // Si el usuario tiene permiso de aprobar, envía una notificación
+            if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar']) {
+                $user = User::find($userId);
+                $user->notify(new DocumentoPendienteAprobacion($documento));
+            }
         }
-    
+
+        // Envia correo a el/los aprobador/es para avisar que tienen un doc pendiente de aprobar
+            
         return redirect()->route('documentos.index')->with('success', 'Documento creado exitosamente.');
     }
         
@@ -95,9 +115,9 @@ class DocumentoController extends Controller
     {
 
         $documento = Documento::findOrFail($id);
-
+        
         if (!$documento->puedeAprobar(auth()->user())) {
-            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para Aprobar este documento');
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para Aprobar este documento lpm: '.$documento->puedeAprobar(auth()->user()));
         }
 
         $documento->estado = 'aprobado';
@@ -153,13 +173,13 @@ class DocumentoController extends Controller
         return $mimeTypes[$extension] ?? 'application/octet-stream'; // Valor por defecto si el tipo MIME no está en el arreglo
     }
 
-    // PAra editar cabecera y permisos documentos
+    // Para editar cabecera y permisos documentos
     public function update(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
         
         if (!$documento->puedeEscribir(auth()->user())) {
-            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento (update)');
         }
     
         $validated = $request->validate([
@@ -177,7 +197,19 @@ class DocumentoController extends Controller
     
         // Gestionar permisos
         DocumentoPermiso::where('documento_id', $documento->id)->delete();
-    
+
+        //Asigna todos los permisos por default al dueño del documento
+        DocumentoPermiso::updateOrCreate(
+            ['documento_id' => $documento->id, 'user_id' => auth()->id()],
+            [
+                'puede_leer' => true,
+                'puede_escribir' => true,
+                'puede_aprobar' => true,
+                'puede_eliminar' => true,
+            ]
+        );
+
+        //Asigna los permisos seleccionados al resto de los usuarios
         foreach ($request->input('permisos', []) as $userId => $permisos) {
             DocumentoPermiso::create([
                 'documento_id' => $documento->id,
@@ -187,6 +219,12 @@ class DocumentoController extends Controller
                 'puede_aprobar' => isset($permisos['puede_aprobar']),
                 'puede_eliminar' => isset($permisos['puede_eliminar']),
             ]);
+            // Si el usuario tiene permiso de aprobar, envía una notificación
+            if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar']) {
+                $user = User::find($userId);
+                $user->notify(new DocumentoPendienteAprobacion($documento));
+            }
+            
         }
     
         return redirect()->route('documentos.show', $documento->id)
@@ -199,7 +237,7 @@ class DocumentoController extends Controller
         $documento = Documento::findOrFail($id);
         
         if (!$documento->puedeEscribir(auth()->user())) {
-            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento');
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento (addversion)');
         }
 
         // Registrar la versión actual en el historial antes de realizar cambios
@@ -345,9 +383,10 @@ class DocumentoController extends Controller
         $documento = Documento::findOrFail($id);
         $ruta = $request->input('ruta');
         $permiso = $request->input('permiso');
+        $usuario = auth()->user();
 
         // Verifica si el usuario tiene el permiso específico
-        if (!$documento->{$permiso}(auth()->user())) {
+        if (!$documento->{$permiso}($usuario)) {
             return redirect()->route('documentos.index')->with('error', 'No tienes permiso para realizar esta acción');
         } else {
             return redirect()->route($ruta, ['documento' => $id]);

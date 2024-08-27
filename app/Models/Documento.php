@@ -43,6 +43,7 @@ class Documento extends Model
         return $this->hasMany(DocumentoPermiso::class);
     }
 
+    // Cualquiera de los permisos que tenga asignado permite leer
     public function puedeLeer(User $user)
     {
         return $this->permisos()->where('user_id', $user->id)->where(function ($query) {
