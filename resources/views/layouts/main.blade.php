@@ -16,7 +16,7 @@
             margin-top: 56px; /* Ajusta este valor según la altura de tu navbar */
         }
         .navbar-brand img {
-            max-height: 50px; /* Ajusta la altura del logo según sea necesario */
+            max-height: 55px; /* Ajusta la altura del logo según sea necesario */
         }
     </style>
 </head>

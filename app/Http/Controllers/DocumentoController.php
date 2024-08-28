@@ -200,7 +200,7 @@ class DocumentoController extends Controller
 
         //Asigna todos los permisos por default al dueño del documento
         DocumentoPermiso::updateOrCreate(
-            ['documento_id' => $documento->id, 'user_id' => auth()->id()],
+            ['documento_id' => $documento->id, 'user_id' => $documento->id_usr_creador],
             [
                 'puede_leer' => true,
                 'puede_escribir' => true,
