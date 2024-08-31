@@ -39,7 +39,7 @@ class DocumentoController extends Controller
             'id_categoria' => 'required|exists:categorias,id',
             'permisos' => 'array'
         ]);
-    
+
         $file = $request->file('archivo');
         $path = $file->store('documentos', 's3');
     
@@ -64,21 +64,23 @@ class DocumentoController extends Controller
             ]
         );
 
-        //Asigna los permisos seleccionados al resto de los usuarios
-        foreach ($validated['permisos'] as $userId => $permisos) {
-            DocumentoPermiso::updateOrCreate(
-                ['documento_id' => $documento->id, 'user_id' => $userId],
-                [
-                    'puede_leer' => isset($permisos['puede_leer']) ? true : false,
-                    'puede_escribir' => isset($permisos['puede_escribir']) ? true : false,
-                    'puede_aprobar' => isset($permisos['puede_aprobar']) ? true : false,
-                    'puede_eliminar' => isset($permisos['puede_eliminar']) ? true : false,
-                ]
-            );
-            // Si el usuario tiene permiso de aprobar, envía una notificación
-            if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar']) {
-                $user = User::find($userId);
-                $user->notify(new DocumentoPendienteAprobacion($documento));
+        if (isset($validated['permisos'])) {
+            //Asigna los permisos seleccionados al resto de los usuarios
+            foreach ($validated['permisos'] as $userId => $permisos) {
+                DocumentoPermiso::updateOrCreate(
+                    ['documento_id' => $documento->id, 'user_id' => $userId],
+                    [
+                        'puede_leer' => isset($permisos['puede_leer']) ? true : false,
+                        'puede_escribir' => isset($permisos['puede_escribir']) ? true : false,
+                        'puede_aprobar' => isset($permisos['puede_aprobar']) ? true : false,
+                        'puede_eliminar' => isset($permisos['puede_eliminar']) ? true : false,
+                    ]
+                );
+                // Si el usuario tiene permiso de aprobar, envía una notificación
+                if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar']) {
+                    $user = User::find($userId);
+                    $user->notify(new DocumentoPendienteAprobacion($documento));
+                }
             }
         }
 
@@ -194,7 +196,7 @@ class DocumentoController extends Controller
             'id_categoria' => $validated['id_categoria'],
             'id_usr_ultima_modif' => auth()->id(),
         ]);
-    
+
         // Gestionar permisos
         DocumentoPermiso::where('documento_id', $documento->id)->delete();
 

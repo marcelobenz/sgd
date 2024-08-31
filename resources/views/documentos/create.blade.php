@@ -36,30 +36,35 @@
             <textarea name="contenido" id="contenido" class="form-control"></textarea>
         </div>
 
-        <div class="form-group">
-            <label for="permisos">Asignar Permisos</label>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Usuario (Correo)</th>
-                        <th>Leer</th>
-                        <th>Escribir</th>
-                        <th>Aprobar</th>
-                        <th>Eliminar</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($usuarios as $usuario)
+        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapsePermisos" aria-expanded="false" aria-controls="collapsePermisos">
+            Asignar Permisos
+        </button>
+
+        <div class="collapse" id="collapsePermisos">
+            <div class="form-group">
+                <table class="table table-bordered">
+                    <thead>
                         <tr>
-                            <td>{{ $usuario->email }}</td>
-                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_leer]" ></td>
-                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_escribir]"></td>
-                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_aprobar]"></td>
-                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_eliminar]"></td>
+                            <th>Usuario (Correo)</th>
+                            <th>Leer</th>
+                            <th>Escribir</th>
+                            <th>Aprobar</th>
+                            <th>Eliminar</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach($usuarios as $usuario)
+                            <tr>
+                                <td>{{ $usuario->email }}</td>
+                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_leer]" ></td>
+                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_escribir]"></td>
+                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_aprobar]"></td>
+                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_eliminar]"></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <button type="submit" class="btn btn-primary">Guardar</button>
@@ -73,13 +78,17 @@
 <script>
     function confirmAndRedirect() {
         Swal.fire({
-            title: 'Confirmación',
+            title: 'Volver sin guardar',
             text: 'Los datos cargados se perderán ¿Estás seguro de que deseas volver?',
-            icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, volver',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
+            cancelButtonText: 'Cancelar',
+            customClass: {
+            confirmButton: 'btn btn-warning', // Cambia 'btn btn-danger' al color que desees
+            cancelButton: 'btn btn-primary' // Cambia 'btn btn-secondary' al color que desees
+        },
+        buttonsStyling: false
+    }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = "{{ route('documentos.index') }}";
             }

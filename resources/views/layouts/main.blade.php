@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css"/>
     @yield('heading')
     <style>
         /* Añadir margen superior para evitar superposición con la barra de navegación */
@@ -16,15 +17,30 @@
             margin-top: 56px; /* Ajusta este valor según la altura de tu navbar */
         }
         .navbar-brand img {
-            max-height: 55px; /* Ajusta la altura del logo según sea necesario */
+            max-height: 60px; /* Ajusta la altura del logo según sea necesario */
         }
+
+        .btn-custom {
+            border: 2px solid #333;
+            background-color: #e9ecef;
+            color: #000;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease; /* Efecto de transición suave */
+        }
+
+        .btn-custom:hover {
+            background-color: #dcdcdc; /* Color de fondo al pasar el mouse */
+            color: #000;
+            border-color: #666;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Añadir sombra al pasar el mouse */
+        }
+
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+    <nav class="navbar navbar-expand-lg fixed-top" style="background-color: #f0f1f2;">
         <!-- Logo de la empresa -->
         <a class="navbar-brand" href="/dashboard">
-            <img src="{{ asset('images/logo.jpg') }}" alt="Logo">
+            <img src="{{ asset('images/logo.png') }}" alt="Logo">
         </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -68,8 +84,16 @@
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+
     <!-- Incluye sweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Para el tooltip
+        $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+        })
+    </script>
     @yield('scripting')
 </body>
 </html>

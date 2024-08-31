@@ -17,7 +17,7 @@ tr.dtrg-group {
 <div class="container-fluid px-3" style="margin-top: 40px;">
     <div style="margin-top: 40px;"></div>
     <div class="d-flex justify-content-between align-items-center mb-2">
-        <a href="{{ route('documentos.create') }}" class="btn btn-secondary" style="margin-bottom: 5px; margin-top: 20px;"><i class="fa-regular fa-file-lines"></i> Nuevo Documento</a>
+        <a href="{{ route('documentos.create') }}" class="btn btn-custom" style="margin-bottom: 5px; margin-top: 40px;"><i class="fa-regular fa-file-lines"></i> Nuevo Documento</a>
         @if(session('success'))
         <div id="success-alert" class="alert alert-success mb-0 ml-3">
             {{ session('success') }}
@@ -32,7 +32,7 @@ tr.dtrg-group {
         </div>
         @endif    
     </div>    
-    <table class="display compact" id="documentosTable" style="margin-top: 1px; width:100%">
+    <table class="display responsive nowrap compact" id="documentosTable" style="margin-top: 1px; width:100%">
         <thead>
             <tr>
                 <th>Título</th>
@@ -47,7 +47,7 @@ tr.dtrg-group {
         <tbody>
             @foreach ($documentos as $documento)
                 <tr data-category="{{ $documento->categoria->nombre_categoria }}">
-                    <td>{{ $documento->titulo }} (v: {{ $documento->version }}) </td>
+                    <td>{{ $documento->titulo }} [v:{{ $documento->version }}] </td>
                     <td>
                         @php
                             $estadoColor = '';
@@ -65,7 +65,7 @@ tr.dtrg-group {
                                     $estadoColor = 'black';
                             }
                         @endphp
-                        <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; font-weight: bold; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
+                        <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
 
                             {{ $documento->estado }}
                         </span>
@@ -75,15 +75,15 @@ tr.dtrg-group {
                     <td>{{ $documento->updated_at }}</td>
                     <td>{{ $documento->ultimaModificacion->name }}</td>
                     <td>
-                        <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.show', 'permiso' => 'puedeLeer']) }}" class="btn btn-light"><i class="fa-solid fa-eye"></i></a>
-                        <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.edit', 'permiso' => 'puedeEscribir']) }}" class="btn btn-light"><i class="fa-regular fa-pen-to-square"></i></a>
+                        <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.show', 'permiso' => 'puedeLeer']) }}" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="Ver"><i class="fa-solid fa-eye"></i></a>
+                        <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.edit', 'permiso' => 'puedeEscribir']) }}" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="Editar"><i class="fa-regular fa-pen-to-square"></i></a>
 
                         <!-- Botón de eliminación con confirmación -->
                         <!-- <form action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este documento?');"> -->
                         <form id="delete-form-{{ $documento->id }}" action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-light" onclick="confirmAndRedirect(event,document.getElementById('delete-form-{{ $documento->id }}'));"><i class="fa-regular fa-circle-xmark"></i></button>
+                            <button type="submit" class="btn btn-light" onclick="confirmAndRedirect(event,document.getElementById('delete-form-{{ $documento->id }}'));" data-toggle="tooltip" data-placement="top" title="Eliminar"><i class="fa-regular fa-circle-xmark"></i></button>
                             <!-- <button type="submit" class="btn btn-light"><i class="fa-regular fa-circle-xmark"></i></button> -->
                         </form>
                     </td>
@@ -132,7 +132,8 @@ $(document).ready(function() {
         order: [[2, 'asc']], // Ordena por la columna de categoría
         rowGroup: {
             dataSrc: 2 // Agrupa por la columna de categoría (índice 2)
-        }
+        },
+        responsive: true
     });
 
     // Manejador para expandir/cerrar filas al hacer clic en la fila agrupada
@@ -197,9 +198,8 @@ $(document).ready(function() {
 function confirmAndRedirect(event, form) {
     event.preventDefault();
     Swal.fire({
-        title: 'Confirmación',
+        title: 'Eliminar',
         text: '¿Estás seguro de que deseas eliminar este documento?',
-        icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar'

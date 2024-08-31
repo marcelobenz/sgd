@@ -30,33 +30,39 @@
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="permisos">Asignar Permisos</label>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Usuario (Correo)</th>
-                        <th>Leer</th>
-                        <th>Escribir</th>
-                        <th>Aprobar</th>
-                        <th>Eliminar</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($usuarios as $usuario)
-                        @php
-                            $permisoActual = $documento->permisos->where('user_id', $usuario->id)->first();
-                        @endphp
+        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapsePermisos" aria-expanded="false" aria-controls="collapsePermisos">
+            Asignar Permisos
+        </button>
+
+        <div class="collapse" id="collapsePermisos">
+            <div class="form-group">
+                <label for="permisos">Asignar Permisos</label>
+                <table class="table table-bordered">
+                    <thead>
                         <tr>
-                            <td>{{ $usuario->email }}</td>
-                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_leer]" {{ $permisoActual && $permisoActual->puede_leer ? 'checked' : '' }}></td>
-                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_escribir]" {{ $permisoActual && $permisoActual->puede_escribir ? 'checked' : '' }}></td>
-                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_aprobar]" {{ $permisoActual && $permisoActual->puede_aprobar ? 'checked' : '' }}></td>
-                            <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_eliminar]" {{ $permisoActual && $permisoActual->puede_eliminar ? 'checked' : '' }}></td>
+                            <th>Usuario (Correo)</th>
+                            <th>Leer</th>
+                            <th>Escribir</th>
+                            <th>Aprobar</th>
+                            <th>Eliminar</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach($usuarios as $usuario)
+                            @php
+                                $permisoActual = $documento->permisos->where('user_id', $usuario->id)->first();
+                            @endphp
+                            <tr>
+                                <td>{{ $usuario->email }}</td>
+                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_leer]" {{ $permisoActual && $permisoActual->puede_leer ? 'checked' : '' }}></td>
+                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_escribir]" {{ $permisoActual && $permisoActual->puede_escribir ? 'checked' : '' }}></td>
+                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_aprobar]" {{ $permisoActual && $permisoActual->puede_aprobar ? 'checked' : '' }}></td>
+                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_eliminar]" {{ $permisoActual && $permisoActual->puede_eliminar ? 'checked' : '' }}></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <button type="submit" class="btn btn-primary">Guardar Cambios</button>
@@ -68,12 +74,16 @@
 <script>
     function confirmAndRedirect() {
         Swal.fire({
-            title: 'Confirmación',
+            title: 'Volver sin guardar',
             text: 'Los datos cargados se perderán ¿Estás seguro de que deseas volver?',
-            icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, volver',
-            cancelButtonText: 'Cancelar'
+            cancelButtonText: 'Cancelar',
+            customClass: {
+            confirmButton: 'btn btn-warning', // Cambia 'btn btn-danger' al color que desees
+            cancelButton: 'btn btn-primary' // Cambia 'btn btn-secondary' al color que desees
+        },
+        buttonsStyling: false         
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = "{{ route('documentos.index') }}";

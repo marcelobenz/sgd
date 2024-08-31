@@ -64,119 +64,132 @@
         @method('PUT')
         
         <div class="row">
-            <!-- Columna A: Información del documento -->
-            <div id="colInfoDocumento" class="col-12 col-md-3">
-                <table class="table table-bordered w-100">
-                    <thead>
-                        <tr>
-                            <th colspan=2>Versión Actual</th>
-                        </tr>
-                    </thead>
-                    <tr>
-                        <td>Documento:</td><td>{{ $documento->titulo }}</td>
-                    </tr>
-                    <tr>
-                        <td>Versión: </td><td>{{ $documento->version }}
-                        <button type="button" class="btn btn-light btn-link p-0" onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Categoría: </td><td>{{ $documento->categoria->nombre_categoria }}</td>
-                    </tr>
-                    <tr>
-                        <td>Estado: </td><td>
-                            @php
-                                $estadoColor = '';
-                                switch($documento->estado) {
-                                    case 'en curso':
-                                        $estadoColor = 'orange';
-                                        break;
-                                    case 'pendiente de aprobación':
-                                        $estadoColor = 'red';
-                                        break;
-                                    case 'aprobado':
-                                        $estadoColor = 'green';
-                                        break;
-                                    default:
-                                        $estadoColor = 'black';
-                                }
-                            @endphp
-                            <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; font-weight: bold; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
-                                {{ $documento->estado }}
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Creador: </td><td> {{ $documento->creador->name }}</td>
-                    </tr>
-                    <tr>
-                        <td>Fecha: </td><td> {{ $documento->created_at }}</td>
-                    </tr>
-                    <tr>
-                        <td>Último Editor:  </td><td>{{ $documento->ultimaModificacion->name }}</td>
-                    </tr>
-                    <tr>
-                        <td>Fecha:  </td><td>{{ $documento->updated_at }}</td>
-                    </tr>
-                </table>
-                <table class="table table-bordered w-100">
-                    <thead>
-                        <tr>
-                            <th colspan=4>Versiones Anteriores</th>
-                        </tr>
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Fecha</th>
-                            <th scope="col" colspan=2>Acciones</th>
-                        </tr>
-                    </thead>
-                    @foreach ($documento->historial as $index => $versionhistorial)
-                        <tr class="table-row">
-                            <td>{{ $versionhistorial->version }}</td>
-                            <td>{{ $versionhistorial->created_at }}</td>
 
-                                <form id="revert-form-{{ $versionhistorial->id }}" action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}" method="POST" style="display: none;">
-                                    @csrf
-                                </form>
-                                <td class="text-center">
-                                <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}" 
-                                data-form-id="revert-form-{{ $versionhistorial->id }}"
-                                onclick="event.preventDefault(); submitForm(this);" class="btn btn-light p-0">
-                                    <i class="fa-solid fa-repeat"></i>
-                                </a>
-                                </td>
-                                <td class="text-center">
-                                <button type="button" class="btn btn-light p-0" onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $versionhistorial->path) }}', '{{ pathinfo($versionhistorial->path, PATHINFO_EXTENSION) }}')">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                                </td>
-                        </tr>
-                    @endforeach
-                </table>
-            </div>
-            
-            <!-- Columna B: Botones y visor embebido -->
-            <div id="colContenidoDocumento" class="col-12 col-md-9">
-                <div class="d-flex justify-content-end">
+            <!-- Columna A: Información del documento -->
+            <div id="colInfoDocumento" class="col-12 col-md-3" style="background-color: #f9f9f9; padding: 15px; border-radius: 8px;">
+                <div class="d-flex justify-content-end mt-2">
                     <div class="btn-group w-100" role="group" aria-label="Basic mixed styles example">
-                        <a href="{{ route('documentos.download', $documento->id) }}" class="btn btn-secondary"><i class="fa-solid fa-cloud-arrow-down"></i> Descargar</a>
-                        <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#uploadModal"><i class="fa-solid fa-cloud-arrow-up"></i> Subir Nueva Versión</button>
-                        <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#aprobarModal"><i class="fa-regular fa-thumbs-up"></i> Aprobar Documento</button>
-                        <a href="{{ route('documentos.index') }}" class="btn btn-secondary"><i class="fa-regular fa-hand-point-left"></i> Volver</a>
+                        <a href="{{ route('documentos.download', $documento->id) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Descargar versión actual">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> 
+                        </a>
+                        <button type="button" id="uploadModalBtn" class="btn btn-custom" data-placement="top" title="Subir una nueva versión" data-toggle="tooltip" data-target="#uploadModal">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> 
+                        </button>
+                        <button type="button" id="AprobarModalBtn" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Aprobar Documento">
+                            <i class="fa-regular fa-thumbs-up"></i> 
+                        </button>
+                        <a href="{{ route('documentos.index') }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Volver">
+                            <i class="fa-regular fa-hand-point-left"></i> 
+                        </a>
                     </div>
                 </div>
-                
+
+                <table class="table table-bordered w-100">
+                    <thead>
+                        <th colspan="2">Versión Actual</th>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Documento:</td><td>{{ $documento->titulo }}</td>
+                        </tr>
+                        <tr>
+                            <td>Versión: </td><td>{{ $documento->version }}
+                            <button type="button" class="btn btn-light btn-link p-0" onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')" data-toggle="tooltip" data-placement="top" title="Ver version actual">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Categoría: </td><td>{{ $documento->categoria->nombre_categoria }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align: middle;">Estado: </td><td>
+                                @php
+                                    $estadoColor = '';
+                                    switch($documento->estado) {
+                                        case 'en curso':
+                                            $estadoColor = 'orange';
+                                            break;
+                                        case 'pendiente de aprobación':
+                                            $estadoColor = 'red';
+                                            break;
+                                        case 'aprobado':
+                                            $estadoColor = 'green';
+                                            break;
+                                        default:
+                                            $estadoColor = 'black';
+                                    }
+                                @endphp
+                                <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
+                                    {{ $documento->estado }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Creador: </td><td> {{ $documento->creador->name }}</td>
+                        </tr>
+                        <tr>
+                            <td>Fecha: </td><td> {{ $documento->created_at }}</td>
+                        </tr>
+                        <tr>
+                            <td>Último Editor:  </td><td>{{ $documento->ultimaModificacion->name }}</td>
+                        </tr>
+                        <tr>
+                            <td>Fecha:  </td><td>{{ $documento->updated_at }}</td>
+                        </tr>
+                        <tr>
+                            <th colspan="2">
+                                <a href="#" data-toggle="collapse" data-target="#collapseVersAnteriores" aria-expanded="false" aria-controls="collapseVersAnteriores">
+                                    Versiones Anteriores
+                                </a>
+                            </th>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="collapse" id="collapseVersAnteriores">
+                    <table class="table table-bordered w-100">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Fecha</th>
+                                <th scope="col" colspan=2>Acciones</th>
+                            </tr>
+                        </thead>
+                        @foreach ($documento->historial as $index => $versionhistorial)
+                            <tr class="table-row">
+                                <td>{{ $versionhistorial->version }}</td>
+                                <td>{{ $versionhistorial->created_at }}</td>
+
+                                    <form id="revert-form-{{ $versionhistorial->id }}" action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}" method="POST" style="display: none;">
+                                        @csrf
+                                    </form>
+                                    <td class="text-center">
+                                    <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}" 
+                                    data-form-id="revert-form-{{ $versionhistorial->id }}"
+                                    onclick="event.preventDefault(); submitRevertForm(this);" class="btn btn-light p-0"
+                                    data-toggle="tooltip" data-placement="top" title="Revertir a esta versión">
+                                        <i class="fa-solid fa-repeat"></i>
+                                    </a>
+                                    </td>
+                                    <td class="text-center">
+                                    <button type="button" class="btn btn-light p-0" onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $versionhistorial->path) }}', '{{ pathinfo($versionhistorial->path, PATHINFO_EXTENSION) }}')"
+                                    data-toggle="tooltip" data-placement="top" title="Ver esta version">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    </td>
+                            </tr>
+                        @endforeach
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- Columna B: Botones y visor embebido -->
+            <div id="colContenidoDocumento" class="col-12 col-md-9">
                 <!-- Visor embebido -->
-                <div id="viewer-container">
-                    @if ($fileExtension === 'pdf')
-                        <embed id="document-viewer" src="{{ $fileUrl }}" type="application/pdf" width="100%" height="600px" />
-                    @elseif (in_array($fileExtension, ['doc', 'docx', 'xls', 'xlsx']))
-                        <iframe id="document-viewer" src="https://view.officeapps.live.com/op/view.aspx?src={{ urlencode($fileUrl) }}" width="100%" height="600px"></iframe>
-                    @else
-                        <p>Formato de archivo no soportado para visualización en el visor embebido.</p>
-                    @endif
+                <div id="visorContainer" style="margin-top: 20px;">
+                    <iframe id="documentViewer" src="" style="width: 100%; height: 600px;" frameborder="0" allowfullscreen></iframe>
                 </div>
             </div>
             
@@ -230,12 +243,49 @@
         </div>
     </div>
 
+    <!-- Modal de confirmación para revertir versión-->
+    <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmModalLabel">Confirmar Reversión</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro de que deseas revertir a esta versión?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirmButton">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 @endsection
 
 @section('scripting')
 <script>
+
+//Maneja la apertur de la modal para aprobar
+$(document).ready(function(){
+    $('#AprobarModalBtn').on('click', function(){
+        $('#aprobarModal').modal('show');
+    });
+});
+
+//Maneja la apertur de la modal para descargar
+$(document).ready(function(){
+    $('#uploadModalBtn').on('click', function(){
+        $('#uploadModal').modal('show');
+    });
+});
+
+//Controla la accion en la modal de upload
 document.getElementById('uploadBtn').addEventListener('click', function() {
     const fileInput = document.getElementById('nuevoArchivo');
     if (fileInput.files.length > 0) {
@@ -246,46 +296,46 @@ document.getElementById('uploadBtn').addEventListener('click', function() {
     }
 });
 
-// Para el manejo  del revertir version
-function submitForm(link) {
+//Controla la accion de revert
+function submitRevertForm(link) {
     var formId = link.getAttribute('data-form-id');
-    console.log('Form ID:', formId);
-    console.log('HTML del cuerpo:', document.body.innerHTML);  // Para depuración
     var form = document.getElementById(formId);
-    console.log('Form:', form);
+
     if (form) {
-        form.submit();
+        // Mostrar el modal de confirmación
+        $('#confirmModal').modal('show');
+
+        // Agregar un evento click al botón de confirmación
+        document.getElementById('confirmButton').onclick = function() {
+            form.submit();
+        };
     } else {
         console.error('Formulario no encontrado:', formId);
     }
 }
 
+
 // Para previsualizar la versión historica
-function viewVersion(fileUrl, fileExtension) {
-    var viewerContainer = document.getElementById('viewer-container');
-    var viewerContent;
+function viewVersion(url, extension) {
+        var iframe = document.getElementById('documentViewer');
+        var viewerUrl;
 
-    // Limpia cualquier selección previa en todas las filas de la tabla de versiones anteriores
-    var rows = document.querySelectorAll('.table-row');
-    rows.forEach(function(row) {
-        row.classList.remove('selected-row');
-    });
-
-    // Aquí puedes añadir el código para resaltar la fila actual si es necesario
-
-    // Configura el visor para mostrar el archivo seleccionado
-    if (fileExtension === 'pdf') {
-        viewerContent = `<embed id="document-viewer" src="${fileUrl}" type="application/pdf" width="100%" height="600px" />`;
-    } else if (fileExtension === 'doc' || fileExtension === 'docx') {
-        viewerContent = `<iframe id="document-viewer" src="https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}" width="100%" height="600px"></iframe>`;
-    } else if (fileExtension === 'xls' || fileExtension === 'xlsx') {
-        viewerContent = `<iframe id="document-viewer" src="https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}" width="100%" height="600px"></iframe>`;
-    } else {
-        viewerContent = '<p>Formato de archivo no soportado para visualización en el visor embebido.</p>';
+        switch (extension) {
+            case 'pdf':
+                viewerUrl = `https://docs.google.com/viewer?url=${url}&embedded=true`;
+                break;
+            case 'docx':
+            case 'xlsx':
+            case 'pptx':
+                viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${url}`;
+                break;
+            default:
+                alert('Formato no soportado para vista previa');
+                return;
+        }
+        
+        iframe.src = viewerUrl;
     }
-
-    viewerContainer.innerHTML = viewerContent;
-}
 
 // Para la tabla de arriba (versión actual)
 document.querySelector('.btn-link').addEventListener('click', function() {
@@ -309,40 +359,66 @@ document.querySelectorAll('.table-row').forEach(function(row) {
     });
 });
 
-// Para solicitar confirmación antes del revert version
-function submitForm(link) {
-    var formId = link.getAttribute('data-form-id');
-    var form = document.getElementById(formId);
+//Para cargar el documento en el viewer apenas carga la vista 
+document.addEventListener('DOMContentLoaded', function() {
+    // Llame a viewVersion con la URL del documento actual y su extensión
+    var currentDocumentUrl = '{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}';
+    var currentDocumentExtension = '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}';
+    viewVersion(currentDocumentUrl, currentDocumentExtension);
+});
 
-    if (form) {
-        // Usar window.confirm para pedir confirmación
-        var confirmAction = window.confirm("¿Estás seguro de que deseas revertir a esta versión?");
-        if (confirmAction) {
-            form.submit();
-        }
+//Para manejar el colapso de la columna izquierda
+document.getElementById('toggleDetails').addEventListener('click', function() {
+    var colInfo = document.getElementById('colInfoDocumento');
+    var colContent = document.getElementById('colContenidoDocumento');
+    var collapseDetails = document.getElementById('collapseDetalles');
+
+    if (colInfo.classList.contains('collapsed')) {
+        // Expande la columna de información del documento
+        colInfo.classList.remove('collapsed');
+        colContent.classList.remove('expanded');
+        collapseDetails.style.display = 'block';
     } else {
-        console.error('Formulario no encontrado:', formId);
+        // Colapsa la columna de información del documento
+        colInfo.classList.add('collapsed');
+        colContent.classList.add('expanded');
+        collapseDetails.style.display = 'none';
     }
-}
+});
 
 </script>
 
 <style>
-    .word-container {
-        width: 100%;
-        height: 800px; /* Ajusta la altura según sea necesario */
-        overflow: auto;
-        border: 1px solid #ddd; /* Opcional, para agregar un borde */
-        padding: 10px; /* Opcional, para agregar algo de espacio interior */
+    .btn-custom {
+        border: 2px solid #333;
+        background-color: #e9ecef;
+        color: #000;
+        transition: background-color 0.3s ease, box-shadow 0.3s ease; /* Efecto de transición suave */
     }
-    
-    .excel-container {
-        width: 100%;
-        height: 800px; /* Ajusta la altura según sea necesario */
-        overflow: auto;
-        border: 1px solid #ddd; /* Opcional, para agregar un borde */
-        padding: 10px; /* Opcional, para agregar algo de espacio interior */
+
+    .btn-custom:hover {
+        background-color: #dcdcdc; /* Color de fondo al pasar el mouse */
+        color: #000;
+        border-color: #666;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Añadir sombra al pasar el mouse */
     }
+
+    .mt-5 {
+        margin-top: 3rem !important; /* Añade margen superior para que el grupo de botones no quede tapado */
+    }
+
+    /* Estilos para animar el colapso de derecha a izquierda */
+    #colInfoDocumento.collapsed {
+        transition: margin-right 0.5s ease, width 0.5s ease;
+        margin-right: -25%;
+        width: 0;
+    }
+
+    #colContenidoDocumento.expanded {
+        transition: width 0.5s ease;
+        width: 100%;
+    }
+
 </style>
 
 @endsection
