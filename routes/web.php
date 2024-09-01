@@ -65,9 +65,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     // Ruta para mostrar el perfil del usuario
-    Route::get('/perfil', [UserProfileController::class, 'show'])->name('profile.show')->middleware('auth');
+    Route::get('/perfil', [UserProfileController::class, 'show'])->name('profile.show');
     // Ruta para actualizar el perfil del usuario
-    Route::post('/perfil/update', [UserProfileController::class, 'update'])->name('profile.update')->middleware('auth');
+    Route::post('/perfil/update', [UserProfileController::class, 'update'])->name('profile.update');
     Route::resource('documentos', DocumentoController::class);
 });
 
