@@ -222,7 +222,7 @@ class DocumentoController extends Controller
                 'puede_eliminar' => isset($permisos['puede_eliminar']),
             ]);
             // Si el usuario tiene permiso de aprobar, envía una notificación
-            if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar']) {
+            if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar'] && $documento->estado === 'pendiente de aprobación') {
                 $user = User::find($userId);
                 $user->notify(new DocumentoPendienteAprobacion($documento));
             }

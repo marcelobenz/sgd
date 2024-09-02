@@ -36,7 +36,6 @@
 
         <div class="collapse" id="collapsePermisos">
             <div class="form-group">
-                <label for="permisos">Asignar Permisos</label>
                 <table class="table table-bordered">
                     <thead>
                         <tr>
