@@ -81,6 +81,12 @@
                         <a href="{{ route('documentos.index') }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Volver">
                             <i class="fa-regular fa-hand-point-left"></i> 
                         </a>
+                        <a href="{{ route('documentos.exportarPdfData', $documento->id) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Exportar a PDF">
+                            <i class="fa-solid fa-file-pdf"></i> 
+                        </a>                    
+                        <a href="{{ route('documentos.exportarPdf', $documento) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Exportar PDF">
+                            <i class="fa-solid fa-file-pdf"></i> 
+                        </a>                    
                     </div>
                 </div>
 
@@ -272,7 +278,8 @@
 <script>
 
 //Maneja la apertur de la modal para aprobar
-$(document).ready(function(){
+$(document).ready(
+function(){
     $('#AprobarModalBtn').on('click', function(){
         $('#aprobarModal').modal('show');
     });
