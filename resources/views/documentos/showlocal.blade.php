@@ -78,15 +78,12 @@
                         <button type="button" id="AprobarModalBtn" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Aprobar Documento">
                             <i class="fa-regular fa-thumbs-up"></i> 
                         </button>
-                        <a href="{{ route('documentos.index') }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Volver">
-                            <i class="fa-regular fa-hand-point-left"></i> 
-                        </a>
-                        <a href="{{ route('documentos.exportarPdfData', $documento->id) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Exportar a PDF">
-                            <i class="fa-solid fa-file-pdf"></i> 
-                        </a>                    
                         <a href="{{ route('documentos.exportarPdf', $documento) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Exportar PDF">
                             <i class="fa-solid fa-file-pdf"></i> 
                         </a>                    
+                        <a href="{{ route('documentos.index') }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Volver">
+                            <i class="fa-regular fa-hand-point-left"></i> 
+                        </a>
                     </div>
                 </div>
 

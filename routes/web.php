@@ -53,8 +53,6 @@ Route::get('/upload-test', function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/documentos/exportar-pdf/{id}', [DocumentoController::class, 'exportarPdf'])->name('documentos.exportarPdf');
-    Route::get('/documentos/exportar-pdfdata/{id}', [DocumentoController::class, 'exportarPdfData'])->name('documentos.exportarPdfData');
-    //Route::get('documentos/exportar-pdf/{documentPath}/{versionInfo}', 'DocumentoController@exportarPdf')->name('documentos.exportarPdf');
     Route::get('/documentos/{id}/validapermiso', [DocumentoController::class, 'validaPermiso'])->name('documentos.validaPermiso');
     Route::post('/documentos/{id}/aprobar', [DocumentoController::class, 'aprobar'])->name('documentos.aprobar');
     Route::put('/documentos/{id}/addVersion', [DocumentoController::class, 'addVersion'])->name('documentos.addVersion');

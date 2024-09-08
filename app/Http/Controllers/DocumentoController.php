@@ -137,6 +137,10 @@ class DocumentoController extends Controller
         // Obtén el documento desde la base de datos
         $documento = Documento::findOrFail($id);
 
+        if (!$documento->puedeEscribir(auth()->user())) {
+            return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento (update)');
+        }
+
         // Ruta del archivo en S3
         $filePath = $documento->path;
         // Determinar el tipo MIME manualmente
@@ -396,84 +400,17 @@ class DocumentoController extends Controller
             return redirect()->route($ruta, ['documento' => $id]);
         }
     }
-
-
-    
-    // function exportarPdf($documentId)
+       
+    // public function exportarPdfData($id)
     // {
-    //     $documento = Documento::findOrFail($documentId);
-    //     //dd($documento);
-
-    //     // Crear una instancia de FPDI
-    //     $pdf = new Fpdi();
-
-    //     $fileName = basename($documento->nombre);
-    //     $disk = Storage::disk('s3');
-    
-    //     if (!$disk->exists($documento->path)) {
-    //         abort(404, 'File not found');
-    //     }
-    
-    //     $file = $disk->get($documento->path);
-
-    //     // Cargar el documento original en formato PDF
-    //     $pageCount = $pdf->setSourceFile($documento->path);
-    //     for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
-    //         $templateId = $pdf->importPage($pageNo);
-    //         $pdf->addPage();
-    //         $pdf->useTemplate($templateId);
-    //     }
-    
-    //     // Añadir una nueva página para la información de versionado
-    //     $pdf->AddPage();
-    //     // Traigo los datos de la version
-    //     $pdfData = $this->exportarPdfData($documentId);
-    //     $pdf->SetFont('Helvetica', '', 12);
-    //     // como agrego los datos de la version?
-    //     $pdf->MultiCell(0, 10, "Información de Versiones Anteriores\n\n", 0, 'L');
-    //     // foreach ($pdfData['versiones_anteriores'] as $version) {
-    //     //     $pdf->MultiCell(0, 10, "Versión: ". $version['version'], 0, 'L');
-    //     //     $pdf->MultiCell(0, 10, "Documento: ". $version['documento'], 0, 'L');
-    //     //     $pdf->MultiCell(0, 10, "Categoría: ". $version['categoria'], 0, 'L');
-    //     //     $pdf->MultiCell(0, 10, "Estado: ". $version['estado'], 0, 'L');
-    //     //     $pdf->MultiCell(0, 10, "Creador: ". $version['
-
-    //     // Añadir texto con la información de versionado
-    //     //$pdf->SetFont('Helvetica', '', 12);
-    //     // $pdf->MultiCell(0, 10, "Información de Versionado\n\n", 0, 'L');
-    //     // $pdf->MultiCell(0, 10, "Versión Actual: " . $versionInfo['version_actual'], 0, 'L');
-    //     // $pdf->MultiCell(0, 10, "Documento: " . $versionInfo['documento'], 0, 'L');
-    //     // $pdf->MultiCell(0, 10, "Categoría: " . $versionInfo['categoria'], 0, 'L');
-    //     // $pdf->MultiCell(0, 10, "Estado: " . $versionInfo['estado'], 0, 'L');
-    //     // $pdf->MultiCell(0, 10, "Creador: " . $versionInfo['creador'], 0, 'L');
-    //     // $pdf->MultiCell(0, 10, "Fecha de Creación: " . $versionInfo['fecha_creacion'], 0, 'L');
-    //     // $pdf->MultiCell(0, 10, "Último Editor: " . $versionInfo['ultimo_editor'], 0, 'L');
-    //     // $pdf->MultiCell(0, 10, "Fecha de Última Modificación: " . $versionInfo['fecha_modificacion'], 0, 'L');
-    
-    //     // Añadir la información de versiones anteriores
-    //     $pdf->MultiCell(0, 10, "\nVersiones Anteriores:\n", 0, 'L');
-    //     foreach ($versionInfo['versiones_anteriores'] as $version) {
-    //         $pdf->MultiCell(0, 10, "#{$version['id']} - Fecha: {$version['fecha']}\n", 0, 'L');
-    //     }
-    
-    //     // Guardar o mostrar el PDF final
-    //     $pdfOutputPath = storage_path('app/public/versioned_document.pdf');
-    //     $pdf->Output($pdfOutputPath, 'F');
-    
-    //     return $pdfOutputPath;
+    //     $documento = Documento::with('historial', 'categoria', 'creador', 'ultimaModificacion')->findOrFail($id);
+    //     $pdf = PDF::loadView('documentos.pdf', compact('documento'));
+    //     //return $pdf->download('documento_' . $documento->id . '.pdf');
+    //     return $pdf;
     // }
-        
-    public function exportarPdfData($id)
-    {
-        $documento = Documento::with('historial', 'categoria', 'creador', 'ultimaModificacion')->findOrFail($id);
-        $pdf = PDF::loadView('documentos.pdf', compact('documento'));
-        //return $pdf->download('documento_' . $documento->id . '.pdf');
-        return $pdf;
-    }
 
     public function exportarPdf($documentId){
 
-        //$documento = Documento::with('historial', 'categoria', 'creador', 'ultimaModificacion')->findOrFail($documentId);
         $documento = Documento::findOrFail($documentId);
 
         // initiate FPDI
@@ -484,7 +421,6 @@ class DocumentoController extends Controller
             $tempPath = tempnam(sys_get_temp_dir(), 'pdf');  // Crear un archivo temporal
             file_put_contents($tempPath, $fileContent);  // Escribir el contenido al archivo temporal
             $pageCount = $pdf->setSourceFile($tempPath);  // Usar el archivo temporal como fuente
-            // Aquí puedes seguir trabajando con el archivo
         } else {
             return "El archivo no existe.";
         }
@@ -505,8 +441,6 @@ class DocumentoController extends Controller
         $pdf->AddPage();
         $pdf->SetFont('Courier', '', 12);
         $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', 'Versión Actual'), 0, 1, 'C');
-
-
 
         $pdf->Cell(80, 10, 'Documento:', 1);
         $pdf->Cell(0, 10, $documento->titulo, 1, 1); // Nuevo línea después del título
