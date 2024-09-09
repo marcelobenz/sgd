@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Notifications\DocumentoPendienteAprobacion;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use setasign\Fpdi\Fpdi as Fpdi;
-
+use Illuminate\Support\Facades\Log;
 class DocumentoController extends Controller
 {
     /**
@@ -401,29 +401,20 @@ class DocumentoController extends Controller
         }
     }
        
-    // public function exportarPdfData($id)
-    // {
-    //     $documento = Documento::with('historial', 'categoria', 'creador', 'ultimaModificacion')->findOrFail($id);
-    //     $pdf = PDF::loadView('documentos.pdf', compact('documento'));
-    //     //return $pdf->download('documento_' . $documento->id . '.pdf');
-    //     return $pdf;
-    // }
-
     public function exportarPdf($documentId){
 
         $documento = Documento::findOrFail($documentId);
+        $extension = pathinfo($documento->path, PATHINFO_EXTENSION);
 
-        // initiate FPDI
-        $pdf = new Fpdi();
-        //dd($documento->path);
-        if (Storage::disk('s3')->exists($documento->path)) {
-            $fileContent = Storage::disk('s3')->get($documento->path);  // Obtener el contenido del archivo
-            $tempPath = tempnam(sys_get_temp_dir(), 'pdf');  // Crear un archivo temporal
-            file_put_contents($tempPath, $fileContent);  // Escribir el contenido al archivo temporal
-            $pageCount = $pdf->setSourceFile($tempPath);  // Usar el archivo temporal como fuente
+        if ($extension != 'pdf') {
+            $convertedPdfPath = $this->convertToPdf($documento->path);
         } else {
-            return "El archivo no existe.";
+            $convertedPdfPath = $this->downloadFileToLocal($documento->path);
         }
+
+        // Preparar el archivo para FPDI
+        $pdf = new Fpdi();
+        $pageCount = $pdf->setSourceFile($convertedPdfPath);
 
         // iterate through all pages
         for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
@@ -466,9 +457,61 @@ class DocumentoController extends Controller
         $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Fecha de Última Modificación:'), 1);
         $pdf->Cell(0, 10, $documento->updated_at, 1, 1); // Fecha de última modificación
 
+        // Eliminar el archivo PDF temporal después de procesarlo
+        unlink($convertedPdfPath);
+
         return $pdf->Output('documento_' . $documento->id . '.pdf', 'D');
     }
- 
+
+    /**
+     * Convertir un archivo de S3 a PDF y manejarlo localmente.
+     *
+     * @param string $path Ruta del archivo en S3.
+     * @return string Ruta del archivo PDF local.
+     */
+    private function convertToPdf($path)
+    {
+        // Descargar el archivo de S3 a un directorio temporal
+        $localPath = tempnam(sys_get_temp_dir(), 'doc');
+        $content = Storage::disk('s3')->get($path);
+        file_put_contents($localPath, $content);
+        // Definir la ruta local del PDF
+        $localPdfPath = sys_get_temp_dir() . '/' . basename($path, '.' . pathinfo($path, PATHINFO_EXTENSION)) . '.pdf';
+        // Reemplazar las barras invertidas en la ruta local del PDF para Windows
+        $localPdfPath = str_replace('/', '\\', $localPdfPath);
+        // Obtener la ruta de soffice desde las variables de entorno
+        $sofficePath = env('SOFFICE_PATH', 'soffice'); // Proporciona un valor por defecto por si no está definido
+        // Escapar la ruta completa del comando
+        $sofficePath = escapeshellarg($sofficePath);
+        $dirPath = escapeshellarg(dirname($localPdfPath));
+        $filePath = escapeshellarg($localPath);
+
+        $command = "{$sofficePath} --headless --convert-to pdf --outdir {$dirPath} {$filePath} 2>&1";
+
+        exec($command, $output, $return_var);
+        Log::info("Comando ejecutado: " . $command);
+        if ($return_var !== 0) {
+            Log::error("Error al convertir archivo: " . implode("\n", $output));
+        } else {
+            Log::info("Success: PDF generado");
+        }
+
+        // Limpiar el archivo original descargado
+        unlink($localPath);
+        //Obtengo el path del archivo resultante de la exportación
+        $resultPath = sys_get_temp_dir() . '/' . basename($localPath, '.' . pathinfo($localPath, PATHINFO_EXTENSION)) . '.pdf';
+        //dd($resultPath);
+        // Devolver la ruta local del archivo PDF
+        return $resultPath;
+    }
+
+    private function downloadFileToLocal($path)
+    {
+        $localPath = tempnam(sys_get_temp_dir(), 'doc');
+        $content = Storage::disk('s3')->get($path);
+        file_put_contents($localPath, $content);
+        return $localPath;
+    }
 
 }
 
