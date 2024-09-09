@@ -487,7 +487,7 @@ class DocumentoController extends Controller
         $filePath = escapeshellarg($localPath);
 
         $command = "{$sofficePath} --headless --convert-to pdf --outdir {$dirPath} {$filePath} 2>&1";
-
+        Log::info("Comando antes de ejecutar: " . $command);
         exec($command, $output, $return_var);
         Log::info("Comando ejecutado: " . $command);
         if ($return_var !== 0) {
