@@ -485,7 +485,8 @@ class DocumentoController extends Controller
         $sofficePath = env('SOFFICE_PATH', 'soffice'); // Proporciona un valor por defecto por si no está definido
         // Escapar la ruta completa del comando
         $sofficePath = escapeshellarg($sofficePath);
-        $dirPath = escapeshellarg(dirname($localPdfPath));
+        //$dirPath = escapeshellarg(dirname($localPdfPath));
+        $dirPath = escapeshellarg(sys_get_temp_dir());
         $filePath = escapeshellarg($localPath);
 
         if (!$isWindows) {
