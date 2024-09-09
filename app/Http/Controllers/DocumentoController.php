@@ -475,6 +475,8 @@ class DocumentoController extends Controller
         $localPath = tempnam(sys_get_temp_dir(), 'doc');
         $content = Storage::disk('s3')->get($path);
         file_put_contents($localPath, $content);
+        // Detectar si estamos en Windows o en Linux
+        $isWindows = (PHP_OS_FAMILY === 'Windows');
         // Definir la ruta local del PDF
         $localPdfPath = sys_get_temp_dir() . '/' . basename($path, '.' . pathinfo($path, PATHINFO_EXTENSION)) . '.pdf';
         // Reemplazar las barras invertidas en la ruta local del PDF para Windows
@@ -486,7 +488,14 @@ class DocumentoController extends Controller
         $dirPath = escapeshellarg(dirname($localPdfPath));
         $filePath = escapeshellarg($localPath);
 
-        $command = "{$sofficePath} --headless --convert-to pdf --outdir {$dirPath} {$filePath} 2>&1";
+        if (!$isWindows) {
+            $command = "{$sofficePath} --headless --convert-to pdf --outdir {$dirPath} {$filePath} -env:UserInstallation=file:///tmp/LibreOfficeConfig 2>&1";
+        } else {
+            // Para Windows no es necesario el parámetro -env
+            $command = "{$sofficePath} --headless --convert-to pdf --outdir {$dirPath} {$filePath} 2>&1";
+        }
+
+        //$command = "{$sofficePath} --headless --convert-to pdf --outdir {$dirPath} {$filePath} 2>&1";
         Log::info("Comando antes de ejecutar: " . $command);
         exec($command, $output, $return_var);
         Log::info("Comando ejecutado: " . $command);
