@@ -69,4 +69,12 @@ class Documento extends Model
         return $this->permisos()->where('user_id', $user->id)->where('puede_eliminar', true)->exists();
     }
 
+    public function ultimaVersionAprobada()
+    {
+        return $this->historial()
+            ->where('estado', 'aprobado')       // Solo versiones aprobadas
+            ->orderByDesc('fecha_aprobacion')   // Ordenar por la fecha_aprobacion en orden descendente
+            ->first();                          // Obtener la última versión aprobada
+    }
+    
 }

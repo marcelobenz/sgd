@@ -80,7 +80,7 @@
                         </button>
                         <a href="{{ route('documentos.exportarPdf', $documento) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Exportar PDF">
                             <i class="fa-solid fa-file-pdf"></i> 
-                        </a>                    
+                        </a>
                         <a href="{{ route('documentos.index') }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Volver">
                             <i class="fa-regular fa-hand-point-left"></i> 
                         </a>
@@ -274,7 +274,7 @@
 @section('scripting')
 <script>
 
-//Maneja la apertur de la modal para aprobar
+//Maneja la apertura de la modal para aprobar
 $(document).ready(
 function(){
     $('#AprobarModalBtn').on('click', function(){
@@ -282,7 +282,7 @@ function(){
     });
 });
 
-//Maneja la apertur de la modal para descargar
+//Maneja la apertura de la modal para descargar
 $(document).ready(function(){
     $('#uploadModalBtn').on('click', function(){
         $('#uploadModal').modal('show');
@@ -317,7 +317,6 @@ function submitRevertForm(link) {
         console.error('Formulario no encontrado:', formId);
     }
 }
-
 
 // Para previsualizar la versión historica
 function viewVersion(url, extension) {
@@ -421,6 +420,26 @@ document.getElementById('toggleDetails').addEventListener('click', function() {
     #colContenidoDocumento.expanded {
         transition: width 0.5s ease;
         width: 100%;
+    }
+
+    #overlay {
+        display: none; /* Oculto por defecto */
+        position: fixed; /* Posición fija para cubrir toda la pantalla */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5); /* Fondo semi-transparente */
+        z-index: 9999; /* Asegura que esté por encima de todos los elementos */
+        text-align: center;
+        color: white;
+    }
+
+    #overlay div {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%); /* Centrar el texto */
     }
 
 </style>

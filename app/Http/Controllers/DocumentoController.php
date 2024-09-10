@@ -126,6 +126,7 @@ class DocumentoController extends Controller
 
         $documento->estado = 'aprobado';
         $documento->fecha_aprobacion = now();
+        $documento->ultima_version_aprobada = $documento->version;
         $documento->save();
     
         return redirect()->back()->with('success', 'El documento ha sido aprobado.');
@@ -402,8 +403,20 @@ class DocumentoController extends Controller
     }
        
     public function exportarPdf($documentId){
-
+        
         $documento = Documento::findOrFail($documentId);
+
+        // Valida que el doc esté aprobado, si no lo está, busca la última versión aprobada en el historial
+        if ($documento->estado != "aprobado") {
+            $documentoAprobado = $documento->ultimaVersionAprobada();
+            if (!$documentoAprobado) {
+                // No hay versiones aprobadas
+                return redirect()->route('documentos.index')->with('error', 'No existe ninguna versión aprobada para el documento que intenta descargar.');
+            }
+            $documento = $documentoAprobado; // Cambiamos al historial del documento aprobado
+        }
+        //dd($documento); 
+
         $extension = pathinfo($documento->path, PATHINFO_EXTENSION);
 
         if ($extension != 'pdf') {
@@ -460,7 +473,7 @@ class DocumentoController extends Controller
         // Eliminar el archivo PDF temporal después de procesarlo
         unlink($convertedPdfPath);
 
-        return $pdf->Output('documento_' . $documento->id . '.pdf', 'D');
+        return $pdf->Output($documento->titulo . '-version_' . $documento->version . '-' . $documento->updated_at . '.pdf', 'D');
     }
 
     /**
