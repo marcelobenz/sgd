@@ -210,7 +210,16 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <input type="file" name="nuevoArchivo" id="nuevoArchivo" class="form-control">
+                    <!-- Campo de archivo -->
+                    <div class="form-group">
+                        <label for="nuevoArchivo">Nuevo Archivo</label>
+                        <input type="file" name="nuevoArchivo" id="nuevoArchivo" class="form-control">
+                    </div>
+                    <!-- Campo de contenido actualizado -->
+                    <div class="form-group">
+                        <label for="contenidoActualizado">Contenido actualizado</label>
+                        <textarea name="contenidoActualizado" id="contenidoActualizado" class="form-control" rows="5"></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -292,7 +301,9 @@ $(document).ready(function(){
 //Controla la accion en la modal de upload
 document.getElementById('uploadBtn').addEventListener('click', function() {
     const fileInput = document.getElementById('nuevoArchivo');
-    if (fileInput.files.length > 0) {
+    const contenidoActualizado = document.getElementById('contenidoActualizado').value;
+
+    if (fileInput.files.length > 0 && contenidoActualizado.trim() !== '') {
         const form = document.getElementById('uploadForm');
         form.submit();
     } else {

@@ -126,6 +126,7 @@ class DocumentoController extends Controller
 
         $documento->estado = 'aprobado';
         $documento->fecha_aprobacion = now();
+        $documento->id_usr_aprobador = auth()->user()->id;
         $documento->ultima_version_aprobada = $documento->version;
         $documento->save();
     
@@ -261,16 +262,23 @@ class DocumentoController extends Controller
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
             'nuevoArchivo' => 'file',
-            'id_categoria' => 'required|exists:categorias,id'
+            'id_categoria' => 'required|exists:categorias,id',
+            'contenidoActualizado' => 'required|string', // Agregar validación para el contenido actualizado
         ]);
 
+        // Subir el nuevo archivo a S3 si se proporciona
         if ($request->hasFile('nuevoArchivo')) {
             $path = $request->file('nuevoArchivo')->store('documentos', 's3');
             $documento->path = $path;
         }
         //dd($request->file('nuevoArchivo'));
 
-        $documento->fill($request->except('nuevoArchivo'));
+        // Asignar todos los campos excepto el archivo y el contenido
+        $documento->fill($request->except('nuevoArchivo','contenidoActualizado'));
+
+        // Actualizar el contenido del documento con el valor de 'contenidoActualizado'
+        $documento->contenido = $request->input('contenidoActualizado');
+
         $maxVersion = HistorialDocumento::where('id_documento', $documento->id)
                        ->max('version');
         $documento->version = $maxVersion + 1;
@@ -294,6 +302,7 @@ class DocumentoController extends Controller
         $historial->id_Categoria = $documento->id_categoria;
         $historial->id_usr_creador = $documento->id_usr_creador;
         $historial->id_usr_ultima_modif = $documento->id_usr_ultima_modif;
+        $historial->id_usr_aprobador = $documento->id_usr_aprobador;
         $historial->fecha_aprobacion = $documento->fecha_aprobacion;
         $historial->version = $documento->version;
         //$historial->created_at = now();
@@ -331,8 +340,9 @@ class DocumentoController extends Controller
             $documento->id_Categoria = $historialDocumento->id_categoria;
             $documento->id_usr_creador = $historialDocumento->id_usr_creador;
             $documento->id_usr_ultima_modif = $historialDocumento->id_usr_ultima_modif;
-            $documento->fecha_aprobacion = $historialDocumento->fecha_aprobacion;
+            $documento->fecha_aprobacion = $historialDocumento->null;
             $documento->version = $historialDocumento->version;
+            $documento->estado = "pendiente de aprobación";
             //$documento->version = $historialDocumento;
             $documento->save();
 
@@ -444,7 +454,7 @@ class DocumentoController extends Controller
         // Añadir una nueva página en blanco
         $pdf->AddPage();
         $pdf->SetFont('Courier', '', 12);
-        $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', 'Versión Actual'), 0, 1, 'C');
+        $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', 'Ultima Versión Aprobada'), 0, 1, 'C');
 
         $pdf->Cell(80, 10, 'Documento:', 1);
         $pdf->Cell(0, 10, $documento->titulo, 1, 1); // Nuevo línea después del título
@@ -452,11 +462,20 @@ class DocumentoController extends Controller
         $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Versión:'), 1);
         $pdf->Cell(0, 10, $documento->version, 1, 1); // Versión
 
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Detalles de la versión:'), 1);
+        $pdf->MultiCell(0, 10, iconv('UTF-8', 'windows-1252', $documento->contenido), 1);
+
         $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Categoría:'), 1);
         $pdf->Cell(0, 10, $documento->categoria->nombre_categoria, 1, 1); // Categoría
 
         $pdf->Cell(80, 10, 'Estado:', 1);
         $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $documento->estado), 1, 1); // Estado
+
+        $pdf->Cell(80, 10, 'Aprobador:', 1);
+        $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $documento->aprobador->name), 1, 1); // Aprobador
+
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Fecha aprobación:'), 1);
+        $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $documento->fecha_aprobacion), 1, 1); // Fecha aprobacion
 
         $pdf->Cell(80, 10, 'Creador:', 1);
         $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $documento->creador->name), 1, 1); // Creador

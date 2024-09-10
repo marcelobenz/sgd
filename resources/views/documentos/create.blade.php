@@ -33,7 +33,7 @@
 
         <div class="form-group">
             <label for="contenido">Contenido</label>
-            <textarea name="contenido" id="contenido" class="form-control"></textarea>
+            <textarea name="contenido" id="contenido" class="form-control" required></textarea>
         </div>
 
         <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapsePermisos" aria-expanded="false" aria-controls="collapsePermisos">

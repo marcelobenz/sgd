@@ -18,6 +18,11 @@ class Documento extends Model
         return $this->belongsTo(User::class, 'id_usr_creador');
     }
 
+    public function aprobador()
+    {
+        return $this->belongsTo(User::class, 'id_usr_aprobador');
+    }
+
     public function ultimaModificacion()
     {
         return $this->belongsTo(User::class, 'id_usr_ultima_modif');
