@@ -302,12 +302,25 @@ $(document).ready(function(){
 document.getElementById('uploadBtn').addEventListener('click', function() {
     const fileInput = document.getElementById('nuevoArchivo');
     const contenidoActualizado = document.getElementById('contenidoActualizado').value;
+    
+    let valid = true;
 
-    if (fileInput.files.length > 0 && contenidoActualizado.trim() !== '') {
+    // Validar archivo
+    if (fileInput.files.length === 0) {
+        alert('Debe seleccionar un archivo para continuar.');
+        valid = false;
+    }
+
+    // Validar contenido actualizado
+    if (contenidoActualizado.trim() === '') {
+        alert('Debe completar el contenido para continuar.');
+        valid = false;
+    }
+
+    // Si ambos campos son válidos, enviar el formulario
+    if (valid) {
         const form = document.getElementById('uploadForm');
         form.submit();
-    } else {
-        alert('Debe seleccionar un archivo para continuar.');
     }
 });
 

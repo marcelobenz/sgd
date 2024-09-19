@@ -21,7 +21,8 @@ class DocumentoController extends Controller
      */
     public function index()
     {
-        $documentos = Documento::all();
+        //$documentos = Documento::all();
+        $documentos = Documento::with(['categoria.parent', 'ultimaModificacion'])->get();
         return view('documentos.index', compact('documentos'));    
     }
 

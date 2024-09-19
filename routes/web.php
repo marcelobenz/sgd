@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\CategoriaController;
 
 // Route::get('/', function () {
 //     return view('login');
@@ -70,6 +71,7 @@ Route::middleware('auth')->group(function () {
     // Ruta para actualizar el perfil del usuario
     Route::post('/perfil/update', [UserProfileController::class, 'update'])->name('profile.update');
     Route::resource('documentos', DocumentoController::class);
+    Route::resource('categorias', CategoriaController::class);
 });
 
 require __DIR__.'/auth.php';

@@ -46,7 +46,7 @@ tr.dtrg-group {
         </thead>
         <tbody>
             @foreach ($documentos as $documento)
-                <tr data-category="{{ $documento->categoria->nombre_categoria }}">
+                <tr data-category="{{ $documento->categoria->parent ? $documento->categoria->parent->nombre_categoria : 'Sin categoría padre' }}/{{ $documento->categoria->nombre_categoria }}">
                     <td>{{ $documento->titulo }} [v:{{ $documento->version }}] </td>
                     <td>
                         @php
@@ -70,7 +70,7 @@ tr.dtrg-group {
                             {{ $documento->estado }}
                         </span>
                     </td>
-                    <td>{{ $documento->categoria->nombre_categoria }}</td>
+                    <td>{{ $documento->categoria->parent ? $documento->categoria->parent->nombre_categoria : '' }}/{{ $documento->categoria->nombre_categoria }}</td>
                     <td>{{ $documento->created_at }}</td>
                     <td>{{ $documento->updated_at }}</td>
                     <td>{{ $documento->ultimaModificacion->name }}</td>
@@ -158,15 +158,15 @@ $(document).ready(function() {
     //     }
     // });
 
-    // Inicialmente ocultar todas las filas agrupadas
-    // table.rows().every(function() {
-    //     var row = this.node();
-    //     if ($(row).hasClass('dtrg-group')) {
-    //         return; // No ocultar las filas de grupo
-    //     }
-    //     $(row).hide();
-    // });
-
+``    // Inicialmente ocultar todas las filas agrupadas
+     table.rows().every(function() {
+         var row = this.node();
+         if ($(row).hasClass('dtrg-group')) {
+             return; // No ocultar las filas de grupo
+         }
+         $(row).hide();
+     });
+``
     // Manejo de borrado de documentos
     let deleteForm;
     function confirmDelete(form) {

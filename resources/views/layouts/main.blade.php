@@ -55,6 +55,9 @@
                         <a class="dropdown-item" href="{{ route('documentos.index') }}">Mis Documentos</a>
                     </div>
                 </li>
+                <a class="nav-link" href="{{ route('categorias.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
+                    Categorías
+                </a>
             </ul>
         </div>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
