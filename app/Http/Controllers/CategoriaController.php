@@ -9,11 +9,18 @@ class CategoriaController extends Controller
 {
     public function index()
     {
-        $categorias = Categoria::whereNull('parent_id')->with('subcategorias')->get();
-        //$categorias = Categoria::all();
+        // Obtener todas las subcategorías y las categorías padre sin subcategorías
+        $subcategorias = Categoria::whereNotNull('parent_id')->with('parent')->get();
+        $categoriasPadreSinSubcategorias = Categoria::whereNull('parent_id')
+            ->whereDoesntHave('subcategorias')
+            ->get();
+    
+        // Combinar ambas colecciones
+        $categorias = $categoriasPadreSinSubcategorias->merge($subcategorias);
+    
         return view('categorias.index', compact('categorias'));
     }
-
+    
     public function create()
     {
         $categorias = Categoria::whereNull('parent_id')->get();

@@ -60,13 +60,13 @@
         </thead>
         <tbody>
             @foreach($categorias as $categoria)
-                <!-- Categoría padre -->
-                <tr class="categoria-parent" data-id="{{ $categoria->id }}">
+                <tr data-id="{{ $categoria->id }}" class="{{ $categoria->parent_id ? 'subcategoria' : 'categoria-parent' }}">
                     <td>
-                        <i class="fa fa-folder"></i> {{ $categoria->nombre_categoria }}
+                        <i class="fa {{ $categoria->parent_id ? 'fa-folder-open' : 'fa-folder' }}"></i> {{ $categoria->nombre_categoria }}
                     </td>
-                    <td>{{ $categoria->parent ? $categoria->parent->nombre_categoria : 'Sin padre' }}</td>
+                    <td>{{ $categoria->parent_id ? $categoria->parent->nombre_categoria : 'Sin padre' }}</td>
                     <td>
+                        <!-- Acciones para todas las categorías -->
                         <a href="{{ route('categorias.edit', $categoria->id) }}" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="Editar">
                             <i class="fa-regular fa-pen-to-square"></i>
                         </a>
@@ -79,28 +79,6 @@
                         </form>
                     </td>
                 </tr>
-
-                <!-- Subcategorías -->
-                @foreach($categoria->subcategorias as $subcategoria)
-                    <tr class="subcategoria" data-parent-id="{{ $categoria->id }}">
-                        <td>
-                            <i class="fa fa-folder-open"></i> {{ $subcategoria->nombre_categoria }}
-                        </td>
-                        <td>{{ $categoria->nombre_categoria }}</td>
-                        <td>
-                            <a href="{{ route('categorias.edit', $subcategoria->id) }}" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="Editar">
-                                <i class="fa-regular fa-pen-to-square"></i>
-                            </a>
-                            <form action="{{ route('categorias.destroy', $subcategoria->id) }}" method="POST" style="display:inline;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="Eliminar">
-                                    <i class="fa-regular fa-circle-xmark"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                @endforeach
             @endforeach
         </tbody>
     </table>
@@ -110,35 +88,25 @@
 @section('scripting')
 <script>
 $(document).ready(function() {
-    // Inicializar DataTables con agrupación por la columna Categoría Padre
     var table = $('#categoriasTable').DataTable({
-        "order": [[1, "asc"], [0, "asc"]], // Ordenar por Categoría Padre primero, luego por Nombre
+        "order": [[1, "asc"], [0, "asc"]], // Ordenar por Categoría Padre, luego Nombre
         "columnDefs": [
             { "orderable": false, "targets": 2 } // Deshabilitar la ordenación en la columna de acciones
         ],
         paging: true,
         ordering: true,
         searching: true,
-        pageLength: 8,
+        pageLength: 6,
         lengthMenu: [
             [8, 20, 50, -1],
             [8, 20, 50, "Todos"]
         ],
         rowGroup: {
             dataSrc: function(row) {
-                // Si la categoría padre es "Sin padre", no agrupar
-                return row[1] !== 'Sin padre' && row[1] !== null ? row[1] : '';
+                // Si la categoría tiene padre, usar el nombre del padre para agrupar
+                return row[1] !== 'Sin padre' ? row[1] : null;
             },
-            emptyDataGroup: null // Esto asegura que no se muestre "No group"
-        },
-        "drawCallback": function(settings) {
-            // Ocultar las filas que no tienen categoría padre (las categorías principales)
-            $('#categoriasTable tbody tr').each(function() {
-                var parentCategory = $(this).find('td').eq(1).text(); // Obtener la categoría padre
-                if (parentCategory === 'Sin padre') {
-                    $(this).hide(); // Ocultar filas sin categoría padre
-                }
-            });
+            emptyDataGroup: null // No mostrar "No group"
         }
     });
 });
