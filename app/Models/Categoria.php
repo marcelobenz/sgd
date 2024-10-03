@@ -14,7 +14,7 @@ class Categoria extends Model
     // Relación para las subcategorías (hijas)
     public function subcategorias()
     {
-        return $this->hasMany(Categoria::class, 'parent_id');
+        return $this->hasMany(Categoria::class, 'parent_id')->orderBy('nombre_categoria', 'asc');
     }
 
     // Relación para la categoría padre

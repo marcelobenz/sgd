@@ -13,6 +13,7 @@ class CategoriaController extends Controller
         $subcategorias = Categoria::whereNotNull('parent_id')->with('parent')->get();
         $categoriasPadreSinSubcategorias = Categoria::whereNull('parent_id')
             ->whereDoesntHave('subcategorias')
+            ->orderBy('nombre_categoria', 'asc')
             ->get();
     
         // Combinar ambas colecciones
