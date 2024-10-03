@@ -5,7 +5,7 @@
 <style>
 tr.dtrg-group {
     background-color: #f1f1f1;
-    font-weight: bold;
+    font-weight: normal;
     cursor: pointer; /* Esto añade un cursor de mano para indicar que es interactivo */
 }
 /* Ajustar el alto de las filas en la DataTable */
@@ -32,7 +32,7 @@ tr.dtrg-group {
         </div>
         @endif    
     </div>    
-    <table class="display responsive nowrap compact" id="documentosTable" style="margin-top: 1px; width:100%">
+    <table class="table table-bordered table-striped responsive compact" id="documentosTable" style="margin-top: 1px; width:100%">
         <thead>
             <tr>
                 <th>Título</th>
@@ -159,14 +159,14 @@ $(document).ready(function() {
     // });
 
 ``    // Inicialmente ocultar todas las filas agrupadas
-     table.rows().every(function() {
+/*      table.rows().every(function() {
          var row = this.node();
          if ($(row).hasClass('dtrg-group')) {
              return; // No ocultar las filas de grupo
          }
          $(row).hide();
      });
-``
+ */``
     // Manejo de borrado de documentos
     let deleteForm;
     function confirmDelete(form) {

@@ -37,7 +37,7 @@
 
 @section('contenidoPrincipal')
 
-<div class="container-fluid" style="margin-top: 20px;">
+<div class="container-fluid" style="margin-top: 40px;">
     <br>
     @if ($errors->any())
         <div class="alert alert-danger">
