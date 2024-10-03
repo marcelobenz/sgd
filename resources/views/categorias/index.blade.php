@@ -50,7 +50,7 @@
         @endif    
     </div>
     <!-- Tabla para las categorías -->
-    <table id="categoriasTable" class="table table-bordered table-striped responsive compact">
+    <table id="categoriasTable" class="table table-bordered table-striped responsive">
         <thead>
             <tr>
                 <th>Nombre</th>
