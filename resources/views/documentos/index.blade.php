@@ -9,6 +9,16 @@ tr.dtrg-group {
     cursor: pointer; /* Esto añade un cursor de mano para indicar que es interactivo */
 }
 /* Ajustar el alto de las filas en la DataTable */
+
+/* Ajustar el ancho de la columna "Estado" */
+#documentosTable th:nth-child(2),
+#documentosTable td:nth-child(2) {
+    width: 60px; /* Ajusta el ancho según tus necesidades */
+    white-space: nowrap; /* Evita que el texto se desborde en varias líneas */
+    text-overflow: ellipsis; /* Muestra puntos suspensivos si el texto es demasiado largo */
+    overflow: hidden;
+}
+
 </style>
 
 @endsection
@@ -66,7 +76,6 @@ tr.dtrg-group {
                             }
                         @endphp
                         <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
-
                             {{ $documento->estado }}
                         </span>
                     </td>
