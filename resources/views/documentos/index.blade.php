@@ -75,7 +75,7 @@ tr.dtrg-group {
                                     $estadoColor = 'black';
                             }
                         @endphp
-                        <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
+                        <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 100%; text-align: center;">
                             {{ $documento->estado }}
                         </span>
                     </td>
