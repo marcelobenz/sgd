@@ -19,7 +19,8 @@
 
         <div class="form-group">
             <label for="archivo">Archivo</label>
-            <input type="file" name="archivo" id="archivo" class="form-control" required>
+            <input type="file" name="archivo" id="archivo" class="form-control" required
+            accept=".pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx">
         </div>
 
         <div class="form-group">
