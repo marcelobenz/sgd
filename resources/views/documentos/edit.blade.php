@@ -5,7 +5,7 @@
 @endsection
 
 @section('contenidoPrincipal')
-<div class="container">
+<div class="container" style="margin-top: 80px;">
     <div class="w-100" style="background-color: #f8f9fa;">
         <h2 class="text-center">Editar Documento</h2>
     </div>

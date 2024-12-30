@@ -29,12 +29,12 @@ tr.dtrg-group {
     <div class="d-flex justify-content-between align-items-center mb-2">
         <a href="{{ route('documentos.create') }}" class="btn btn-custom" style="margin-bottom: 5px; margin-top: 40px;"><i class="fa-regular fa-file-lines"></i> Nuevo Documento</a>
         @if(session('success'))
-        <div id="success-alert" class="alert alert-success mb-0 ml-3">
+        <div id="success-alert" class="alert alert-success" style="margin-top: 40px; margin-left: 15px;">
             {{ session('success') }}
         </div>
         @endif
         @if(session('error'))
-        <div class="alert alert-danger mb-0 ml-3">
+        <div class="alert alert-danger" style="margin-top: 40px; margin-left: 15px;">
             {{ session('error') }}
             <!-- <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
