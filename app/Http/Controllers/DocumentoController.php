@@ -28,8 +28,12 @@ class DocumentoController extends Controller
 
     public function create()
     {
-        $categorias = Categoria::all();
-        $usuarios = User::all(); // Obtener todos los usuarios
+        //$categorias = Categoria::all();
+        $categorias = Categoria::orderBy('nombre_categoria', 'asc')->get();
+
+        //$usuarios = User::all(); // Obtener todos los usuarios
+        $usuarios = User::orderBy('email', 'asc')->get();
+
         return view('documentos.create', compact('categorias', 'usuarios'));
     }
 
