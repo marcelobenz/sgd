@@ -18,7 +18,10 @@ class CategoriaController extends Controller
     
         // Combinar ambas colecciones
         $categorias = $categoriasPadreSinSubcategorias->merge($subcategorias);
-    
+
+        // Ordenar la colección combinada por nombre de categoría
+        $categorias = $categorias->sortBy('nombre_categoria');
+
         return view('categorias.index', compact('categorias'));
     }
     
