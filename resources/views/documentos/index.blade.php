@@ -3,21 +3,84 @@
 @section('heading')
 
 <style>
-tr.dtrg-group {
-    background-color: #f1f1f1;
-    font-weight: normal;
-    cursor: pointer; /* Esto añade un cursor de mano para indicar que es interactivo */
-}
-/* Ajustar el alto de las filas en la DataTable */
+    tr.dtrg-group {
+        background-color: #f1f1f1;
+        font-weight: normal;
+        cursor: pointer; /* Esto añade un cursor de mano para indicar que es interactivo */
+    }
 
-/* Ajustar el ancho de la columna "Estado" */
-#documentosTable th:nth-child(2),
-#documentosTable td:nth-child(2) {
-    width: 60px; /* Ajusta el ancho según tus necesidades */
-    white-space: nowrap; /* Evita que el texto se desborde en varias líneas */
-    text-overflow: ellipsis; /* Muestra puntos suspensivos si el texto es demasiado largo */
-    overflow: hidden;
-}
+    /* Ajustar el alto de las filas en la DataTable */
+    #documentosTable th:nth-child(1), #documentosTable td:nth-child(1) {
+        width: 30%; /* Título */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #documentosTable th:nth-child(2), #documentosTable td:nth-child(2) {
+        width: 10%; /* Estado */
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    #documentosTable th:nth-child(3), #documentosTable td:nth-child(3) {
+        width: 15%; /* Categoría */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #documentosTable th:nth-child(4), #documentosTable td:nth-child(4),
+    #documentosTable th:nth-child(5), #documentosTable td:nth-child(5) {
+        width: 10%; /* Fechas */
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    #documentosTable th:nth-child(6), #documentosTable td:nth-child(6) {
+        width: 15%; /* Usuario */
+        white-space: nowrap;
+    }
+
+    #documentosTable th:nth-child(7), #documentosTable td:nth-child(7) {
+        width: 10%; /* Acciones */
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* Ajustes de estilo para la tabla en pantallas pequeñas */
+    @media (max-width: 768px) {
+        #documentosTable th, #documentosTable td {
+            font-size: 12px;
+            padding: 5px;
+        }
+
+        .btn {
+            font-size: 10px; /* Botones más pequeños */
+            padding: 2px 4px;
+        }
+    }
+
+    .estado {
+        display: inline-block;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: white;
+        text-align: center;
+    }
+
+    .estado-en-curso {
+        background-color: orange;
+    }
+
+    .estado-pendiente {
+        background-color: red;
+    }
+
+    .estado-aprobado {
+        background-color: green;
+    }
 
 </style>
 
@@ -36,9 +99,6 @@ tr.dtrg-group {
         @if(session('error'))
         <div class="alert alert-danger" style="margin-top: 40px; margin-left: 15px;">
             {{ session('error') }}
-            <!-- <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button> -->
         </div>
         @endif    
     </div>    
@@ -75,7 +135,7 @@ tr.dtrg-group {
                                     $estadoColor = 'black';
                             }
                         @endphp
-                        <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 100%; text-align: center;">
+                        <span class="estado estado-{{ strtolower(str_replace(' ', '-', $documento->estado)) }}">
                             {{ $documento->estado }}
                         </span>
                     </td>
@@ -87,13 +147,10 @@ tr.dtrg-group {
                         <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.show', 'permiso' => 'puedeLeer']) }}" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="Ver"><i class="fa-solid fa-eye"></i></a>
                         <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.edit', 'permiso' => 'puedeEscribir']) }}" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="Editar"><i class="fa-regular fa-pen-to-square"></i></a>
 
-                        <!-- Botón de eliminación con confirmación -->
-                        <!-- <form action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este documento?');"> -->
                         <form id="delete-form-{{ $documento->id }}" action="{{ route('documentos.destroy', $documento) }}" method="POST" style="display:inline;">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-light" onclick="confirmAndRedirect(event,document.getElementById('delete-form-{{ $documento->id }}'));" data-toggle="tooltip" data-placement="top" title="Eliminar"><i class="fa-regular fa-circle-xmark"></i></button>
-                            <!-- <button type="submit" class="btn btn-light"><i class="fa-regular fa-circle-xmark"></i></button> -->
                         </form>
                     </td>
                 </tr>
@@ -142,10 +199,20 @@ $(document).ready(function() {
         rowGroup: {
             dataSrc: 2 // Agrupa por la columna de categoría (índice 2)
         },
-        responsive: true
+        responsive: true,
+        autoWidth: false, // Desactiva el ajuste automático del ancho
+        columnDefs: [
+            { width: "30%", targets: 0 }, // Título
+            { width: "10%", targets: 1 }, // Estado
+            { width: "15%", targets: 2 }, // Categoría
+            { width: "10%", targets: 3 }, // Creado
+            { width: "10%", targets: 4 }, // Modificado
+            { width: "15%", targets: 5 }, // Usuario
+            { width: "10%", targets: 6 }  // Acciones
+        ]
     });
 
-    // Manejador para expandir/cerrar filas al hacer clic en la fila agrupada
+    // Expansión y contracción de categorías al hacer clic en la fila de agrupación
     $('#documentosTable tbody').on('click', 'tr.dtrg-group', function() {
         var groupName = $(this).children('td').text(); // Obtener el nombre del grupo (categoría)
         var rows = table.rows().nodes(); // Obtener todas las filas de la tabla
@@ -160,22 +227,14 @@ $(document).ready(function() {
         $(this).toggleClass('expanded'); // Alternar la clase para indicar que está expandido/colapsado
     });
 
-    // Ocultar todas las filas de documentos inicialmente
-    // $('#documentosTable tbody tr').each(function() {
-    //     if (!$(this).hasClass('dtrg-group')) {
-    //         $(this).hide(); // Oculta todas las filas de documentos
-    //     }
-    // });
+    // Ocultar todas las filas inicialmente (excepto las filas de agrupación)
+    table.rows().every(function() {
+        var row = this.node();
+        if (!$(row).hasClass('dtrg-group')) {
+            $(row).hide(); // Oculta todas las filas que no son de agrupación
+        }
+    });
 
-``    // Inicialmente ocultar todas las filas agrupadas
-/*      table.rows().every(function() {
-         var row = this.node();
-         if ($(row).hasClass('dtrg-group')) {
-             return; // No ocultar las filas de grupo
-         }
-         $(row).hide();
-     });
- */``
     // Manejo de borrado de documentos
     let deleteForm;
     function confirmDelete(form) {
@@ -203,22 +262,5 @@ $(document).ready(function() {
         }
     });
 });
-
-function confirmAndRedirect(event, form) {
-    event.preventDefault();
-    Swal.fire({
-        title: 'Eliminar',
-        text: '¿Estás seguro de que deseas eliminar este documento?',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            form.submit();
-        }
-    });
-}
-
 </script>
-
 @endsection
