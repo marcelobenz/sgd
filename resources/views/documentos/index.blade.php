@@ -82,6 +82,55 @@
         background-color: green;
     }
 
+
+
+/* Estilo para el switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(14px);
+}
+
+
 </style>
 
 @endsection
@@ -90,7 +139,13 @@
 <div class="container-fluid px-3" style="margin-top: 40px;">
     <div style="margin-top: 40px;"></div>
     <div class="d-flex justify-content-between align-items-center mb-2">
-        <a href="{{ route('documentos.create') }}" class="btn btn-custom" style="margin-bottom: 5px; margin-top: 40px;"><i class="fa-regular fa-file-lines"></i> Nuevo Documento</a>
+    <label class="switch" style="margin-top: 30px;">
+        <input type="checkbox" id="toggleExpandAll">
+        <span class="slider round"></span>
+    </label>
+
+    <a href="{{ route('documentos.create') }}" class="btn btn-custom" style="margin-bottom: 5px; margin-top: 40px;"><i class="fa-regular fa-file-lines"></i> Nuevo Documento</a>
+
         @if(session('success'))
         <div id="success-alert" class="alert alert-success" style="margin-top: 40px; margin-left: 15px;">
             {{ session('success') }}
@@ -225,6 +280,30 @@ $(document).ready(function() {
         });
 
         $(this).toggleClass('expanded'); // Alternar la clase para indicar que está expandido/colapsado
+    });
+
+    // Funcionalidad de Expandir/Contraer todo
+    $('#toggleExpandAll').on('change', function () {
+        var isChecked = $(this).is(':checked'); // Verifica si el switch está activado
+        var rows = table.rows().nodes(); // Obtiene todas las filas de la tabla
+
+        $(rows).each(function () {
+            var row = $(this);
+            if (!row.hasClass('dtrg-group')) {
+                if (isChecked) {
+                    row.show(); // Expande todas las filas
+                } else {
+                    row.hide(); // Contrae todas las filas
+                }
+            }
+        });
+
+        // Cambia la clase de las categorías agrupadas
+        if (isChecked) {
+            $('tr.dtrg-group').addClass('expanded');
+        } else {
+            $('tr.dtrg-group').removeClass('expanded');
+        }
     });
 
     // Ocultar todas las filas inicialmente (excepto las filas de agrupación)
