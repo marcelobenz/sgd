@@ -28,7 +28,7 @@
     /* Columna Título */
     #documentosTable th:nth-child(1),
     #documentosTable td:nth-child(1) {
-        width: 20%; /* Título */
+        width: 30%; /* Título */
     }
 
     /* Columna Estado */
@@ -40,23 +40,24 @@
 
     /* Columna Categoría */
     #documentosTable th:nth-child(3),
-    #documentosTable td:nth-child(3) {
+    #documentosTable td:nth-child(3),
+    #documentosTable th:nth-child(4),
+    #documentosTable td:nth-child(4)
+    {
         width: 15%; /* Categoría */
     }
 
     /* Columnas Fecha */
-    #documentosTable th:nth-child(4),
-    #documentosTable td:nth-child(4),
     #documentosTable th:nth-child(5),
     #documentosTable td:nth-child(5) {
-        width: 15%; /* Fechas */
+        width: 10%; /* Fechas */
         text-align: center; /* Centrar texto */
     }
 
     /* Columna Usuario */
     #documentosTable th:nth-child(6),
     #documentosTable td:nth-child(6) {
-        width: 15%; /* Usuario */
+        width: 10%; /* Usuario */
     }
 
     /* Columna Acciones */
@@ -283,13 +284,13 @@ $(document).ready(function() {
         responsive: false,
         autoWidth: false, // Desactiva el ajuste automático del ancho
         columnDefs: [
-            { width: "20%", targets: 0 }, // Título
+            { width: "30%", targets: 0 }, // Título
             { width: "10%", targets: 1 }, // Estado
             { width: "15%", targets: 2 }, // Categoría
             { width: "10%", targets: 3 }, // Creado
             { width: "15%", targets: 4 }, // Modificado
-            { width: "15%", targets: 5 }, // Usuario
-            { width: "15%", targets: 6 }  // Acciones
+            { width: "10%", targets: 5 }, // Usuario
+            { width: "10%", targets: 6 }  // Acciones
         ]
     });
 
