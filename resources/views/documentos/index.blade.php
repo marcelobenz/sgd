@@ -3,49 +3,67 @@
 @section('heading')
 
 <style>
+    /* Estilo para las filas agrupadas */
     tr.dtrg-group {
         background-color: #f1f1f1;
         font-weight: normal;
-        cursor: pointer; /* Esto añade un cursor de mano para indicar que es interactivo */
+        cursor: pointer; /* Añade un cursor de mano para indicar que es interactivo */
     }
 
-    /* Ajustar el alto de las filas en la DataTable */
-    #documentosTable th:nth-child(1), #documentosTable td:nth-child(1) {
-        width: 30%; /* Título */
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    /* General para todas las columnas */
+    #documentosTable th,
+    #documentosTable td {
+        white-space: nowrap; /* Evita que el texto se ajuste a varias líneas */
+        overflow: hidden; /* Oculta contenido desbordado */
+        text-overflow: ellipsis; /* Muestra puntos suspensivos para texto largo */
     }
 
-    #documentosTable th:nth-child(2), #documentosTable td:nth-child(2) {
+    /* Mantener el diseño fijo */
+    #documentosTable {
+        table-layout: fixed; /* Controlar las proporciones de las columnas */
+        width: 100%; /* Usar el ancho total disponible */
+        /*border-collapse: collapse;*/ /* Ajusta las líneas de las celdas */
+    }
+
+    /* Columna Título */
+    #documentosTable th:nth-child(1),
+    #documentosTable td:nth-child(1) {
+        width: 20%; /* Título */
+    }
+
+    /* Columna Estado */
+    #documentosTable th:nth-child(2),
+    #documentosTable td:nth-child(2) {
         width: 10%; /* Estado */
-        text-align: center;
-        white-space: nowrap;
+        text-align: center; /* Centrar texto */
     }
 
-    #documentosTable th:nth-child(3), #documentosTable td:nth-child(3) {
+    /* Columna Categoría */
+    #documentosTable th:nth-child(3),
+    #documentosTable td:nth-child(3) {
         width: 15%; /* Categoría */
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
-    #documentosTable th:nth-child(4), #documentosTable td:nth-child(4),
-    #documentosTable th:nth-child(5), #documentosTable td:nth-child(5) {
-        width: 10%; /* Fechas */
-        text-align: center;
-        white-space: nowrap;
+    /* Columnas Fecha */
+    #documentosTable th:nth-child(4),
+    #documentosTable td:nth-child(4),
+    #documentosTable th:nth-child(5),
+    #documentosTable td:nth-child(5) {
+        width: 15%; /* Fechas */
+        text-align: center; /* Centrar texto */
     }
 
-    #documentosTable th:nth-child(6), #documentosTable td:nth-child(6) {
+    /* Columna Usuario */
+    #documentosTable th:nth-child(6),
+    #documentosTable td:nth-child(6) {
         width: 15%; /* Usuario */
-        white-space: nowrap;
     }
 
-    #documentosTable th:nth-child(7), #documentosTable td:nth-child(7) {
+    /* Columna Acciones */
+    #documentosTable th:nth-child(7),
+    #documentosTable td:nth-child(7) {
         width: 10%; /* Acciones */
-        text-align: center;
-        white-space: nowrap;
+        text-align: center; /* Centrar botones */
     }
 
     /* Ajustes de estilo para la tabla en pantallas pequeñas */
@@ -59,8 +77,19 @@
             font-size: 10px; /* Botones más pequeños */
             padding: 2px 4px;
         }
+
+        /* Ocultar columnas específicas en pantallas pequeñas */
+        #documentosTable th:nth-child(1), /* Título */
+        #documentosTable td:nth-child(1),
+        #documentosTable th:nth-child(3), /* Categoría */
+        #documentosTable td:nth-child(3),
+        #documentosTable th:nth-child(6), /* Usuario */
+        #documentosTable td:nth-child(6) {
+            display: none; /* Ocultar estas columnas en pantallas pequeñas */
+        }
     }
 
+    /* Estilos para los estados */
     .estado {
         display: inline-block;
         padding: 2px 5px;
@@ -82,56 +111,53 @@
         background-color: green;
     }
 
+    /* Estilo para el switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 34px;
+        height: 20px;
+    }
 
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
 
-/* Estilo para el switch */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 34px;
-    height: 20px;
-}
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 20px;
+    }
 
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
 
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 20px;
-}
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
 
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 14px;
-    width: 14px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: #2196F3;
-}
-
-input:checked + .slider:before {
-    transform: translateX(14px);
-}
-
-
+    input:checked + .slider:before {
+        transform: translateX(14px);
+    }
 </style>
+
 
 @endsection
 
@@ -254,16 +280,16 @@ $(document).ready(function() {
         rowGroup: {
             dataSrc: 2 // Agrupa por la columna de categoría (índice 2)
         },
-        responsive: true,
+        responsive: false,
         autoWidth: false, // Desactiva el ajuste automático del ancho
         columnDefs: [
-            { width: "30%", targets: 0 }, // Título
+            { width: "20%", targets: 0 }, // Título
             { width: "10%", targets: 1 }, // Estado
             { width: "15%", targets: 2 }, // Categoría
             { width: "10%", targets: 3 }, // Creado
-            { width: "10%", targets: 4 }, // Modificado
+            { width: "15%", targets: 4 }, // Modificado
             { width: "15%", targets: 5 }, // Usuario
-            { width: "10%", targets: 6 }  // Acciones
+            { width: "15%", targets: 6 }  // Acciones
         ]
     });
 
