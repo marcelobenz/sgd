@@ -30,6 +30,9 @@
                         case 'aprobado':
                             $estadoColor = 'green';
                             break;
+                        case 'registro':
+                            $estadoColor = 'red';
+                            break;
                         default:
                             $estadoColor = 'black';
                     }

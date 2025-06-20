@@ -32,6 +32,11 @@
             </select>
         </div>
 
+        <div class="form-group form-check mt-2">
+            <input type="checkbox" name="sin_aprobacion" id="sin_aprobacion" class="form-check-input">
+            <label for="sin_aprobacion" class="form-check-label">No requiere aprobación</label>
+        </div>
+
         <div class="form-group">
             <label for="contenido">Contenido</label>
             <textarea name="contenido" id="contenido" class="form-control" required></textarea>

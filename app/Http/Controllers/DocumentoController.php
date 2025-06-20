@@ -49,12 +49,13 @@ class DocumentoController extends Controller
 
         $file = $request->file('archivo');
         $path = $file->store('documentos', 's3');
+        $estado = $request->has('sin_aprobacion') ? 'registro' : 'en curso';
     
         $documento = Documento::create([
             'titulo' => $validated['titulo'],
             'path' => $path,
             'contenido' => $request->input('contenido'),
-            'estado' => 'en curso',
+            'estado' => $estado,
             'id_categoria' => $validated['id_categoria'],
             'id_usr_creador' => auth()->id(),
             'id_usr_ultima_modif' => auth()->id(),

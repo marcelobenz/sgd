@@ -112,6 +112,10 @@
         background-color: green;
     }
 
+    .estado-registro {
+        background-color: blue;
+    }
+
     /* Estilo para el switch */
     .switch {
         position: relative;
@@ -212,6 +216,9 @@
                                     break;
                                 case 'aprobado':
                                     $estadoColor = 'green';
+                                    break;
+                                case 'registro':
+                                    $estadoColor = 'blue';
                                     break;
                                 default:
                                     $estadoColor = 'black';

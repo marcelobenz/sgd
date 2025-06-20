@@ -89,24 +89,39 @@
 
                 <table class="table table-bordered w-100">
                     <thead>
-                        <th colspan="2">Versión Actual</th>
+                        <th colspan="4">Versión Actual</th>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Documento:</td><td>{{ $documento->titulo }}</td>
+                            <td>Documento:</td><td colspan=3>{{ $documento->titulo }}</td>
                         </tr>
                         <tr>
-                            <td>Versión: </td><td>{{ $documento->version }}
-                            <button type="button" class="btn btn-light btn-link p-0" onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')" data-toggle="tooltip" data-placement="top" title="Ver version actual">
+                            <td>Versión:</td>
+                            <td>{{ $documento->version }}</td>
+                            <td class="text-center">
+                                <button type="button"
+                                        class="btn btn-light btn-link mx-1"
+                                        onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')"
+                                        data-toggle="tooltip" data-placement="top"
+                                        title="Ver versión actual">
                                     <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </td>
+                            <td class="text-center">
+                                <button type="button"
+                                        class="btn btn-light btn-link mx-1"
+                                        onclick="mostrarContenido(`{{ addslashes($documento->contenido ?? 'Sin contenido') }}`)"
+                                        data-toggle="tooltip" data-placement="top"
+                                        title="Ver detalle versión">
+                                    <i class="fa-solid fa-file-lines"></i>
                                 </button>
                             </td>
                         </tr>
                         <tr>
-                            <td>Categoría: </td><td>{{ $documento->categoria->nombre_categoria }}</td>
+                            <td>Categoría: </td><td> colspan=3{{ $documento->categoria->nombre_categoria }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align: middle;">Estado: </td><td>
+                            <td style="vertical-align: middle;">Estado: </td><td colspan=3>
                                 @php
                                     $estadoColor = '';
                                     switch($documento->estado) {
@@ -119,6 +134,9 @@
                                         case 'aprobado':
                                             $estadoColor = 'green';
                                             break;
+                                        case 'registro':
+                                            $estadoColor = 'blue';
+                                            break;
                                         default:
                                             $estadoColor = 'black';
                                     }
@@ -129,19 +147,19 @@
                             </td>
                         </tr>
                         <tr>
-                            <td>Creador: </td><td> {{ $documento->creador->name }}</td>
+                            <td>Creador: </td><td colspan=3> {{ $documento->creador->name }}</td>
                         </tr>
                         <tr>
-                            <td>Fecha: </td><td> {{ $documento->created_at }}</td>
+                            <td>Fecha: </td><td colspan=3> {{ $documento->created_at }}</td>
                         </tr>
                         <tr>
-                            <td>Último Editor:  </td><td>{{ $documento->ultimaModificacion->name }}</td>
+                            <td>Último Editor:  </td><td colspan=3>{{ $documento->ultimaModificacion->name }}</td>
                         </tr>
                         <tr>
-                            <td>Fecha:  </td><td>{{ $documento->updated_at }}</td>
+                            <td>Fecha:  </td><td colspan=3>{{ $documento->updated_at }}</td>
                         </tr>
                         <tr>
-                            <th colspan="2">
+                            <th colspan="4">
                                 <a href="#" data-toggle="collapse" data-target="#collapseVersAnteriores" aria-expanded="false" aria-controls="collapseVersAnteriores">
                                     Versiones Anteriores
                                 </a>
@@ -156,7 +174,7 @@
                             <tr>
                                 <th scope="col">#</th>
                                 <th scope="col">Fecha</th>
-                                <th scope="col" colspan=2>Acciones</th>
+                                <th scope="col" colspan=3>Acciones</th>
                             </tr>
                         </thead>
                         @foreach ($documento->historial as $index => $versionhistorial)
@@ -180,6 +198,16 @@
                                     data-toggle="tooltip" data-placement="top" title="Ver esta version">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button"
+                                                class="btn btn-light p-0"
+                                                onclick="mostrarContenido(`{{ addslashes($versionhistorial->contenido ?? 'Sin contenido') }}`)"
+                                                data-toggle="tooltip"
+                                                data-placement="top"
+                                                title="Ver contenido de esta versión">
+                                            <i class="fa-solid fa-file-lines"></i>
+                                        </button>
                                     </td>
                             </tr>
                         @endforeach
@@ -272,6 +300,26 @@
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="confirmButton">Confirmar</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mostrar contenido -->
+    <div class="modal fade" id="contenidoModal" tabindex="-1" role="dialog" aria-labelledby="contenidoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Info de la versión</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="contenidoModalBody" style="white-space: pre-wrap; font-family: monospace;">
+                Cargando contenido...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
             </div>
         </div>
     </div>
@@ -412,6 +460,12 @@ document.getElementById('toggleDetails').addEventListener('click', function() {
         collapseDetails.style.display = 'none';
     }
 });
+
+function mostrarContenido(contenido) {
+    const modalBody = document.getElementById('contenidoModalBody');
+    modalBody.textContent = contenido;
+    $('#contenidoModal').modal('show');
+}
 
 </script>
 
