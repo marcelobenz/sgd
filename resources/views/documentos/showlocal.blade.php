@@ -110,8 +110,7 @@
                             <td class="text-center">
                                 <button type="button"
                                         class="btn btn-light btn-link mx-1"
-                                        onclick="mostrarContenido(`{{ addslashes($documento->contenido ?? 'Sin contenido') }}`)"
-                                        data-toggle="tooltip" data-placement="top"
+                                        onclick="mostrarPopoverContenido(event, `{{ addslashes($documento->contenido ?? 'Sin contenido') }}`)"
                                         title="Ver detalle versión">
                                     <i class="fa-solid fa-file-lines"></i>
                                 </button>
@@ -202,7 +201,7 @@
                                     <td class="text-center">
                                         <button type="button"
                                                 class="btn btn-light p-0"
-                                                onclick="mostrarContenido(`{{ addslashes($versionhistorial->contenido ?? 'Sin contenido') }}`)"
+                                                onclick="mostrarPopoverContenido(event, `{{ addslashes($versionhistorial->contenido ?? 'Sin contenido') }}`)"
                                                 data-toggle="tooltip"
                                                 data-placement="top"
                                                 title="Ver contenido de esta versión">
@@ -304,26 +303,10 @@
         </div>
     </div>
 
-    <!-- Modal para mostrar contenido -->
-    <div class="modal fade" id="contenidoModal" tabindex="-1" role="dialog" aria-labelledby="contenidoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Info de la versión</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="contenidoModalBody" style="white-space: pre-wrap; font-family: monospace;">
-                Cargando contenido...
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-            </div>
-            </div>
-        </div>
-    </div>
+</div>
 
+<div id="contenidoPopover" 
+    style="display:none; position:absolute; z-index:1050; max-width:300px; background:#fff; border:1px solid #ccc; border-radius:5px; box-shadow:0 2px 10px rgba(0,0,0,0.2); padding:10px; white-space:pre-wrap;">
 </div>
 
 @endsection
@@ -331,141 +314,168 @@
 @section('scripting')
 <script>
 
-//Maneja la apertura de la modal para aprobar
-$(document).ready(
-function(){
-    $('#AprobarModalBtn').on('click', function(){
-        $('#aprobarModal').modal('show');
-    });
-});
+    let popoverTimeout = null;
 
-//Maneja la apertura de la modal para descargar
-$(document).ready(function(){
-    $('#uploadModalBtn').on('click', function(){
-        $('#uploadModal').modal('show');
-    });
-});
-
-//Controla la accion en la modal de upload
-document.getElementById('uploadBtn').addEventListener('click', function() {
-    const fileInput = document.getElementById('nuevoArchivo');
-    const contenidoActualizado = document.getElementById('contenidoActualizado').value;
-    
-    let valid = true;
-
-    // Validar archivo
-    if (fileInput.files.length === 0) {
-        alert('Debe seleccionar un archivo para continuar.');
-        valid = false;
-    }
-
-    // Validar contenido actualizado
-    if (contenidoActualizado.trim() === '') {
-        alert('Debe completar el contenido para continuar.');
-        valid = false;
-    }
-
-    // Si ambos campos son válidos, enviar el formulario
-    if (valid) {
-        const form = document.getElementById('uploadForm');
-        form.submit();
-    }
-});
-
-//Controla la accion de revert
-function submitRevertForm(link) {
-    var formId = link.getAttribute('data-form-id');
-    var form = document.getElementById(formId);
-
-    if (form) {
-        // Mostrar el modal de confirmación
-        $('#confirmModal').modal('show');
-
-        // Agregar un evento click al botón de confirmación
-        document.getElementById('confirmButton').onclick = function() {
-            form.submit();
-        };
-    } else {
-        console.error('Formulario no encontrado:', formId);
-    }
-}
-
-// Para previsualizar la versión historica
-function viewVersion(url, extension) {
-        var iframe = document.getElementById('documentViewer');
-        var viewerUrl;
-
-        switch (extension) {
-            case 'pdf':
-                viewerUrl = `https://docs.google.com/viewer?url=${url}&embedded=true`;
-                break;
-            case 'docx':
-            case 'xlsx':
-            case 'pptx':
-                viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${url}`;
-                break;
-            default:
-                alert('Formato no soportado para vista previa');
-                return;
-        }
-        
-        iframe.src = viewerUrl;
-    }
-
-// Para la tabla de arriba (versión actual)
-document.querySelector('.btn-link').addEventListener('click', function() {
-    // Desselecciona todas las filas en la tabla de versiones anteriores
-    var rows = document.querySelectorAll('.table-row');
-    rows.forEach(function(row) {
-        row.classList.remove('selected-row');
-    });
-});
-
-// Asigna el evento click a todas las filas de la tabla de versiones anteriores
-document.querySelectorAll('.table-row').forEach(function(row) {
-    row.addEventListener('click', function() {
-        // Elimina la clase 'selected-row' de todas las filas
-        document.querySelectorAll('.table-row').forEach(function(r) {
-            r.classList.remove('selected-row');
+    //Maneja la apertura de la modal para aprobar
+    $(document).ready(
+    function(){
+        $('#AprobarModalBtn').on('click', function(){
+            $('#aprobarModal').modal('show');
         });
-
-        // Añade la clase 'selected-row' a la fila actual
-        this.classList.add('selected-row');
     });
-});
 
-//Para cargar el documento en el viewer apenas carga la vista 
-document.addEventListener('DOMContentLoaded', function() {
-    // Llame a viewVersion con la URL del documento actual y su extensión
-    var currentDocumentUrl = '{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}';
-    var currentDocumentExtension = '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}';
-    viewVersion(currentDocumentUrl, currentDocumentExtension);
-});
+    //Maneja la apertura de la modal para descargar
+    $(document).ready(function(){
+        $('#uploadModalBtn').on('click', function(){
+            $('#uploadModal').modal('show');
+        });
+    });
 
-//Para manejar el colapso de la columna izquierda
-document.getElementById('toggleDetails').addEventListener('click', function() {
-    var colInfo = document.getElementById('colInfoDocumento');
-    var colContent = document.getElementById('colContenidoDocumento');
-    var collapseDetails = document.getElementById('collapseDetalles');
+    //Controla la accion en la modal de upload
+    document.getElementById('uploadBtn').addEventListener('click', function() {
+        const fileInput = document.getElementById('nuevoArchivo');
+        const contenidoActualizado = document.getElementById('contenidoActualizado').value;
+        
+        let valid = true;
 
-    if (colInfo.classList.contains('collapsed')) {
-        // Expande la columna de información del documento
-        colInfo.classList.remove('collapsed');
-        colContent.classList.remove('expanded');
-        collapseDetails.style.display = 'block';
-    } else {
-        // Colapsa la columna de información del documento
-        colInfo.classList.add('collapsed');
-        colContent.classList.add('expanded');
-        collapseDetails.style.display = 'none';
+        // Validar archivo
+        if (fileInput.files.length === 0) {
+            alert('Debe seleccionar un archivo para continuar.');
+            valid = false;
+        }
+
+        // Validar contenido actualizado
+        if (contenidoActualizado.trim() === '') {
+            alert('Debe completar el contenido para continuar.');
+            valid = false;
+        }
+
+        // Si ambos campos son válidos, enviar el formulario
+        if (valid) {
+            const form = document.getElementById('uploadForm');
+            form.submit();
+        }
+    });
+
+    //Controla la accion de revert
+    function submitRevertForm(link) {
+        var formId = link.getAttribute('data-form-id');
+        var form = document.getElementById(formId);
+
+        if (form) {
+            // Mostrar el modal de confirmación
+            $('#confirmModal').modal('show');
+
+            // Agregar un evento click al botón de confirmación
+            document.getElementById('confirmButton').onclick = function() {
+                form.submit();
+            };
+        } else {
+            console.error('Formulario no encontrado:', formId);
+        }
     }
-});
 
-function mostrarContenido(contenido) {
-    const modalBody = document.getElementById('contenidoModalBody');
-    modalBody.textContent = contenido;
-    $('#contenidoModal').modal('show');
-}
+    // Para previsualizar la versión historica
+    function viewVersion(url, extension) {
+            var iframe = document.getElementById('documentViewer');
+            var viewerUrl;
+
+            switch (extension) {
+                case 'pdf':
+                    viewerUrl = `https://docs.google.com/viewer?url=${url}&embedded=true`;
+                    break;
+                case 'docx':
+                case 'xlsx':
+                case 'pptx':
+                    viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${url}`;
+                    break;
+                default:
+                    alert('Formato no soportado para vista previa');
+                    return;
+            }
+            
+            iframe.src = viewerUrl;
+        }
+
+    // Para la tabla de arriba (versión actual)
+    document.querySelector('.btn-link').addEventListener('click', function() {
+        // Desselecciona todas las filas en la tabla de versiones anteriores
+        var rows = document.querySelectorAll('.table-row');
+        rows.forEach(function(row) {
+            row.classList.remove('selected-row');
+        });
+    });
+
+    // Asigna el evento click a todas las filas de la tabla de versiones anteriores
+    document.querySelectorAll('.table-row').forEach(function(row) {
+        row.addEventListener('click', function() {
+            // Elimina la clase 'selected-row' de todas las filas
+            document.querySelectorAll('.table-row').forEach(function(r) {
+                r.classList.remove('selected-row');
+            });
+
+            // Añade la clase 'selected-row' a la fila actual
+            this.classList.add('selected-row');
+        });
+    });
+
+    //Para cargar el documento en el viewer apenas carga la vista 
+    document.addEventListener('DOMContentLoaded', function() {
+        // Llame a viewVersion con la URL del documento actual y su extensión
+        var currentDocumentUrl = '{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}';
+        var currentDocumentExtension = '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}';
+        viewVersion(currentDocumentUrl, currentDocumentExtension);
+    });
+
+    //Para manejar el colapso de la columna izquierda
+    document.getElementById('toggleDetails').addEventListener('click', function() {
+        var colInfo = document.getElementById('colInfoDocumento');
+        var colContent = document.getElementById('colContenidoDocumento');
+        var collapseDetails = document.getElementById('collapseDetalles');
+
+        if (colInfo.classList.contains('collapsed')) {
+            // Expande la columna de información del documento
+            colInfo.classList.remove('collapsed');
+            colContent.classList.remove('expanded');
+            collapseDetails.style.display = 'block';
+        } else {
+            // Colapsa la columna de información del documento
+            colInfo.classList.add('collapsed');
+            colContent.classList.add('expanded');
+            collapseDetails.style.display = 'none';
+        }
+    });
+
+
+    //Muestra detalle de version
+    function mostrarPopoverContenido(event, contenido) {
+        const popover = document.getElementById('contenidoPopover');
+        popover.innerText = contenido;
+        popover.style.display = 'block';
+
+        // Posicionar al lado derecho del botón
+        const rect = event.currentTarget.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+        popover.style.top = (rect.top + scrollTop) + 'px';
+        popover.style.left = (rect.right + scrollLeft + 10) + 'px';
+
+        // Reiniciar timeout
+        clearTimeout(popoverTimeout);
+        popoverTimeout = setTimeout(() => {
+            popover.style.display = 'none';
+        }, 3000);
+    }
+
+    // Ocultar el popover al hacer clic fuera
+    document.addEventListener('click', function (e) {
+        const popover = document.getElementById('contenidoPopover');
+        if (!popover.contains(e.target) && !e.target.closest('.btn-light')) {
+            popover.style.display = 'none';
+            clearTimeout(popoverTimeout);
+        }
+    });
 
 </script>
 
