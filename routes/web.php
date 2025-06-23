@@ -57,7 +57,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/documentos/{id}/validapermiso', [DocumentoController::class, 'validaPermiso'])->name('documentos.validaPermiso');
     Route::post('/documentos/{id}/aprobar', [DocumentoController::class, 'aprobar'])->name('documentos.aprobar');
     Route::put('/documentos/{id}/addVersion', [DocumentoController::class, 'addVersion'])->name('documentos.addVersion');
-    Route::put('/documentos/{id}', [DocumentoController::class, 'update'])->name('documentos.update');
+    #Route::put('/documentos/{id}', [DocumentoController::class, 'update'])->name('documentos.update');
     Route::post('documentos/{documento}/revert/{version}', [DocumentoController::class, 'revertToVersion'])->name('documentos.revert');
     Route::get('/documentos/download/{id}', [DocumentoController::class, 'download'])->name('documentos.download');
     Route::view('/','layouts/main')->name('main');
