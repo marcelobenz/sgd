@@ -117,7 +117,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td>Categoría: </td><td> colspan=3{{ $documento->categoria->nombre_categoria }}</td>
+                            <td>Categoría: </td><td colspan=3> {{ $documento->categoria->nombre_categoria }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align: middle;">Estado: </td><td colspan=3>
