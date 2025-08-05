@@ -267,10 +267,13 @@ class DocumentoController extends Controller
 
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
-            'nuevoArchivo' => 'file',
+            //'nuevoArchivo' => 'file',
+            'nuevoArchivo' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx',
             'id_categoria' => 'required|exists:categorias,id',
             'contenidoActualizado' => 'required|string', // Agregar validación para el contenido actualizado
-        ]);
+            ], [
+            'nuevoArchivo.mimes' => 'Solo se permiten archivos PDF, Word, Excel o PowerPoint.',
+            ]);
 
         // Subir el nuevo archivo a S3 si se proporciona
         if ($request->hasFile('nuevoArchivo')) {

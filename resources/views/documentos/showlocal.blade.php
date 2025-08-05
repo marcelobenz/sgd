@@ -146,6 +146,12 @@
                             </td>
                         </tr>
                         <tr>
+                            <td>Aprobador: </td><td colspan=3> {{ $documento->aprobador->name }}</td>
+                        </tr>
+                        <tr>
+                            <td>Fecha: </td><td colspan=3> {{ $documento->fecha_aprobacion }}</td>
+                        </tr>
+                        <tr>
                             <td>Creador: </td><td colspan=3> {{ $documento->creador->name }}</td>
                         </tr>
                         <tr>
