@@ -145,12 +145,14 @@
                                 </span>
                             </td>
                         </tr>
-                        <tr>
-                            <td>Aprobador: </td><td colspan=3> {{ $documento->aprobador->name }}</td>
-                        </tr>
-                        <tr>
-                            <td>Fecha: </td><td colspan=3> {{ $documento->fecha_aprobacion }}</td>
-                        </tr>
+                        @if($documento->aprobador)
+                            <tr>
+                                <td>Aprobador: </td><td colspan=3> {{ $documento->aprobador->name }}</td>
+                            </tr>
+                            <tr>
+                                <td>Fecha: </td><td colspan=3> {{ $documento->fecha_aprobacion }}</td>
+                            </tr>
+                        @endif
                         <tr>
                             <td>Creador: </td><td colspan=3> {{ $documento->creador->name }}</td>
                         </tr>

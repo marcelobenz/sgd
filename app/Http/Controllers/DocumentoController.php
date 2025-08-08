@@ -298,7 +298,6 @@ class DocumentoController extends Controller
                          ->with('success', 'Documento actualizado y nueva versión creada');
     }
     
-    
     protected function archiveCurrentVersion($documento)
     {
         // Guardar la versión actual del documento en el historial
