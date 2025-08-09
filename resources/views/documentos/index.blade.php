@@ -206,27 +206,25 @@
                     <td>{{ $documento->titulo }} [v:{{ $documento->version }}] </td>
                     <td>
                         @php
-                            $estadoColor = '';
-                            switch($documento->estado) {
+                            switch ($documento->estado) {
                                 case 'en curso':
-                                    $estadoColor = 'orange';
+                                    $estadoClase = 'estado-en-curso';
                                     break;
                                 case 'pendiente de aprobación':
-                                    $estadoColor = 'red';
+                                    $estadoClase = 'estado-pendiente';
                                     break;
                                 case 'aprobado':
-                                    $estadoColor = 'green';
+                                    $estadoClase = 'estado-aprobado';
                                     break;
                                 case 'registro':
-                                    $estadoColor = 'blue';
+                                    $estadoClase = 'estado-registro';
                                     break;
                                 default:
-                                    $estadoColor = 'black';
+                                    $estadoClase = '';
                             }
                         @endphp
-                        <span class="estado estado-{{ strtolower(str_replace(' ', '-', $documento->estado)) }}">
-                            {{ $documento->estado }}
-                        </span>
+
+                        <span class="estado {{ $estadoClase }}">{{ $documento->estado }}</span>
                     </td>
                     <td>{{ $documento->categoria->parent ? $documento->categoria->parent->nombre_categoria : '' }}/{{ $documento->categoria->nombre_categoria }}</td>
                     <td>{{ $documento->created_at }}</td>

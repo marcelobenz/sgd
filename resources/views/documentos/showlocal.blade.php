@@ -121,27 +121,28 @@
                         </tr>
                         <tr>
                             <td style="vertical-align: middle;">Estado: </td><td colspan=3>
-                            @php
-                                use Illuminate\Support\Str;
-
-                                // Normalizamos estado (sin tildes, minúsculas, sin espacios extras)
-                                $estadoNormalizado = Str::lower(Str::ascii(trim($documento->estado)));
-
-                                // Mapear estado → clases Bootstrap
-                                $clasesEstado = [
-                                    'en curso'                => 'badge text-bg-warning fw-bold w-100 py-2',
-                                    'pendiente de aprobacion' => 'badge text-bg-danger fw-bold w-100 py-2',
-                                    'aprobado'                => 'badge text-bg-success fw-bold w-100 py-2',
-                                    'registro'                => 'badge text-bg-primary fw-bold w-100 py-2',
-                                ];
-
-                                // Clase por defecto si no matchea
-                                $badgeClase = $clasesEstado[$estadoNormalizado] ?? 'badge text-bg-secondary fw-bold w-100 py-2';
-                            @endphp
-
-                            <span class="{{ $badgeClase }}">
-                                {{ $documento->estado }}
-                            </span>
+                                @php
+                                    $estadoColor = '';
+                                    switch($documento->estado) {
+                                        case 'en curso':
+                                            $estadoColor = 'orange';
+                                            break;
+                                        case 'pendiente de aprobación':
+                                            $estadoColor = 'red';
+                                            break;
+                                        case 'aprobado':
+                                            $estadoColor = 'green';
+                                            break;
+                                        case 'registro':
+                                            $estadoColor = 'blue';
+                                            break;
+                                        default:
+                                            $estadoColor = 'black';
+                                    }
+                                @endphp
+                                <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
+                                    {{ $documento->estado }}
+                                </span>
                             </td>
                         </tr>
                         @if($documento->aprobador)
