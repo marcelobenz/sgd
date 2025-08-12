@@ -145,7 +145,7 @@
                                 </span>
                             </td>
                         </tr>
-                        @if($documento->aprobador)
+                        @if($documento->aprobador && $documento->estado === 'aprobado')
                             <tr>
                                 <td>Aprobador: </td><td colspan=3> {{ $documento->aprobador->name }}</td>
                             </tr>
