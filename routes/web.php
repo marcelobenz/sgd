@@ -1,72 +1,14 @@
 <?php
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\GoController;
 
-
-// Rutas para pruebas
-// Route::get('/test-s3-credentials', function () {
-//     dd(env('AWS_ACCESS_KEY_ID'), env('AWS_SECRET_ACCESS_KEY'));
-// });
-
-// Route::get('/upload-test', function () {
-//     $filePath = 'C:/laragon/www/sgd/storage/logs/laravel.log';
-
-//     try {
-//         // Leer el contenido del archivo
-//         $contents = file_get_contents($filePath);
-        
-//         // Comprobar si el archivo se ha leído correctamente
-//         if ($contents === false) {
-//             $errorMsg = 'Failed to read the file contents.';
-//             Log::error($errorMsg);
-//             return $errorMsg;
-//         }
-
-//         // Intentar cargar el archivo en S3
-//         $result = Storage::disk('s3')->put('prueba/laravel.log', $contents);
-
-//         // Verificar si la carga fue exitosa
-//         if ($result) {
-//             return 'File uploaded successfully!';
-//         } else {
-//             $errorMsg = 'Failed to upload the file.';
-//             Log::error($errorMsg);
-//             return $errorMsg;
-//         }
-//     } catch (\Exception $e) {
-//         // Registrar el error en el archivo de logs
-//         Log::error('File upload error: ' . $e->getMessage(), ['exception' => $e]);
-
-//         // Mostrar el mensaje de error al usuario
-//         return 'Error: ' . $e->getMessage();
-//     }
-// });
-
-// ---- NUEVA RUTA PÚBLICA ----
-Route::get('/go', function (Request $request) {
-    $next = $request->query('next', '/dashboard');
-
-    // Sanitizar: sólo permitimos paths locales (evita open-redirect)
-    $esSeguro = is_string($next)
-        && str_starts_with($next, '/')
-        && !preg_match('#^//|https?://#i', $next);
-
-    if (!$esSeguro) {
-        $next = '/dashboard';
-    }
-
-    return auth()->check()
-        ? redirect($next)                               // ya logueado → directo al doc
-        : redirect()->route('login', ['next' => $next]); // no logueado → login con next
-})->name('go');
+Route::get('/go', GoController::class)->name('go');
 
 Route::middleware('auth')->group(function () {
     Route::get('/documentos/exportar-pdf/{id}', [DocumentoController::class, 'exportarPdf'])->name('documentos.exportarPdf');
