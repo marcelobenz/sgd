@@ -10,7 +10,7 @@ class GoController extends Controller
     {
         $next = $request->query('next', '/dashboard');
 
-        // Solo paths locales (evita open redirect)
+        // Sanitizar: solo paths locales (evita open redirect)
         $ok = is_string($next)
             && str_starts_with($next, '/')
             && !preg_match('#^//|https?://#i', $next);
@@ -19,8 +19,10 @@ class GoController extends Controller
             $next = '/dashboard';
         }
 
-        return auth()->check()
-            ? redirect($next)                                // logueado → va directo
-            : redirect()->route('login', ['next' => $next]); // sin sesión → login con next
+        // Siempre redirigimos al destino.
+        // Si no hay sesión, el middleware 'auth' en /documentos/... te lleva al login
+        // y Laravel recuerda la intended automáticamente.
+        return redirect($next);
     }
+
 }

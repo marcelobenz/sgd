@@ -103,7 +103,7 @@ class DocumentoController extends Controller
 
         if (!$documento->puedeLeer(auth()->user())) {
             //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para leer este documento.');
-            abort(403, 'No tienes permiso para aprobar este documento.');
+            abort(403, 'No tienes permiso para leer este documento.');
         }
 
         $bucket = env('AWS_BUCKET');
