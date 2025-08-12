@@ -2,6 +2,12 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
+    @if (session('url.intended'))
+        <div style="background: yellow; padding: 5px; margin-bottom: 10px;">
+            URL intended: {{ session('url.intended') }}
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('login') }}">
         @csrf
 
