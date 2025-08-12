@@ -10,6 +10,8 @@
 
     <form method="POST" action="{{ route('login') }}">
         @csrf
+        
+        <input type="hidden" name="next" value="{{ request('next') }}">
 
         <!-- Email Address -->
         <div>
