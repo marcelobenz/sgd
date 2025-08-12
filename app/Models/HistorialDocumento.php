@@ -6,16 +6,31 @@ use Illuminate\Database\Eloquent\Model;
 
 class HistorialDocumento extends Model
 {
-    protected $fillable = ['id_documento', 'user_id', 'accion', 'notas'];
+    protected $table = 'historial_documentos'; // si tu tabla se llama así
+
+    protected $fillable = [
+        'id_documento',
+        'path',
+        'titulo',
+        'contenido',
+        'estado',
+        'version',
+        'id_categoria',
+        'id_usr_creador',
+        'id_usr_ultima_modif',
+        'id_usr_aprobador',
+        'fecha_aprobacion',
+    ];
+
+    protected $casts = [
+        'fecha_aprobacion' => 'datetime',
+        'created_at'       => 'datetime',
+        'updated_at'       => 'datetime',
+    ];
 
     public function documento()
     {
         return $this->belongsTo(Documento::class, 'id_documento');
-    }
-
-    public function usuario()
-    {
-        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function categoria()
@@ -32,6 +47,9 @@ class HistorialDocumento extends Model
     {
         return $this->belongsTo(User::class, 'id_usr_ultima_modif');
     }
-    
 
+    public function aprobador()
+    {
+        return $this->belongsTo(User::class, 'id_usr_aprobador');
+    }
 }

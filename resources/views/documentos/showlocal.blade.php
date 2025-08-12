@@ -30,7 +30,16 @@
     .selected-row {
     background-color: #d1ecf1; /* Cambia el color según tus preferencias */
     font-weight: bold; /* Opcional: para resaltar más el texto */
-}
+    }
+
+    /* Posicionar la modal sobre #colInfoDocumento */
+    #versionInfoModal .modal-dialog{
+    max-width:none; margin:0; /* anulamos centrado de Bootstrap */
+    }
+    #versionInfoModal.show .modal-dialog{
+    position:fixed; z-index:1060; /* por encima del panel */
+    }
+
 </style>
 
 @endsection
@@ -185,37 +194,63 @@
                             </tr>
                         </thead>
                         @foreach ($documento->historial as $index => $versionhistorial)
+                            @php
+                                // Armamos los metadatos a mostrar en la modal
+                                $histMeta = [
+                                    'titulo'              => $versionhistorial->titulo ?? $documento->titulo,
+                                    'version'             => $versionhistorial->version,
+                                    'categoria'           => $documento->categoria->nombre_categoria, // ajustá si tu historial guarda categoría
+                                    'estado'              => $versionhistorial->estado,
+                                    // Si NO tenés relaciones en HistorialDocumento, reemplazá por User::find(...)
+                                    'aprobador'           => optional($versionhistorial->aprobador)->name ?? null,
+                                    'fecha_aprobacion'    => (string) $versionhistorial->fecha_aprobacion,
+                                    'creador'             => optional($versionhistorial->creador)->name ?? null,
+                                    'fecha_creacion'      => (string) $versionhistorial->created_at,
+                                    'ultimo_editor'       => optional($versionhistorial->ultimaModificacion)->name ?? null,
+                                    'fecha_ultima_modif'  => (string) $versionhistorial->updated_at,
+                                    'contenido'           => $versionhistorial->contenido,
+                                ];
+                                $histUrl = sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $versionhistorial->path);
+                                $histExt = pathinfo($versionhistorial->path, PATHINFO_EXTENSION);
+                            @endphp
+
                             <tr class="table-row">
                                 <td>{{ $versionhistorial->version }}</td>
                                 <td>{{ $versionhistorial->created_at }}</td>
 
-                                    <form id="revert-form-{{ $versionhistorial->id }}" action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}" method="POST" style="display: none;">
-                                        @csrf
-                                    </form>
-                                    <td class="text-center">
-                                    <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}" 
+                                <form id="revert-form-{{ $versionhistorial->id }}"
+                                    action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
+                                    method="POST" style="display: none;">
+                                    @csrf
+                                </form>
+
+                                <td class="text-center">
+                                    <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
                                     data-form-id="revert-form-{{ $versionhistorial->id }}"
-                                    onclick="event.preventDefault(); submitRevertForm(this);" class="btn btn-light p-0"
+                                    onclick="event.preventDefault(); submitRevertForm(this);"
+                                    class="btn btn-light p-0"
                                     data-toggle="tooltip" data-placement="top" title="Revertir a esta versión">
                                         <i class="fa-solid fa-repeat"></i>
                                     </a>
-                                    </td>
-                                    <td class="text-center">
-                                    <button type="button" class="btn btn-light p-0" onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $versionhistorial->path) }}', '{{ pathinfo($versionhistorial->path, PATHINFO_EXTENSION) }}')"
-                                    data-toggle="tooltip" data-placement="top" title="Ver esta version">
+                                </td>
+
+                                {{-- Ver (👁️): carga iframe y abre modal superpuesta con los datos --}}
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-light p-0"
+                                            onclick='viewAndShowMeta(@json($histUrl), @json($histExt), @json($histMeta))'
+                                            data-toggle="tooltip" data-placement="top" title="Ver esta versión">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button"
-                                                class="btn btn-light p-0"
-                                                onclick="mostrarPopoverContenido(event, `{{ addslashes($versionhistorial->contenido ?? 'Sin contenido') }}`)"
-                                                data-toggle="tooltip"
-                                                data-placement="top"
-                                                title="Ver contenido de esta versión">
-                                            <i class="fa-solid fa-file-lines"></i>
-                                        </button>
-                                    </td>
+                                </td>
+
+                                {{-- Ver contenido (📄): abre la misma modal con el detalle (sin tocar el iframe) --}}
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-light p-0"
+                                            onclick='openVersionModal(@json($histMeta))'
+                                            data-toggle="tooltip" data-placement="top" title="Ver contenido de esta versión">
+                                        <i class="fa-solid fa-file-lines"></i>
+                                    </button>
+                                </td>
                             </tr>
                         @endforeach
                     </table>
@@ -311,6 +346,43 @@
         </div>
     </div>
 
+    {{-- Modal anclada sobre el panel izquierdo (sin backdrop) --}}
+    <div class="modal fade" id="versionInfoModal" tabindex="-1" role="dialog"
+        aria-labelledby="versionInfoLabel" aria-hidden="true" data-backdrop="false" data-keyboard="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content" style="box-shadow:0 10px 25px rgba(0,0,0,.35);">
+            <div class="modal-header py-2">
+                <h5 class="modal-title" id="versionInfoLabel">Versión</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-2">
+                <table class="table table-bordered w-100 mb-0">
+                <tbody>
+                    <tr><td>Documento:</td><td id="m_titulo"></td></tr>
+                    <tr><td>Versión:</td><td id="m_version"></td></tr>
+                    <tr><td>Categoría:</td><td id="m_categoria"></td></tr>
+                    <tr>
+                    <td>Estado:</td>
+                    <td>
+                        <span id="m_estadoBadge" style="border:2px solid; padding:5px 8px; border-radius:4px;"></span>
+                    </td>
+                    </tr>
+                    <tr id="m_aprobadorRow" style="display:none"><td>Aprobador:</td><td id="m_aprobador"></td></tr>
+                    <tr id="m_fechaAprRow" style="display:none"><td>Fecha:</td><td id="m_fecha_aprobacion"></td></tr>
+                    <tr><td>Creador:</td><td id="m_creador"></td></tr>
+                    <tr><td>Fecha:</td><td id="m_fecha_creacion"></td></tr>
+                    <tr><td>Último Editor:</td><td id="m_ultimo_editor"></td></tr>
+                    <tr><td>Fecha:</td><td id="m_fecha_ultima"></td></tr>
+                    <tr><td>Detalle de versión:</td><td id="m_contenido" style="white-space:pre-wrap"></td></tr>
+                </tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <div id="contenidoPopover" 
@@ -384,26 +456,93 @@
     }
 
     // Para previsualizar la versión historica
-    function viewVersion(url, extension) {
-            var iframe = document.getElementById('documentViewer');
-            var viewerUrl;
+    const estadoColors = {
+        'en curso': 'orange',
+        'pendiente de aprobación': 'red',
+        'aprobado': 'green',
+        'registro': 'blue'
+    };
 
-            switch (extension) {
-                case 'pdf':
-                    viewerUrl = `https://docs.google.com/viewer?url=${url}&embedded=true`;
-                    break;
-                case 'docx':
-                case 'xlsx':
-                case 'pptx':
-                    viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${url}`;
-                    break;
-                default:
-                    alert('Formato no soportado para vista previa');
-                    return;
-            }
-            
-            iframe.src = viewerUrl;
+    function paintBadge(el, estado){
+        const color = estadoColors[estado] || 'black';
+        el.textContent = estado || '';
+        el.style.borderColor = color;
+        el.style.color = color;
+    }
+
+    // Mantengo tu viewVersion (solo le agrego encodeURIComponent)
+    function viewVersion(url, extension) {
+        const iframe = document.getElementById('documentViewer');
+        let viewerUrl;
+        switch (extension) {
+        case 'pdf':
+            viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+            break;
+        case 'docx':
+        case 'xlsx':
+        case 'pptx':
+            viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+            break;
+        default:
+            alert('Formato no soportado para vista previa');
+            return;
         }
+        iframe.src = viewerUrl;
+    }
+
+    // Cargar iframe + abrir modal con datos
+    function viewAndShowMeta(url, extension, meta){
+        viewVersion(url, extension);
+        openVersionModal(meta);
+    }
+
+    function openVersionModal(meta){
+        // Completar campos
+        document.getElementById('versionInfoLabel').textContent = `Versión ${meta.version}`;
+        document.getElementById('m_titulo').textContent = meta.titulo || '';
+        document.getElementById('m_version').textContent = meta.version ?? '';
+        document.getElementById('m_categoria').textContent = meta.categoria || '';
+        paintBadge(document.getElementById('m_estadoBadge'), meta.estado || '');
+
+        const showApr = (meta.estado === 'aprobado') && !!meta.aprobador;
+        document.getElementById('m_aprobadorRow').style.display = showApr ? '' : 'none';
+        document.getElementById('m_fechaAprRow').style.display = showApr ? '' : 'none';
+        document.getElementById('m_aprobador').textContent = meta.aprobador || '';
+        document.getElementById('m_fecha_aprobacion').textContent = meta.fecha_aprobacion || '';
+
+        document.getElementById('m_creador').textContent = meta.creador || '';
+        document.getElementById('m_fecha_creacion').textContent = meta.fecha_creacion || '';
+        document.getElementById('m_ultimo_editor').textContent = meta.ultimo_editor || '';
+        document.getElementById('m_fecha_ultima').textContent = meta.fecha_ultima_modif || '';
+        document.getElementById('m_contenido').textContent = meta.contenido || 'Sin contenido';
+
+        // Mostrar modal
+        $('#versionInfoModal').modal('show');
+
+        // Posicionarla sobre el panel izquierdo
+        $('#versionInfoModal').on('shown.bs.modal', function () {
+        const rect = document.getElementById('colInfoDocumento').getBoundingClientRect();
+        const dlg  = document.querySelector('#versionInfoModal .modal-dialog');
+        dlg.style.left   = (rect.left + window.scrollX) + 'px';
+        dlg.style.top    = (rect.top  + window.scrollY) + 'px';
+        dlg.style.width  = rect.width + 'px';
+        dlg.style.height = 'auto';
+        dlg.style.position = 'fixed';
+        dlg.style.margin = '0';
+        });
+
+        // Reposicionar si cambia el tamaño de ventana
+        window.addEventListener('resize', function(){
+        if ($('#versionInfoModal').hasClass('show')) {
+            const rect = document.getElementById('colInfoDocumento').getBoundingClientRect();
+            const dlg  = document.querySelector('#versionInfoModal .modal-dialog');
+            dlg.style.left  = (rect.left + window.scrollX) + 'px';
+            dlg.style.top   = (rect.top  + window.scrollY) + 'px';
+            dlg.style.width = rect.width + 'px';
+        }
+        });
+    }
+
 
     // Para la tabla de arriba (versión actual)
     document.querySelector('.btn-link').addEventListener('click', function() {

@@ -99,26 +99,28 @@ class DocumentoController extends Controller
         
     public function show($id)
     {
-        $documento = Documento::findOrFail($id); 
+        // 👉 Eager loading para evitar N+1 al usar relaciones en la vista
+        $documento = Documento::with([
+            'categoria',
+            'creador',
+            'ultimaModificacion',
+            'aprobador',
+            'historial.categoria',
+            'historial.creador',
+            'historial.ultimaModificacion',
+            'historial.aprobador',
+        ])->findOrFail($id);
 
         if (!$documento->puedeLeer(auth()->user())) {
-            //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para leer este documento.');
             abort(403, 'No tienes permiso para leer este documento.');
         }
 
         $bucket = env('AWS_BUCKET');
-        $region = env('AWS_DEFAULT_REGION'); // Opcional: si necesitas la región para construir la URL
+        $region = env('AWS_DEFAULT_REGION');
         $baseUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/";
-        //dd($baseUrl);
-
-        // Construye la URL del archivo
         $fileUrl = $baseUrl . $documento->path;
-        //dd($fileUrl);
-
-        // Obtener el contenido del archivo si es necesario para el preview
-        // $fileUrl = "https://repositorio-sgd.s3.us-west-2.amazonaws.com/" . $documento->path;
         $fileExtension = pathinfo($documento->path, PATHINFO_EXTENSION);
-    
+
         return view('documentos.showlocal', compact('documento', 'fileUrl', 'fileExtension'));
     }
 
