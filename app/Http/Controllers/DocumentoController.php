@@ -14,6 +14,8 @@ use App\Notifications\DocumentoPendienteAprobacion;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use setasign\Fpdi\Fpdi as Fpdi;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
 class DocumentoController extends Controller
 {
     /**
