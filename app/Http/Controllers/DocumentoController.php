@@ -198,29 +198,54 @@ class DocumentoController extends Controller
     public function update(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
-        
+
         if (!$documento->puedeEscribir(auth()->user())) {
-            //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento (update)');
             abort(403, 'No tienes permiso para modificar este documento (update).');
         }
-    
+
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
             'id_categoria' => 'required|exists:categorias,id',
             'permisos' => 'array'
         ]);
-    
-        // Actualiza el documento
-        $documento->update([
-            'titulo' => $validated['titulo'],
-            'id_categoria' => $validated['id_categoria'],
-            'id_usr_ultima_modif' => auth()->id(),
-        ]);
 
-        // Gestionar permisos
+        // === Manejo de "No requiere aprobación" ===
+        $sinAprobacion = $request->has('sin_aprobacion');
+
+        // Determinar el nuevo estado en base al checkbox
+        // - Si NO requiere aprobación => 'registro'
+        // - Si requiere aprobación:
+        //     * si venía de 'registro', lo pasamos a 'en curso'
+        //     * si ya estaba 'en curso' o 'pendiente de aprobación', lo dejamos como está
+        $nuevoEstado = $documento->estado; // default: mantener
+
+        if ($sinAprobacion) {
+            $nuevoEstado = 'registro';
+        } else {
+            if ($documento->estado === 'registro') {
+                $nuevoEstado = 'en curso';
+            }
+            // si estaba 'en curso' o 'pendiente de aprobación', no lo cambiamos acá
+        }
+
+        // Actualiza cabecera
+        $documento->titulo = $validated['titulo'];
+        $documento->id_categoria = $validated['id_categoria'];
+        $documento->id_usr_ultima_modif = auth()->id();
+        $documento->estado = $nuevoEstado;
+
+        // Si ahora NO requiere aprobación, limpiamos datos de aprobación previos
+        if ($nuevoEstado === 'registro') {
+            $documento->id_usr_aprobador = null;   // <-- ajusta nombre si difiere
+            $documento->fecha_aprobacion = null;   // <-- ajusta nombre si difiere
+        }
+
+        $documento->save();
+
+        // === Gestionar permisos ===
         DocumentoPermiso::where('documento_id', $documento->id)->delete();
 
-        //Asigna todos los permisos por default al dueño del documento
+        // Dueño siempre con todos los permisos
         DocumentoPermiso::updateOrCreate(
             ['documento_id' => $documento->id, 'user_id' => $documento->id_usr_creador],
             [
@@ -231,7 +256,7 @@ class DocumentoController extends Controller
             ]
         );
 
-        //Asigna los permisos seleccionados al resto de los usuarios
+        // Asignación para el resto
         foreach ($request->input('permisos', []) as $userId => $permisos) {
             DocumentoPermiso::create([
                 'documento_id' => $documento->id,
@@ -241,17 +266,23 @@ class DocumentoController extends Controller
                 'puede_aprobar' => isset($permisos['puede_aprobar']),
                 'puede_eliminar' => isset($permisos['puede_eliminar']),
             ]);
-            // Si el usuario tiene permiso de aprobar, envía una notificación
-            if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar'] && $documento->estado === 'pendiente de aprobación') {
-                $user = User::find($userId);
-                $user->notify(new DocumentoPendienteAprobacion($documento));
-            }
-            
-        }
-    
-        return redirect()->route('documentos.index')->with('success', 'Documento actualizado exitosamente.');
 
+            // Avisamos solo si efectivamente está pendiente de aprobación
+            if (
+                isset($permisos['puede_aprobar']) &&
+                $permisos['puede_aprobar'] &&
+                $documento->estado === 'pendiente de aprobación'
+            ) {
+                $user = User::find($userId);
+                if ($user) {
+                    $user->notify(new DocumentoPendienteAprobacion($documento));
+                }
+            }
+        }
+
+        return redirect()->route('documentos.index')->with('success', 'Documento actualizado exitosamente.');
     }
+
     
     //Versionado
     public function AddVersion(Request $request, $id)

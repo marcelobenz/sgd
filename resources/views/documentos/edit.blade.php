@@ -30,6 +30,12 @@
             </select>
         </div>
 
+        <div class="form-group form-check mt-2">
+            <input type="checkbox" name="sin_aprobacion" id="sin_aprobacion" class="form-check-input"
+                    {{ $documento->estado === 'registro' ? 'checked' : '' }}>
+            <label for="sin_aprobacion" class="form-check-label">No requiere aprobación</label>
+        </div>
+
         <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapsePermisos" aria-expanded="false" aria-controls="collapsePermisos">
             Asignar Permisos
         </button>
