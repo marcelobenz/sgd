@@ -403,46 +403,56 @@ class DocumentoController extends Controller
 
     public function revertToVersion($documentoId, $versionId)
     {
-        Log::info('Revertir versión', ['doc' => $documentoId, 'hist' => $versionId, 'user' => auth()->id()]);
+        try {
+            return DB::transaction(function () use ($documentoId, $versionId) {
+                Log::info('Revertir versión', ['doc' => $documentoId, 'hist' => $versionId, 'user' => auth()->id()]);
 
-        $documento = Documento::findOrFail($documentoId);
+                $documento = Documento::findOrFail($documentoId);
 
-        if (!$documento->puedeEscribir(auth()->user())) {
-            abort(403, 'No tienes permiso para modificar o revertir este documento.');
+                if (!$documento->puedeEscribir(auth()->user())) {
+                    abort(403, 'No tienes permiso para modificar o revertir este documento.');
+                }
+
+                $historialDocumento = HistorialDocumento::where('id', $versionId)
+                    ->where('id_documento', $documento->id)
+                    ->firstOrFail();
+
+                $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
+                    ->where('version', $documento->version)
+                    ->exists();
+
+                if (!$existeEnHistorial) {
+                    $this->archiveCurrentVersion($documento);
+                }
+
+                $documento->path                = $historialDocumento->path;
+                $documento->titulo              = $historialDocumento->titulo;
+                $documento->contenido           = $historialDocumento->contenido;
+                $documento->id_categoria        = $historialDocumento->id_categoria ?? $documento->id_categoria;
+                $documento->id_usr_creador      = $historialDocumento->id_usr_creador ?? $documento->id_usr_creador;
+                $documento->id_usr_ultima_modif = auth()->id();
+                $documento->id_usr_aprobador    = null;
+                $documento->fecha_aprobacion    = null;
+                $documento->version             = $historialDocumento->version;
+                $documento->estado              = 'pendiente de aprobación';
+
+                $documento->save();
+
+                return redirect()
+                    ->route('documentos.show', $documento->id)
+                    ->with('success', 'Se revirtió el documento a la versión seleccionada.');
+            });
+        } catch (\Throwable $e) {
+            Log::error('RevertToVersion ERROR', [
+                'doc' => $documentoId,
+                'hist' => $versionId,
+                'user' => optional(auth()->user())->id,
+                'msg' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return back()->with('error', 'No se pudo revertir: ' . $e->getMessage());
         }
-
-        $historialDocumento = HistorialDocumento::where('id', $versionId)
-            ->where('id_documento', $documento->id)
-            ->firstOrFail();
-
-        // Aseguramos archivar la versión actual si no está en historial
-        $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
-            ->where('version', $documento->version)
-            ->exists();
-
-        if (!$existeEnHistorial) {
-            $this->archiveCurrentVersion($documento);
-        }
-
-        // Restaurar campos (corrijo nombres y nulos)
-        $documento->path                  = $historialDocumento->path;
-        $documento->titulo                = $historialDocumento->titulo;
-        $documento->contenido             = $historialDocumento->contenido;
-        $documento->estado                = 'pendiente de aprobación'; // tras revertir, que vuelva a circuito
-        $documento->id_categoria          = $historialDocumento->id_categoria ?? $documento->id_categoria; // ojo con nombre en historial
-        $documento->id_usr_creador        = $historialDocumento->id_usr_creador;
-        $documento->id_usr_ultima_modif   = auth()->id(); // el que revierte
-        $documento->id_usr_aprobador      = null;         // se invalida
-        $documento->fecha_aprobacion      = null;         // se invalida
-        $documento->version               = $historialDocumento->version;
-
-        $documento->save();
-
-        return redirect()
-            ->route('documentos.show', $documento->id)
-            ->with('success', 'Se revirtió el documento a la versión seleccionada.');
     }
-
 
     // Editar
     public function edit($id)
