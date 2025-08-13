@@ -419,24 +419,36 @@ class DocumentoController extends Controller
                     ->where('id_documento', $documento->id)
                     ->firstOrFail();
 
+                // Si la versión actual no está ya en historial, archivarla
                 $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
                     ->where('version', $documento->version)
                     ->exists();
-
                 if (!$existeEnHistorial) {
                     $this->archiveCurrentVersion($documento);
                 }
 
+                // ¿El documento actual está configurado como "sin aprobación"?
+                $sinAprobacionActual = ($documento->estado === 'registro');
+
+                // Restaurar campos principales desde el historial
                 $documento->path                = $historialDocumento->path;
                 $documento->titulo              = $historialDocumento->titulo;
                 $documento->contenido           = $historialDocumento->contenido;
                 $documento->id_categoria        = $historialDocumento->id_categoria ?? $documento->id_categoria;
-                $documento->id_usr_creador      = $historialDocumento->id_usr_creador ?? $documento->id_usr_creador;
+
+                // Mantener el creador original del documento
+                // (no lo sobreescribas con el del historial)
+                // $documento->id_usr_creador   = $documento->id_usr_creador;
+
                 $documento->id_usr_ultima_modif = auth()->id();
                 $documento->id_usr_aprobador    = null;
                 $documento->fecha_aprobacion    = null;
                 $documento->version             = $historialDocumento->version;
-                $documento->estado              = 'pendiente de aprobación';
+
+                // Estado según “requiere/no requiere aprobación”
+                $documento->estado = $sinAprobacionActual
+                    ? 'registro'
+                    : 'pendiente de aprobación';
 
                 $documento->save();
 
@@ -455,6 +467,7 @@ class DocumentoController extends Controller
             return back()->with('error', 'No se pudo revertir: ' . $e->getMessage());
         }
     }
+
 
     // Editar
     public function edit($id)
