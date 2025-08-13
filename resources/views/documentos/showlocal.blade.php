@@ -218,16 +218,10 @@
                                 <td>{{ $versionhistorial->version }}</td>
                                 <td>{{ $versionhistorial->created_at }}</td>
 
-                                <form id="revert-form-{{ $versionhistorial->id }}"
-                                    action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
-                                    method="POST" style="display: none;">
-                                    @csrf
-                                </form>
-
                                 <td class="text-center">
                                     <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
-                                    data-form-id="revert-form-{{ $versionhistorial->id }}"
-                                    onclick="event.preventDefault(); submitRevertForm(this);"
+                                    data-action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
+                                    onclick="event.preventDefault(); confirmRevert(this);"
                                     class="btn btn-light p-0"
                                     data-toggle="tooltip" data-placement="top" title="Revertir a esta versión">
                                         <i class="fa-solid fa-repeat"></i>
@@ -299,6 +293,11 @@
         </div>
     </div>
 
+    </form>
+
+    {{-- Form global para revertir (NO dentro de #uploadForm) --}}
+    <form id="revert-global-form" method="POST" style="display:none;">
+        @csrf
     </form>
 
     <!-- Modal de Confirmación para Aprobar documento -->
@@ -438,21 +437,17 @@
     });
 
     //Controla la accion de revert
-    function submitRevertForm(link) {
-        var formId = link.getAttribute('data-form-id');
-        var form = document.getElementById(formId);
+    function confirmRevert(linkEl) {
+        const action = linkEl.getAttribute('data-action');
+        // Abrir modal
+        $('#confirmModal').modal('show');
 
-        if (form) {
-            // Mostrar el modal de confirmación
-            $('#confirmModal').modal('show');
-
-            // Agregar un evento click al botón de confirmación
-            document.getElementById('confirmButton').onclick = function() {
-                form.submit();
-            };
-        } else {
-            console.error('Formulario no encontrado:', formId);
-        }
+        // Al confirmar
+        document.getElementById('confirmButton').onclick = function() {
+            const form = document.getElementById('revert-global-form');
+            form.setAttribute('action', action);
+            form.submit();
+        };
     }
 
     // Para previsualizar la versión historica
@@ -575,23 +570,24 @@
     });
 
     //Para manejar el colapso de la columna izquierda
-    document.getElementById('toggleDetails').addEventListener('click', function() {
+    const toggleBtn = document.getElementById('toggleDetails');
+    if (toggleBtn) {
+    toggleBtn.addEventListener('click', function() {
         var colInfo = document.getElementById('colInfoDocumento');
         var colContent = document.getElementById('colContenidoDocumento');
         var collapseDetails = document.getElementById('collapseDetalles');
 
         if (colInfo.classList.contains('collapsed')) {
-            // Expande la columna de información del documento
-            colInfo.classList.remove('collapsed');
-            colContent.classList.remove('expanded');
-            collapseDetails.style.display = 'block';
+        colInfo.classList.remove('collapsed');
+        colContent.classList.remove('expanded');
+        if (collapseDetails) collapseDetails.style.display = 'block';
         } else {
-            // Colapsa la columna de información del documento
-            colInfo.classList.add('collapsed');
-            colContent.classList.add('expanded');
-            collapseDetails.style.display = 'none';
+        colInfo.classList.add('collapsed');
+        colContent.classList.add('expanded');
+        if (collapseDetails) collapseDetails.style.display = 'none';
         }
     });
+    }
 
 
     //Muestra detalle de version

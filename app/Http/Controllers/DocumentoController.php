@@ -345,7 +345,7 @@ class DocumentoController extends Controller
         $historial->contenido = $documento->contenido;
         $historial->estado = $documento->estado;
         $historial->id_documento = $documento->id;
-        $historial->id_Categoria = $documento->id_categoria;
+        $historial->id_categoria = $documento->id_categoria;
         $historial->id_usr_creador = $documento->id_usr_creador;
         $historial->id_usr_ultima_modif = $documento->id_usr_ultima_modif;
         $historial->id_usr_aprobador = $documento->id_usr_aprobador;
@@ -355,51 +355,94 @@ class DocumentoController extends Controller
         $historial->save();
     }
     
+    // public function revertToVersion($documentoId, $versionId)
+    // {
+
+    //     // Encuentra el documento actual
+    //     $documento = Documento::findOrFail($documentoId);
+
+    //     if (!$documento->puedeEscribir(auth()->user())) {
+    //         //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar o revertir este documento');
+    //         abort(403, 'No tienes permiso para modificar o revertir este documento.');
+    //     }
+
+    //     // Encuentra la version en el historial a restaurar
+    //     $historialDocumento = HistorialDocumento::findOrFail($versionId);
+
+    //     // Verifica si la versión ya existe en el historial
+    //     $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
+    //                                         ->where('version', $documento->version)
+    //                                         ->exists();
+
+    //     // Solo archiva la versión actual si no existe en el historial
+    //     if (!$existeEnHistorial) {
+    //         $this->archiveCurrentVersion($documento);
+    //     }
+
+    //     if ($documento && $historialDocumento){
+    //         $documento->path = $historialDocumento->path;
+    //         $documento->titulo = $historialDocumento->titulo;
+    //         $documento->contenido = $historialDocumento->contenido;
+    //         $documento->estado = $historialDocumento->estado;
+    //         $documento->id_Categoria = $historialDocumento->id_categoria;
+    //         $documento->id_usr_creador = $historialDocumento->id_usr_creador;
+    //         $documento->id_usr_ultima_modif = $historialDocumento->id_usr_ultima_modif;
+    //         $documento->fecha_aprobacion = $historialDocumento->null;
+    //         $documento->version = $historialDocumento->version;
+    //         $documento->estado = "pendiente de aprobación";
+    //         //$documento->version = $historialDocumento;
+    //         $documento->save();
+
+    //         return redirect()->route('documentos.show', $documento->id)
+    //         ->with('success', 'Documento actualizado y nueva versión creada');
+    //     } else {
+    //         return response()->json(['error' => 'Documento o historial no encontrado.'], 404);
+    //     }
+
+    // }
+
     public function revertToVersion($documentoId, $versionId)
     {
+        Log::info('Revertir versión', ['doc' => $documentoId, 'hist' => $versionId, 'user' => auth()->id()]);
 
-        // Encuentra el documento actual
         $documento = Documento::findOrFail($documentoId);
 
         if (!$documento->puedeEscribir(auth()->user())) {
-            //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar o revertir este documento');
             abort(403, 'No tienes permiso para modificar o revertir este documento.');
         }
 
-        // Encuentra la version en el historial a restaurar
-        $historialDocumento = HistorialDocumento::findOrFail($versionId);
+        $historialDocumento = HistorialDocumento::where('id', $versionId)
+            ->where('id_documento', $documento->id)
+            ->firstOrFail();
 
-        // Verifica si la versión ya existe en el historial
+        // Aseguramos archivar la versión actual si no está en historial
         $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
-                                            ->where('version', $documento->version)
-                                            ->exists();
+            ->where('version', $documento->version)
+            ->exists();
 
-        // Solo archiva la versión actual si no existe en el historial
         if (!$existeEnHistorial) {
             $this->archiveCurrentVersion($documento);
         }
 
-        if ($documento && $historialDocumento){
-            $documento->path = $historialDocumento->path;
-            $documento->titulo = $historialDocumento->titulo;
-            $documento->contenido = $historialDocumento->contenido;
-            $documento->estado = $historialDocumento->estado;
-            $documento->id_Categoria = $historialDocumento->id_categoria;
-            $documento->id_usr_creador = $historialDocumento->id_usr_creador;
-            $documento->id_usr_ultima_modif = $historialDocumento->id_usr_ultima_modif;
-            $documento->fecha_aprobacion = $historialDocumento->null;
-            $documento->version = $historialDocumento->version;
-            $documento->estado = "pendiente de aprobación";
-            //$documento->version = $historialDocumento;
-            $documento->save();
+        // Restaurar campos (corrijo nombres y nulos)
+        $documento->path                  = $historialDocumento->path;
+        $documento->titulo                = $historialDocumento->titulo;
+        $documento->contenido             = $historialDocumento->contenido;
+        $documento->estado                = 'pendiente de aprobación'; // tras revertir, que vuelva a circuito
+        $documento->id_categoria          = $historialDocumento->id_categoria ?? $documento->id_categoria; // ojo con nombre en historial
+        $documento->id_usr_creador        = $historialDocumento->id_usr_creador;
+        $documento->id_usr_ultima_modif   = auth()->id(); // el que revierte
+        $documento->id_usr_aprobador      = null;         // se invalida
+        $documento->fecha_aprobacion      = null;         // se invalida
+        $documento->version               = $historialDocumento->version;
 
-            return redirect()->route('documentos.show', $documento->id)
-            ->with('success', 'Documento actualizado y nueva versión creada');
-        } else {
-            return response()->json(['error' => 'Documento o historial no encontrado.'], 404);
-        }
+        $documento->save();
 
+        return redirect()
+            ->route('documentos.show', $documento->id)
+            ->with('success', 'Se revirtió el documento a la versión seleccionada.');
     }
+
 
     // Editar
     public function edit($id)
