@@ -51,7 +51,7 @@ class DocumentoController extends Controller
 
         $file = $request->file('archivo');
         $path = $file->store('documentos', 's3');
-        $estado = $request->has('sin_aprobacion') ? 'registro' : 'en curso';
+        $estado = $request->has('sin_aprobacion') ? 'registro' : 'pendiente de aprobación';
     
         $documento = Documento::create([
             'titulo' => $validated['titulo'],
@@ -217,17 +217,16 @@ class DocumentoController extends Controller
         // Determinar el nuevo estado en base al checkbox
         // - Si NO requiere aprobación => 'registro'
         // - Si requiere aprobación:
-        //     * si venía de 'registro', lo pasamos a 'en curso'
-        //     * si ya estaba 'en curso' o 'pendiente de aprobación', lo dejamos como está
+        //     * si ya estaba 'pendiente de aprobación', lo dejamos como está
         $nuevoEstado = $documento->estado; // default: mantener
 
         if ($sinAprobacion) {
             $nuevoEstado = 'registro';
         } else {
             if ($documento->estado === 'registro') {
-                $nuevoEstado = 'en curso';
+                $nuevoEstado = 'pendiente de aprobación';
             }
-            // si estaba 'en curso' o 'pendiente de aprobación', no lo cambiamos acá
+            // si ya estaba en 'pendiente de aprobación' o 'aprobado', se mantiene
         }
 
         // Actualiza cabecera

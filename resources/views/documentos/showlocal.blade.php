@@ -133,9 +133,6 @@
                                 @php
                                     $estadoColor = '';
                                     switch($documento->estado) {
-                                        case 'en curso':
-                                            $estadoColor = 'orange';
-                                            break;
                                         case 'pendiente de aprobación':
                                             $estadoColor = 'red';
                                             break;
@@ -452,7 +449,6 @@
 
     // Para previsualizar la versión historica
     const estadoColors = {
-        'en curso': 'orange',
         'pendiente de aprobación': 'red',
         'aprobado': 'green',
         'registro': 'blue'

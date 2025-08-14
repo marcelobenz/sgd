@@ -21,9 +21,6 @@
                 @php
                     $estadoColor = '';
                     switch($documento->estado) {
-                        case 'en curso':
-                            $estadoColor = 'orange';
-                            break;
                         case 'pendiente de aprobación':
                             $estadoColor = 'red';
                             break;

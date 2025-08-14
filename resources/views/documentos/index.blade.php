@@ -207,9 +207,6 @@
                     <td>
                         @php
                             switch ($documento->estado) {
-                                case 'en curso':
-                                    $estadoClase = 'estado-en-curso';
-                                    break;
                                 case 'pendiente de aprobación':
                                     $estadoClase = 'estado-pendiente';
                                     break;
