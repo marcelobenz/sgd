@@ -87,6 +87,12 @@
                         <button type="button" id="AprobarModalBtn" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Aprobar Documento">
                             <i class="fa-regular fa-thumbs-up"></i> 
                         </button>
+                        @if($documento->puedeAprobar(auth()->user()) && $documento->estado === 'pendiente de aprobación')
+                            <!-- Botón para abrir modal de rechazo -->
+                            <button type="button" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Rechazar documento" data-target="#modalRechazo">
+                                <i class="fas fa-thumbs-down"></i>
+                            </button>
+                        @endif
                         <a href="{{ route('documentos.exportarPdf', $documento) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Exportar PDF">
                             <i class="fa-solid fa-file-pdf"></i> 
                         </a>
@@ -377,6 +383,31 @@
             </div>
             </div>
         </div>
+    </div>
+
+    <!-- Modal Rechazo -->
+    <div class="modal fade" id="modalRechazo" tabindex="-1" role="dialog" aria-labelledby="modalRechazoLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        <form id="formRechazo" action="{{ route('documentos.rechazar', $documento->id) }}" method="POST">
+            @csrf
+            <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title" id="modalRechazoLabel">Rechazar documento</h5>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            </div>
+            <div class="modal-body">
+            <label for="comentarios">Motivo del rechazo:</label>
+            <textarea name="comentarios" id="comentarios" class="form-control" rows="4" required></textarea>
+            </div>
+            <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            <button type="submit" class="btn btn-danger">Rechazar</button>
+            </div>
+        </form>
+        </div>
+    </div>
     </div>
 
 </div>

@@ -15,6 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use setasign\Fpdi\Fpdi as Fpdi;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Notifications\DocumentoRechazado;
 
 class DocumentoController extends Controller
 {
@@ -673,6 +674,32 @@ class DocumentoController extends Controller
         $content = Storage::disk('s3')->get($path);
         file_put_contents($localPath, $content);
         return $localPath;
+    }
+
+
+    public function rechazar(Request $request, $id)
+    {
+        $documento = Documento::findOrFail($id);
+
+        if (!$documento->puedeAprobar(auth()->user())) {
+            abort(403, 'No tienes permiso para rechazar este documento.');
+        }
+
+        $request->validate([
+            'comentarios' => 'required|string|max:1000',
+        ]);
+
+        // Cambiar estado a pendiente de aprobación nuevamente
+        $documento->estado = 'pendiente de aprobación';
+        $documento->save();
+
+        // Notificar al creador
+        $creador = $documento->creador;
+        if ($creador) {
+            $creador->notify(new DocumentoRechazado($documento, $request->comentarios));
+        }
+
+        return redirect()->back()->with('success', 'Documento rechazado y notificación enviada.');
     }
 
 }

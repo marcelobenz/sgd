@@ -11,6 +11,7 @@ use App\Http\Controllers\GoController;
 Route::get('/go', GoController::class)->name('go');
 
 Route::middleware('auth')->group(function () {
+    Route::post('/documentos/{id}/rechazar', [DocumentoController::class, 'rechazar'])->name('documentos.rechazar');
     Route::get('/documentos/exportar-pdf/{id}', [DocumentoController::class, 'exportarPdf'])->name('documentos.exportarPdf');
     Route::get('/documentos/{id}/validapermiso', [DocumentoController::class, 'validaPermiso'])->name('documentos.validaPermiso');
     Route::post('/documentos/{id}/aprobar', [DocumentoController::class, 'aprobar'])->name('documentos.aprobar');
