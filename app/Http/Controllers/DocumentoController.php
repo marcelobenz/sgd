@@ -689,17 +689,24 @@ class DocumentoController extends Controller
             'comentarios' => 'required|string|max:1000',
         ]);
 
-        // Cambiar estado a pendiente de aprobación nuevamente
+        // El documento sigue requiriendo aprobación hasta nueva versión
         $documento->estado = 'pendiente de aprobación';
         $documento->save();
 
-        // Notificar al creador
-        $creador = $documento->creador;
-        if ($creador) {
-            $creador->notify(new DocumentoRechazado($documento, $request->comentarios));
+        // === Destinatario: último editor (id_usr_ultima_modif) ===
+        // Intentamos por relación; si no está cargada, buscamos por ID.
+        $destinatario = $documento->ultimaModificacion ?? User::find($documento->id_usr_ultima_modif);
+
+        // Fallback: si por alguna razón no existe, notificamos al creador
+        if (!$destinatario) {
+            $destinatario = $documento->creador ?? User::find($documento->id_usr_creador);
         }
 
-        return redirect()->back()->with('success', 'Documento rechazado y notificación enviada.');
+        if ($destinatario) {
+            $destinatario->notify(new DocumentoRechazado($documento, $request->comentarios));
+        }
+
+        return redirect()->back()->with('success', 'Documento rechazado y notificación enviada al último editor.');
     }
 
 }
