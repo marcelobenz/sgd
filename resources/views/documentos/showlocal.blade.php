@@ -89,7 +89,7 @@
                         </button>
                         @if($documento->puedeAprobar(auth()->user()) && $documento->estado === 'pendiente de aprobación')
                             <!-- Botón para abrir modal de rechazo -->
-                            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#modalRechazo" title="Rechazar documento">
+                            <button type="button" class="btn btn-custom" data-toggle="modal" data-target="#modalRechazo" title="Rechazar documento">
                                 <i class="fas fa-thumbs-down"></i>
                             </button>
                         @endif
