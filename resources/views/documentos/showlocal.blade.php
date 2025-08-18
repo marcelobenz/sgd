@@ -307,22 +307,33 @@
     <div class="modal fade" id="aprobarModal" tabindex="-1" role="dialog" aria-labelledby="aprobarModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="aprobarModalLabel">Confirmar Aprobación</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="aprobarModalLabel">Confirmar Aprobación</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                ¿Estás seguro de que deseas aprobar este documento?
+                <div class="mt-3">
+                <div class="form-check">
+                    {{-- Importante: el hidden garantiza que, si NO se tilda, llegue "0" --}}
+                    <input type="hidden" name="notificar_autor" value="0" form="formAprobarDoc">
+                    <input class="form-check-input" type="checkbox" id="notificarAutor" name="notificar_autor" value="1" form="formAprobarDoc" checked>
+                    <label class="form-check-label" for="notificarAutor">
+                    Notificar al autor
+                    </label>
                 </div>
-                <div class="modal-body">
-                    ¿Estás seguro de que deseas aprobar este documento?
                 </div>
-                <div class="modal-footer">
-                    <form action="{{ route('documentos.aprobar', $documento->id) }}" method="POST">
-                        @csrf
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning">Aprobar</button>
-                    </form>
-                </div>
+            </div>
+
+            <div class="modal-footer">
+                <form id="formAprobarDoc" action="{{ route('documentos.aprobar', $documento->id) }}" method="POST">
+                @csrf
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning">Aprobar</button>
+                </form>
             </div>
         </div>
     </div>

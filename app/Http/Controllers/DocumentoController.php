@@ -11,11 +11,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; 
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Notifications\DocumentoPendienteAprobacion;
-use Barryvdh\DomPDF\Facade\Pdf as PDF;
+//use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use setasign\Fpdi\Fpdi as Fpdi;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\DocumentoRechazado;
+use App\Notifications\DocumentoAprobado;
+
 
 class DocumentoController extends Controller
 {
@@ -127,23 +129,51 @@ class DocumentoController extends Controller
         return view('documentos.showlocal', compact('documento', 'fileUrl', 'fileExtension'));
     }
 
-    public function aprobar($id)
+    public function aprobar(Request $request, $id)
     {
+        $documento = Documento::with('ultimaModificacion')->findOrFail($id);
 
-        $documento = Documento::findOrFail($id);
-        
         if (!$documento->puedeAprobar(auth()->user())) {
-            //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para Aprobar este documento lpm: '.$documento->puedeAprobar(auth()->user()));
             abort(403, 'No tienes permiso para aprobar este documento.');
         }
 
+        // Aprobar
         $documento->estado = 'aprobado';
         $documento->fecha_aprobacion = now();
-        $documento->id_usr_aprobador = auth()->user()->id;
-        $documento->ultima_version_aprobada = $documento->version;
+        $documento->id_usr_aprobador = auth()->id();
+        $documento->ultima_version_aprobada = $documento->version; // si usás este campo
         $documento->save();
-    
-        return redirect()->back()->with('success', 'El documento ha sido aprobado.');
+
+        Log::info('Documento aprobado', [
+            'doc_id'         => $documento->id,
+            'aprobador_id'   => auth()->id(),
+            'ultimo_editor'  => $documento->ultimaModificacion?->id, // asumimos presente
+            'notificar_flag' => $request->boolean('notificar_autor'),
+        ]);
+
+        // Notificar al último modificador (simple)
+        if ($request->boolean('notificar_autor')) {
+            $ultimoEditor = $documento->ultimaModificacion; // asumimos que existe
+
+            if ($ultimoEditor->id !== auth()->id()) {
+                $ultimoEditor->notify(new DocumentoAprobado($documento, auth()->user()));
+                Log::info('Notificación enviada al último editor', [
+                    'doc_id' => $documento->id,
+                    'user_id'=> $ultimoEditor->id,
+                ]);
+            } else {
+                Log::info('No se envía notificación (aprobador == último editor)', [
+                    'doc_id' => $documento->id,
+                    'user_id'=> $ultimoEditor->id,
+                ]);
+            }
+        } else {
+            Log::info('No se envía notificación (checkbox no tildado)', [
+                'doc_id' => $documento->id,
+            ]);
+        }
+
+        return back()->with('success', 'El documento ha sido aprobado.');
     }
     
 
@@ -332,6 +362,7 @@ class DocumentoController extends Controller
                        ->max('version');
         $documento->version = $maxVersion + 1;
         $documento->estado = "pendiente de aprobación";
+        $documento->id_usr_ultima_modif = auth()->id();
         $documento->save();
     
         return redirect()->route('documentos.show', $documento->id)

@@ -30,6 +30,7 @@ class DocumentoPendienteAprobacion extends Notification implements ShouldQueue
         return (new MailMessage)
                     ->subject('Nuevo documento pendiente de aprobación')
                     ->line('Tiene un nuevo documento pendiente de aprobación.')
+                    ->line('Documento: ' . $this->documento->titulo)
                     ->action('Ver Documento', $url)
                     ->line('Gracias por usar nuestra aplicación!');
     }
