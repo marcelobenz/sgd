@@ -312,7 +312,8 @@ class DocumentoController extends Controller
             }
         }
 
-        return redirect()->route('documentos.index')->with('success', 'Documento actualizado exitosamente.');
+        return redirect()->route('documentos.edit', $documento->id)->with('success', 'Documento actualizado exitosamente.');
+
     }
 
     
