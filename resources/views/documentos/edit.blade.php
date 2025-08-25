@@ -6,12 +6,6 @@
 
 @section('contenidoPrincipal')
 <div class="container" style="margin-top: 80px;">
-    @if(session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
     <div class="w-100" style="background-color: #f8f9fa;">
         <h2 class="text-center">Editar Documento</h2>
     </div>
@@ -42,9 +36,8 @@
             <label for="sin_aprobacion" class="form-check-label">No requiere aprobación</label>
         </div>
 
-        <button class="btn btn-primary" type="button" data-toggle="collapse" 
-                data-target="#collapsePermisos" aria-expanded="false" aria-controls="collapsePermisos">
-            <i class="fa-solid fa-user-shield"></i> Asignar Permisos
+        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapsePermisos" aria-expanded="false" aria-controls="collapsePermisos">
+            Asignar Permisos
         </button>
 
         <div class="collapse" id="collapsePermisos">
@@ -77,17 +70,8 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
-        </button>
-        <button type="button" class="btn btn-primary" data-toggle="tooltip" data-placement="top" title="Ver"
-                onclick="window.location.href='{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.show', 'permiso' => 'puedeLeer']) }}'">
-            <i class="fa-solid fa-eye"></i> Detalle
-        </button>
-        <button type="button" class="btn btn-secondary" onclick="confirmAndRedirect();">
-            <i class="fa-solid fa-arrow-left"></i> Volver
-        </button>
-
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        <button type="button" class="btn btn-secondary" onclick="confirmAndRedirect();">Volver</button>
     </form>
 </div>
 @endsection

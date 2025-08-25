@@ -93,10 +93,6 @@
                                 <i class="fas fa-thumbs-down"></i>
                             </button>
                         @endif
-                        <!-- Botón para editar metatata documento -->
-                        <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.edit', 'permiso' => 'puedeEscribir']) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Editar Cabecera y Permisos">
-                            <i class="fa-regular fa-pen-to-square"></i>
-                        </a>
                         <a href="{{ route('documentos.exportarPdf', $documento) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Exportar PDF">
                             <i class="fa-solid fa-file-pdf"></i> 
                         </a>
