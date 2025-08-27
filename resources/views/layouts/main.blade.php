@@ -82,9 +82,48 @@
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Añadir sombra al logo */
 }
 
-
+.navbar{
+    z-index: 3000;   /* por encima del iframe */
+}
+.navbar .dropdown-menu{
+    z-index: 4000;   /* por encima de todo lo normal */
+}
 
 </style>
+
+{{-- SweetAlert2 por sesión --}}
+@if(session('swal'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        Swal.fire(@json(session('swal')));
+    });
+</script>
+@endif
+
+{{-- Compatibilidad con mensajes flash clásicos --}}
+@if(session('error'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        Swal.fire({
+            icon: 'error',
+            title: 'Acceso denegado',
+            text: @json(session('error')),
+        });
+    });
+</script>
+@endif
+@if(session('success'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        Swal.fire({
+            icon: 'success',
+            title: 'Operación exitosa',
+            text: @json(session('success')),
+        });
+    });
+</script>
+@endif
+
 
 <nav class="navbar navbar-expand-lg fixed-top">
     <a class="navbar-brand" href="/dashboard">

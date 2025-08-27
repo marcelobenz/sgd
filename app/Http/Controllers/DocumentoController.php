@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; 
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Notifications\DocumentoPendienteAprobacion;
-//use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use setasign\Fpdi\Fpdi as Fpdi;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -117,7 +116,13 @@ class DocumentoController extends Controller
         ])->findOrFail($id);
 
         if (!$documento->puedeLeer(auth()->user())) {
-            abort(403, 'No tienes permiso para leer este documento.');
+            return redirect()
+                ->to(url()->previous() ?: route('documentos.index'))
+                ->with('swal', [
+                    'icon'  => 'error',
+                    'title' => 'Acceso denegado',
+                    'text'  => 'No tienes permiso para leer este documento.'
+                ]);
         }
 
         $bucket = env('AWS_BUCKET');
@@ -134,7 +139,13 @@ class DocumentoController extends Controller
         $documento = Documento::with('ultimaModificacion')->findOrFail($id);
 
         if (!$documento->puedeAprobar(auth()->user())) {
-            abort(403, 'No tienes permiso para aprobar este documento.');
+            return redirect()
+                ->to(url()->previous() ?: route('documentos.index'))
+                ->with('swal', [
+                    'icon'  => 'error',
+                    'title' => 'Acceso denegado',
+                    'text'  => 'No tienes permiso para aprobar este documento.'
+                ]);
         }
 
         // Aprobar
@@ -183,9 +194,15 @@ class DocumentoController extends Controller
         $documento = Documento::findOrFail($id);
 
         if (!$documento->puedeEscribir(auth()->user())) {
-            //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento (update)');
-            abort(403, 'No tienes permiso para descargar/modificar este documento.');
+            return redirect()
+                ->to(url()->previous() ?: route('documentos.index'))
+                ->with('swal', [
+                    'icon'  => 'error',
+                    'title' => 'Acceso denegado',
+                    'text'  => 'No tienes permiso para descargar/modificar este documento.'
+                ]);
         }
+
 
         // Ruta del archivo en S3
         $filePath = $documento->path;
@@ -233,7 +250,13 @@ class DocumentoController extends Controller
         $documento = Documento::findOrFail($id);
 
         if (!$documento->puedeEscribir(auth()->user())) {
-            abort(403, 'No tienes permiso para modificar este documento (update).');
+            return redirect()
+                ->to(url()->previous() ?: route('documentos.index'))
+                ->with('swal', [
+                    'icon'  => 'error',
+                    'title' => 'Acceso denegado',
+                    'text'  => 'No tienes permiso para modificar o revertir este documento.'
+                ]);
         }
 
         $validated = $request->validate([
@@ -323,8 +346,13 @@ class DocumentoController extends Controller
         $documento = Documento::findOrFail($id);
         
         if (!$documento->puedeEscribir(auth()->user())) {
-            //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar este documento (addversion)');
-            abort(403, 'No tienes permiso para modificar este documento (addversion).');
+            return redirect()
+                ->to(url()->previous() ?: route('documentos.index'))
+                ->with('swal', [
+                    'icon'  => 'error',
+                    'title' => 'Acceso denegado',
+                    'text'  => 'No tienes permiso para modificar este documento.'
+                ]);
         }
 
         // Registrar la versión actual en el historial antes de realizar cambios
@@ -389,52 +417,6 @@ class DocumentoController extends Controller
         $historial->save();
     }
     
-    // public function revertToVersion($documentoId, $versionId)
-    // {
-
-    //     // Encuentra el documento actual
-    //     $documento = Documento::findOrFail($documentoId);
-
-    //     if (!$documento->puedeEscribir(auth()->user())) {
-    //         //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para modificar o revertir este documento');
-    //         abort(403, 'No tienes permiso para modificar o revertir este documento.');
-    //     }
-
-    //     // Encuentra la version en el historial a restaurar
-    //     $historialDocumento = HistorialDocumento::findOrFail($versionId);
-
-    //     // Verifica si la versión ya existe en el historial
-    //     $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
-    //                                         ->where('version', $documento->version)
-    //                                         ->exists();
-
-    //     // Solo archiva la versión actual si no existe en el historial
-    //     if (!$existeEnHistorial) {
-    //         $this->archiveCurrentVersion($documento);
-    //     }
-
-    //     if ($documento && $historialDocumento){
-    //         $documento->path = $historialDocumento->path;
-    //         $documento->titulo = $historialDocumento->titulo;
-    //         $documento->contenido = $historialDocumento->contenido;
-    //         $documento->estado = $historialDocumento->estado;
-    //         $documento->id_Categoria = $historialDocumento->id_categoria;
-    //         $documento->id_usr_creador = $historialDocumento->id_usr_creador;
-    //         $documento->id_usr_ultima_modif = $historialDocumento->id_usr_ultima_modif;
-    //         $documento->fecha_aprobacion = $historialDocumento->null;
-    //         $documento->version = $historialDocumento->version;
-    //         $documento->estado = "pendiente de aprobación";
-    //         //$documento->version = $historialDocumento;
-    //         $documento->save();
-
-    //         return redirect()->route('documentos.show', $documento->id)
-    //         ->with('success', 'Documento actualizado y nueva versión creada');
-    //     } else {
-    //         return response()->json(['error' => 'Documento o historial no encontrado.'], 404);
-    //     }
-
-    // }
-
     public function revertToVersion($documentoId, $versionId)
     {
         try {
@@ -444,8 +426,15 @@ class DocumentoController extends Controller
                 $documento = Documento::findOrFail($documentoId);
 
                 if (!$documento->puedeEscribir(auth()->user())) {
-                    abort(403, 'No tienes permiso para modificar o revertir este documento.');
+                    return redirect()
+                        ->to(url()->previous() ?: route('documentos.index'))
+                        ->with('swal', [
+                            'icon'  => 'error',
+                            'title' => 'Acceso denegado',
+                            'text'  => 'No tienes permiso para modificar o revertir este documento.'
+                        ]);
                 }
+
 
                 $historialDocumento = HistorialDocumento::where('id', $versionId)
                     ->where('id_documento', $documento->id)
@@ -519,8 +508,13 @@ class DocumentoController extends Controller
         $documento = Documento::findOrFail($id); 
 
         if (!$documento->puedeEliminar(auth()->user())) {
-            //return redirect()->route('documentos.index')->with('error', 'No tienes permiso para eliminar este documento');
-            abort(403, 'No tienes permiso para eliminar este documento.');
+            return redirect()
+                ->to(url()->previous() ?: route('documentos.index'))
+                ->with('swal', [
+                    'icon'  => 'error',
+                    'title' => 'Acceso denegado',
+                    'text'  => 'No tienes permiso para eliminar este documento.'
+                ]);
         }
 
         // Obtiene el historial de documentos asociados
@@ -553,13 +547,14 @@ class DocumentoController extends Controller
         $usuario = auth()->user();
 
         // Verifica si el usuario tiene el permiso específico
-        // if (!$documento->{$permiso}($usuario)) {
-        //     return redirect()->route('documentos.index')->with('error', 'No tienes permiso para realizar esta acción');
-        // } else {
-        //     return redirect()->route($ruta, ['documento' => $id]);
-        // }
         if (!$documento->{$permiso}($usuario)) {
-            abort(403, 'No tienes permiso para realizar esta acción.');
+            return redirect()
+                ->to(url()->previous() ?: route('documentos.index'))
+                ->with('swal', [
+                    'icon'  => 'error',
+                    'title' => 'Acceso denegado',
+                    'text'  => 'No tienes permiso para realizar esta acción.'
+                ]);
         } else {
             return redirect()->route($ruta, ['documento' => $id]);
         }
@@ -714,7 +709,13 @@ class DocumentoController extends Controller
         $documento = Documento::findOrFail($id);
 
         if (!$documento->puedeAprobar(auth()->user())) {
-            abort(403, 'No tienes permiso para rechazar este documento.');
+            return redirect()
+                ->to(url()->previous() ?: route('documentos.index'))
+                ->with('swal', [
+                    'icon'  => 'error',
+                    'title' => 'Acceso denegado',
+                    'text'  => 'No tienes permiso para rechazar este documento.'
+                ]);
         }
 
         $request->validate([

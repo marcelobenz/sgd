@@ -27,19 +27,41 @@
     .btn-link {
         text-decoration: none;
     }
+
     .selected-row {
-    background-color: #d1ecf1; /* Cambia el color según tus preferencias */
-    font-weight: bold; /* Opcional: para resaltar más el texto */
+        background-color: #d1ecf1;
+        /* Cambia el color según tus preferencias */
+        font-weight: bold;
+        /* Opcional: para resaltar más el texto */
     }
 
-    /* Posicionar la modal sobre #colInfoDocumento */
-    #versionInfoModal .modal-dialog{
-    max-width:none; margin:0; /* anulamos centrado de Bootstrap */
-    }
-    #versionInfoModal.show .modal-dialog{
-    position:fixed; z-index:1060; /* por encima del panel */
+    #documentViewer {
+        position: relative;
+        z-index: 1050;
+        /* Asegura que quede por encima del fondo pero debajo de la modal */
     }
 
+    #versionInfoPanel {
+        position: absolute;
+        top: 60px;
+        /* deja margen con el navbar */
+        left: 0;
+        width: 400px;
+        height: 50%;
+        background-color: #fff;
+        border-left: 1px solid #ccc;
+        box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+        z-index: 2000;
+        display: none;
+        overflow-y: auto;
+        padding: 15px;
+        cursor: move;
+        /* para indicar que se puede arrastrar */
+    }
+
+    #versionInfoPanel.show {
+        display: block;
+    }
 </style>
 
 @endsection
@@ -49,29 +71,29 @@
 <div class="container-fluid" style="margin-top: 40px;">
     <br>
     @if ($errors->any())
-        <div class="alert alert-danger mt-4">
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-            </ul>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger mt-4">
-            {{ session('error') }}
+    <div class="alert alert-danger mt-4">
+        <ul>
+            @foreach ($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
-        </div>
-    @endif    
+        </ul>
+    </div>
+    @endif
+    @if(session('error'))
+    <div class="alert alert-danger mt-4">
+        {{ session('error') }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    @endif
     <form id="uploadForm" action="{{ route('documentos.addVersion', $documento->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
-        
+
         <div class="row">
 
             <!-- Columna A: Información del documento -->
@@ -79,117 +101,128 @@
                 <div class="d-flex justify-content-end mt-2">
                     <div class="btn-group w-100" role="group" aria-label="Basic mixed styles example">
                         <a href="{{ route('documentos.download', $documento->id) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Descargar versión actual">
-                            <i class="fa-solid fa-cloud-arrow-down"></i> 
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
                         </a>
                         <button type="button" id="uploadModalBtn" class="btn btn-custom" data-placement="top" title="Subir una nueva versión" data-toggle="tooltip" data-target="#uploadModal">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> 
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
                         </button>
                         <button type="button" id="AprobarModalBtn" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Aprobar Documento">
-                            <i class="fa-regular fa-thumbs-up"></i> 
+                            <i class="fa-regular fa-thumbs-up"></i>
                         </button>
                         @if($documento->puedeAprobar(auth()->user()) && $documento->estado === 'pendiente de aprobación')
-                            <!-- Botón para abrir modal de rechazo -->
-                            <button type="button" class="btn btn-custom" data-toggle="modal" data-target="#modalRechazo" title="Rechazar documento">
-                                <i class="fas fa-thumbs-down"></i>
-                            </button>
+                        <!-- Botón para abrir modal de rechazo -->
+                        <button type="button" class="btn btn-custom" data-toggle="modal" data-target="#modalRechazo" title="Rechazar documento">
+                            <i class="fas fa-thumbs-down"></i>
+                        </button>
                         @endif
                         <!-- Botón para editar metatata documento -->
                         <a href="{{ route('documentos.validaPermiso', ['id' => $documento, 'ruta' => 'documentos.edit', 'permiso' => 'puedeEscribir']) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Editar Cabecera y Permisos">
                             <i class="fa-regular fa-pen-to-square"></i>
                         </a>
                         <a href="{{ route('documentos.exportarPdf', $documento) }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Exportar PDF">
-                            <i class="fa-solid fa-file-pdf"></i> 
+                            <i class="fa-solid fa-file-pdf"></i>
                         </a>
                         <a href="{{ route('documentos.index') }}" class="btn btn-custom" data-toggle="tooltip" data-placement="top" title="Volver">
-                            <i class="fa-regular fa-hand-point-left"></i> 
+                            <i class="fa-regular fa-hand-point-left"></i>
                         </a>
                     </div>
                 </div>
 
-                <table class="table table-bordered w-100">
-                    <thead>
-                        <th colspan="4">Versión Actual</th>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Documento:</td><td colspan=3>{{ $documento->titulo }}</td>
-                        </tr>
-                        <tr>
-                            <td>Versión:</td>
-                            <td>{{ $documento->version }}</td>
-                            <td class="text-center">
-                                <button type="button"
+                <div id="bloqueVersionActual" style="position: relative;">
+                    <table class="table table-bordered w-100">
+                        <thead>
+                            <th colspan="4">Versión Actual</th>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Documento:</td>
+                                <td colspan=3>{{ $documento->titulo }}</td>
+                            </tr>
+                            <tr>
+                                <td>Versión:</td>
+                                <td>{{ $documento->version }}</td>
+                                <td class="text-center">
+                                    <button type="button"
                                         class="btn btn-light btn-link mx-1"
                                         onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')"
                                         data-toggle="tooltip" data-placement="top"
                                         title="Ver versión actual">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </td>
-                            <td class="text-center">
-                                <button type="button"
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button"
                                         class="btn btn-light btn-link mx-1"
                                         onclick="mostrarPopoverContenido(event, `{{ addslashes($documento->contenido ?? 'Sin contenido') }}`)"
                                         title="Ver detalle versión">
-                                    <i class="fa-solid fa-file-lines"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Categoría: </td><td colspan=3> {{ $documento->categoria->nombre_categoria }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align: middle;">Estado: </td><td colspan=3>
-                                @php
+                                        <i class="fa-solid fa-file-lines"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Categoría: </td>
+                                <td colspan=3> {{ $documento->categoria->nombre_categoria }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle;">Estado: </td>
+                                <td colspan=3>
+                                    @php
                                     $estadoColor = '';
                                     switch($documento->estado) {
-                                        case 'pendiente de aprobación':
-                                            $estadoColor = 'red';
-                                            break;
-                                        case 'aprobado':
-                                            $estadoColor = 'green';
-                                            break;
-                                        case 'registro':
-                                            $estadoColor = 'blue';
-                                            break;
-                                        default:
-                                            $estadoColor = 'black';
+                                    case 'pendiente de aprobación':
+                                    $estadoColor = 'red';
+                                    break;
+                                    case 'aprobado':
+                                    $estadoColor = 'green';
+                                    break;
+                                    case 'registro':
+                                    $estadoColor = 'blue';
+                                    break;
+                                    default:
+                                    $estadoColor = 'black';
                                     }
-                                @endphp
-                                <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
-                                    {{ $documento->estado }}
-                                </span>
-                            </td>
-                        </tr>
-                        @if($documento->aprobador && $documento->estado === 'aprobado')
+                                    @endphp
+                                    <span style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
+                                        {{ $documento->estado }}
+                                    </span>
+                                </td>
+                            </tr>
+                            @if($documento->aprobador && $documento->estado === 'aprobado')
                             <tr>
-                                <td>Aprobador: </td><td colspan=3> {{ $documento->aprobador->name }}</td>
+                                <td>Aprobador: </td>
+                                <td colspan=3> {{ $documento->aprobador->name }}</td>
                             </tr>
                             <tr>
-                                <td>Fecha: </td><td colspan=3> {{ $documento->fecha_aprobacion }}</td>
+                                <td>Fecha: </td>
+                                <td colspan=3> {{ $documento->fecha_aprobacion }}</td>
                             </tr>
-                        @endif
-                        <tr>
-                            <td>Creador: </td><td colspan=3> {{ $documento->creador->name }}</td>
-                        </tr>
-                        <tr>
-                            <td>Fecha: </td><td colspan=3> {{ $documento->created_at }}</td>
-                        </tr>
-                        <tr>
-                            <td>Último Editor:  </td><td colspan=3>{{ $documento->ultimaModificacion->name }}</td>
-                        </tr>
-                        <tr>
-                            <td>Fecha:  </td><td colspan=3>{{ $documento->updated_at }}</td>
-                        </tr>
-                        <tr>
-                            <th colspan="4">
-                                <a href="#" data-toggle="collapse" data-target="#collapseVersAnteriores" aria-expanded="false" aria-controls="collapseVersAnteriores">
-                                    Versiones Anteriores
-                                </a>
-                            </th>
-                        </tr>
-                    </tbody>
-                </table>
+                            @endif
+                            <tr>
+                                <td>Creador: </td>
+                                <td colspan=3> {{ $documento->creador->name }}</td>
+                            </tr>
+                            <tr>
+                                <td>Fecha: </td>
+                                <td colspan=3> {{ $documento->created_at }}</td>
+                            </tr>
+                            <tr>
+                                <td>Último Editor: </td>
+                                <td colspan=3>{{ $documento->ultimaModificacion->name }}</td>
+                            </tr>
+                            <tr>
+                                <td>Fecha: </td>
+                                <td colspan=3>{{ $documento->updated_at }}</td>
+                            </tr>
+                            <tr>
+                                <th colspan="4">
+                                    <a href="#" data-toggle="collapse" data-target="#collapseVersAnteriores" aria-expanded="false" aria-controls="collapseVersAnteriores">
+                                        Versiones Anteriores
+                                    </a>
+                                </th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <div class="collapse" id="collapseVersAnteriores">
                     <table class="table table-bordered w-100">
@@ -201,58 +234,50 @@
                             </tr>
                         </thead>
                         @foreach ($documento->historial as $index => $versionhistorial)
-                            @php
-                                // Armamos los metadatos a mostrar en la modal
-                                $histMeta = [
-                                    'titulo'              => $versionhistorial->titulo ?? $documento->titulo,
-                                    'version'             => $versionhistorial->version,
-                                    'categoria'           => $documento->categoria->nombre_categoria, // ajustá si tu historial guarda categoría
-                                    'estado'              => $versionhistorial->estado,
-                                    // Si NO tenés relaciones en HistorialDocumento, reemplazá por User::find(...)
-                                    'aprobador'           => optional($versionhistorial->aprobador)->name ?? null,
-                                    'fecha_aprobacion'    => (string) $versionhistorial->fecha_aprobacion,
-                                    'creador'             => optional($versionhistorial->creador)->name ?? null,
-                                    'fecha_creacion'      => (string) $versionhistorial->created_at,
-                                    'ultimo_editor'       => optional($versionhistorial->ultimaModificacion)->name ?? null,
-                                    'fecha_ultima_modif'  => (string) $versionhistorial->updated_at,
-                                    'contenido'           => $versionhistorial->contenido,
-                                ];
-                                $histUrl = sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $versionhistorial->path);
-                                $histExt = pathinfo($versionhistorial->path, PATHINFO_EXTENSION);
-                            @endphp
+                        @php
+                        // Armamos los metadatos a mostrar en la modal
+                        $histMeta = [
+                        'titulo' => $versionhistorial->titulo ?? $documento->titulo,
+                        'version' => $versionhistorial->version,
+                        'categoria' => $documento->categoria->nombre_categoria, // ajustá si tu historial guarda categoría
+                        'estado' => $versionhistorial->estado,
+                        // Si NO tenés relaciones en HistorialDocumento, reemplazá por User::find(...)
+                        'aprobador' => optional($versionhistorial->aprobador)->name ?? null,
+                        'fecha_aprobacion' => (string) $versionhistorial->fecha_aprobacion,
+                        'creador' => optional($versionhistorial->creador)->name ?? null,
+                        'fecha_creacion' => (string) $versionhistorial->created_at,
+                        'ultimo_editor' => optional($versionhistorial->ultimaModificacion)->name ?? null,
+                        'fecha_ultima_modif' => (string) $versionhistorial->updated_at,
+                        'contenido' => $versionhistorial->contenido,
+                        ];
+                        $histUrl = sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $versionhistorial->path);
+                        $histExt = pathinfo($versionhistorial->path, PATHINFO_EXTENSION);
+                        @endphp
 
-                            <tr class="table-row">
-                                <td>{{ $versionhistorial->version }}</td>
-                                <td>{{ $versionhistorial->created_at }}</td>
+                        <tr class="table-row">
+                            <td>{{ $versionhistorial->version }}</td>
+                            <td>{{ $versionhistorial->created_at }}</td>
 
-                                <td class="text-center">
-                                    <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
+                            <td class="text-center">
+                                <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
                                     data-action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
                                     onclick="event.preventDefault(); confirmRevert(this);"
                                     class="btn btn-light p-0"
                                     data-toggle="tooltip" data-placement="top" title="Revertir a esta versión">
-                                        <i class="fa-solid fa-repeat"></i>
-                                    </a>
-                                </td>
+                                    <i class="fa-solid fa-repeat"></i>
+                                </a>
+                            </td>
 
-                                {{-- Ver (👁️): carga iframe y abre modal superpuesta con los datos --}}
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-light p-0"
-                                            onclick='viewAndShowMeta(@json($histUrl), @json($histExt), @json($histMeta))'
-                                            data-toggle="tooltip" data-placement="top" title="Ver esta versión">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                </td>
+                            {{-- Ver (👁️): carga iframe y abre modal superpuesta con los datos --}}
+                            <td class="text-center">
+                                <button type="button" class="btn btn-light p-0"
+                                    onclick='viewAndShowMeta(@json($histUrl), @json($histExt), @json($histMeta))'
+                                    data-toggle="tooltip" data-placement="top" title="Ver esta versión">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </td>
 
-                                {{-- Ver contenido (📄): abre la misma modal con el detalle (sin tocar el iframe) --}}
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-light p-0"
-                                            onclick='openVersionModal(@json($histMeta))'
-                                            data-toggle="tooltip" data-placement="top" title="Ver contenido de esta versión">
-                                        <i class="fa-solid fa-file-lines"></i>
-                                    </button>
-                                </td>
-                            </tr>
+                        </tr>
                         @endforeach
                     </table>
                 </div>
@@ -266,39 +291,39 @@
                     <iframe id="documentViewer" src="" style="width: 100%; height: 600px;" frameborder="0" allowfullscreen></iframe>
                 </div>
             </div>
-            
+
         </div>
 
-    <!-- Modales -->
-    <!-- Modal para actualizar documento -->
-    <div class="modal fade" id="uploadModal" tabindex="-1" role="dialog" aria-labelledby="uploadModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="uploadModalLabel">Seleccionar nuevo archivo</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <!-- Campo de archivo -->
-                    <div class="form-group">
-                        <label for="nuevoArchivo">Nuevo Archivo</label>
-                        <input type="file" name="nuevoArchivo" id="nuevoArchivo" class="form-control">
+        <!-- Modales -->
+        <!-- Modal para actualizar documento -->
+        <div class="modal fade" id="uploadModal" tabindex="-1" role="dialog" aria-labelledby="uploadModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="uploadModalLabel">Seleccionar nuevo archivo</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
-                    <!-- Campo de contenido actualizado -->
-                    <div class="form-group">
-                        <label for="contenidoActualizado">Contenido actualizado</label>
-                        <textarea name="contenidoActualizado" id="contenidoActualizado" class="form-control" rows="5"></textarea>
+                    <div class="modal-body">
+                        <!-- Campo de archivo -->
+                        <div class="form-group">
+                            <label for="nuevoArchivo">Nuevo Archivo</label>
+                            <input type="file" name="nuevoArchivo" id="nuevoArchivo" class="form-control">
+                        </div>
+                        <!-- Campo de contenido actualizado -->
+                        <div class="form-group">
+                            <label for="contenidoActualizado">Contenido actualizado</label>
+                            <textarea name="contenidoActualizado" id="contenidoActualizado" class="form-control" rows="5"></textarea>
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="uploadBtn">Aceptar</button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="uploadBtn">Aceptar</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
     </form>
 
@@ -306,41 +331,6 @@
     <form id="revert-global-form" method="POST" style="display:none;">
         @csrf
     </form>
-
-    <!-- Modal de Confirmación para Aprobar documento -->
-    <div class="modal fade" id="aprobarModal" tabindex="-1" role="dialog" aria-labelledby="aprobarModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="aprobarModalLabel">Confirmar Aprobación</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                ¿Estás seguro de que deseas aprobar este documento?
-                <div class="mt-3">
-                <div class="form-check">
-                    {{-- Importante: el hidden garantiza que, si NO se tilda, llegue "0" --}}
-                    <input type="hidden" name="notificar_autor" value="0" form="formAprobarDoc">
-                    <input class="form-check-input" type="checkbox" id="notificarAutor" name="notificar_autor" value="1" form="formAprobarDoc" checked>
-                    <label class="form-check-label" for="notificarAutor">
-                    Notificar al autor
-                    </label>
-                </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <form id="formAprobarDoc" action="{{ route('documentos.aprobar', $documento->id) }}" method="POST">
-                @csrf
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-warning">Aprobar</button>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal de confirmación para revertir versión-->
     <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true">
@@ -363,361 +353,551 @@
         </div>
     </div>
 
-    {{-- Modal anclada sobre el panel izquierdo (sin backdrop) --}}
-    <div class="modal fade" id="versionInfoModal" tabindex="-1" role="dialog"
-        aria-labelledby="versionInfoLabel" aria-hidden="true" data-backdrop="false" data-keyboard="true">
+    <!-- Modal anclada sobre el panel izquierdo (sin backdrop) -->
+    <!-- <div class="modal fade" id="versionInfoModal" tabindex="-1" role="dialog"
+        aria-labelledby="versionInfoLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content" style="box-shadow:0 10px 25px rgba(0,0,0,.35);">
-            <div class="modal-header py-2">
-                <h5 class="modal-title" id="versionInfoLabel">Versión</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body p-2">
-                <table class="table table-bordered w-100 mb-0">
-                <tbody>
-                    <tr><td>Documento:</td><td id="m_titulo"></td></tr>
-                    <tr><td>Versión:</td><td id="m_version"></td></tr>
-                    <tr><td>Categoría:</td><td id="m_categoria"></td></tr>
-                    <tr>
-                    <td>Estado:</td>
-                    <td>
-                        <span id="m_estadoBadge" style="border:2px solid; padding:5px 8px; border-radius:4px;"></span>
-                    </td>
-                    </tr>
-                    <tr id="m_aprobadorRow" style="display:none"><td>Aprobador:</td><td id="m_aprobador"></td></tr>
-                    <tr id="m_fechaAprRow" style="display:none"><td>Fecha:</td><td id="m_fecha_aprobacion"></td></tr>
-                    <tr><td>Creador:</td><td id="m_creador"></td></tr>
-                    <tr><td>Fecha:</td><td id="m_fecha_creacion"></td></tr>
-                    <tr><td>Último Editor:</td><td id="m_ultimo_editor"></td></tr>
-                    <tr><td>Fecha:</td><td id="m_fecha_ultima"></td></tr>
-                    <tr><td>Detalle de versión:</td><td id="m_contenido" style="white-space:pre-wrap"></td></tr>
-                </tbody>
-                </table>
-            </div>
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="versionInfoLabel">Versión</h5>
+                    <button type="button" class="close" onclick="cerrarVersionModal()" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-2">
+                    <table class="table table-bordered w-100 mb-0">
+                        <tbody>
+                            <tr>
+                                <td>Documento:</td>
+                                <td id="m_titulo"></td>
+                            </tr>
+                            <tr>
+                                <td>Versión:</td>
+                                <td id="m_version"></td>
+                            </tr>
+                            <tr>
+                                <td>Categoría:</td>
+                                <td id="m_categoria"></td>
+                            </tr>
+                            <tr>
+                                <td>Estado:</td>
+                                <td>
+                                    <span id="m_estadoBadge" style="border:2px solid; padding:5px 8px; border-radius:4px;"></span>
+                                </td>
+                            </tr>
+                            <tr id="m_aprobadorRow" style="display:none">
+                                <td>Aprobador:</td>
+                                <td id="m_aprobador"></td>
+                            </tr>
+                            <tr id="m_fechaAprRow" style="display:none">
+                                <td>Fecha:</td>
+                                <td id="m_fecha_aprobacion"></td>
+                            </tr>
+                            <tr>
+                                <td>Creador:</td>
+                                <td id="m_creador"></td>
+                            </tr>
+                            <tr>
+                                <td>Fecha:</td>
+                                <td id="m_fecha_creacion"></td>
+                            </tr>
+                            <tr>
+                                <td>Último Editor:</td>
+                                <td id="m_ultimo_editor"></td>
+                            </tr>
+                            <tr>
+                                <td>Fecha:</td>
+                                <td id="m_fecha_ultima"></td>
+                            </tr>
+                            <tr>
+                                <td>Detalle de versión:</td>
+                                <td id="m_contenido" style="white-space:pre-wrap"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- Modal Rechazo -->
     <div class="modal fade" id="modalRechazo" tabindex="-1" role="dialog" aria-labelledby="modalRechazoLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-        <form id="formRechazo" action="{{ route('documentos.rechazar', $documento->id) }}" method="POST">
-            @csrf
-            <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title" id="modalRechazoLabel">Rechazar documento</h5>
-            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
-                <span aria-hidden="true">&times;</span>
-            </button>
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form id="formRechazo" action="{{ route('documentos.rechazar', $documento->id) }}" method="POST">
+                    @csrf
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="modalRechazoLabel">Rechazar documento</h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="comentarios">Motivo del rechazo:</label>
+                        <textarea name="comentarios" id="comentarios" class="form-control" rows="4" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-danger">Rechazar</button>
+                    </div>
+                </form>
             </div>
-            <div class="modal-body">
-            <label for="comentarios">Motivo del rechazo:</label>
-            <textarea name="comentarios" id="comentarios" class="form-control" rows="4" required></textarea>
-            </div>
-            <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-            <button type="submit" class="btn btn-danger">Rechazar</button>
-            </div>
-        </form>
         </div>
     </div>
+
+    <!-- Modal de Confirmación para Aprobar documento -->
+    <div class="modal fade" id="aprobarModal" tabindex="-1" role="dialog" aria-labelledby="aprobarModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aprobarModalLabel">Confirmar Aprobación</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    ¿Estás seguro de que deseas aprobar este documento?
+                    <div class="mt-3">
+                        <div class="form-check">
+                            {{-- Importante: el hidden garantiza que, si NO se tilda, llegue "0" --}}
+                            <input type="hidden" name="notificar_autor" value="0" form="formAprobarDoc">
+                            <input class="form-check-input" type="checkbox" id="notificarAutor" name="notificar_autor" value="1" form="formAprobarDoc" checked>
+                            <label class="form-check-label" for="notificarAutor">
+                                Notificar al autor
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <form id="formAprobarDoc" action="{{ route('documentos.aprobar', $documento->id) }}" method="POST">
+                        @csrf
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Aprobar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-</div>
+    <div id="contenidoPopover"
+        style="display:none; position:absolute; z-index:1050; max-width:300px; background:#fff; border:1px solid #ccc; border-radius:5px; box-shadow:0 2px 10px rgba(0,0,0,0.2); padding:10px; white-space:pre-wrap;">
+    </div>
 
-<div id="contenidoPopover" 
-    style="display:none; position:absolute; z-index:1050; max-width:300px; background:#fff; border:1px solid #ccc; border-radius:5px; box-shadow:0 2px 10px rgba(0,0,0,0.2); padding:10px; white-space:pre-wrap;">
-</div>
+    @endsection
 
-@endsection
+    <div id="versionInfoPanel">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" id="versionInfoLabel">Versión</h5>
+            <button type="button" class="close" onclick="cerrarVersionInfoPanel()" style="position: absolute; top: 5px; right: 10px; font-size: 1.5rem; background: none; border: none;">
+                &times;
+            </button>
+        </div>
+        <hr>
+        <table class="table table-bordered">
+            <tbody>
+                <tr>
+                    <td>Documento:</td>
+                    <td id="m_titulo"></td>
+                </tr>
+                <tr>
+                    <td>Versión:</td>
+                    <td id="m_version"></td>
+                </tr>
+                <tr>
+                    <td>Categoría:</td>
+                    <td id="m_categoria"></td>
+                </tr>
+                <tr>
+                    <td>Estado:</td>
+                    <td><span id="m_estadoBadge"></span></td>
+                </tr>
+                <tr id="m_aprobadorRow">
+                    <td>Aprobador:</td>
+                    <td id="m_aprobador"></td>
+                </tr>
+                <tr id="m_fechaAprRow">
+                    <td>Fecha:</td>
+                    <td id="m_fecha_aprobacion"></td>
+                </tr>
+                <tr>
+                    <td>Creador:</td>
+                    <td id="m_creador"></td>
+                </tr>
+                <tr>
+                    <td>Fecha:</td>
+                    <td id="m_fecha_creacion"></td>
+                </tr>
+                <tr>
+                    <td>Último Editor:</td>
+                    <td id="m_ultimo_editor"></td>
+                </tr>
+                <tr>
+                    <td>Fecha:</td>
+                    <td id="m_fecha_ultima"></td>
+                </tr>
+                <tr>
+                    <td>Detalle de versión:</td>
+                    <td id="m_contenido" style="white-space: pre-wrap;"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-@section('scripting')
-<script>
+    @section('scripting')
+    <script>
+        let popoverTimeout = null;
 
-    let popoverTimeout = null;
-
-    //Maneja la apertura de la modal para aprobar
-    $(document).ready(
-    function(){
-        $('#AprobarModalBtn').on('click', function(){
-            $('#aprobarModal').modal('show');
-        });
-    });
-
-    //Maneja la apertura de la modal para descargar
-    $(document).ready(function(){
-        $('#uploadModalBtn').on('click', function(){
-            $('#uploadModal').modal('show');
-        });
-    });
-
-    //Controla la accion en la modal de upload
-    document.getElementById('uploadBtn').addEventListener('click', function() {
-        const fileInput = document.getElementById('nuevoArchivo');
-        const contenidoActualizado = document.getElementById('contenidoActualizado').value;
-        
-        let valid = true;
-
-        // Validar archivo
-        if (fileInput.files.length === 0) {
-            alert('Debe seleccionar un archivo para continuar.');
-            valid = false;
-        }
-
-        // Validar contenido actualizado
-        if (contenidoActualizado.trim() === '') {
-            alert('Debe completar el contenido para continuar.');
-            valid = false;
-        }
-
-        // Si ambos campos son válidos, enviar el formulario
-        if (valid) {
-            const form = document.getElementById('uploadForm');
-            form.submit();
-        }
-    });
-
-    //Controla la accion de revert
-    function confirmRevert(linkEl) {
-        const action = linkEl.getAttribute('data-action');
-        // Abrir modal
-        $('#confirmModal').modal('show');
-
-        // Al confirmar
-        document.getElementById('confirmButton').onclick = function() {
-            const form = document.getElementById('revert-global-form');
-            form.setAttribute('action', action);
-            form.submit();
-        };
-    }
-
-    // Para previsualizar la versión historica
-    const estadoColors = {
-        'pendiente de aprobación': 'red',
-        'aprobado': 'green',
-        'registro': 'blue'
-    };
-
-    function paintBadge(el, estado){
-        const color = estadoColors[estado] || 'black';
-        el.textContent = estado || '';
-        el.style.borderColor = color;
-        el.style.color = color;
-    }
-
-    // Mantengo tu viewVersion (solo le agrego encodeURIComponent)
-    function viewVersion(url, extension) {
-        const iframe = document.getElementById('documentViewer');
-        let viewerUrl;
-        switch (extension) {
-        case 'pdf':
-            viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-            break;
-        case 'docx':
-        case 'xlsx':
-        case 'pptx':
-            viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
-            break;
-        default:
-            alert('Formato no soportado para vista previa');
-            return;
-        }
-        iframe.src = viewerUrl;
-    }
-
-    // Cargar iframe + abrir modal con datos
-    function viewAndShowMeta(url, extension, meta){
-        viewVersion(url, extension);
-        openVersionModal(meta);
-    }
-
-    function openVersionModal(meta){
-        // Completar campos
-        document.getElementById('versionInfoLabel').textContent = `Versión ${meta.version}`;
-        document.getElementById('m_titulo').textContent = meta.titulo || '';
-        document.getElementById('m_version').textContent = meta.version ?? '';
-        document.getElementById('m_categoria').textContent = meta.categoria || '';
-        paintBadge(document.getElementById('m_estadoBadge'), meta.estado || '');
-
-        const showApr = (meta.estado === 'aprobado') && !!meta.aprobador;
-        document.getElementById('m_aprobadorRow').style.display = showApr ? '' : 'none';
-        document.getElementById('m_fechaAprRow').style.display = showApr ? '' : 'none';
-        document.getElementById('m_aprobador').textContent = meta.aprobador || '';
-        document.getElementById('m_fecha_aprobacion').textContent = meta.fecha_aprobacion || '';
-
-        document.getElementById('m_creador').textContent = meta.creador || '';
-        document.getElementById('m_fecha_creacion').textContent = meta.fecha_creacion || '';
-        document.getElementById('m_ultimo_editor').textContent = meta.ultimo_editor || '';
-        document.getElementById('m_fecha_ultima').textContent = meta.fecha_ultima_modif || '';
-        document.getElementById('m_contenido').textContent = meta.contenido || 'Sin contenido';
-
-        // Mostrar modal
-        $('#versionInfoModal').modal('show');
-
-        // Posicionarla sobre el panel izquierdo
-        $('#versionInfoModal').on('shown.bs.modal', function () {
-        const rect = document.getElementById('colInfoDocumento').getBoundingClientRect();
-        const dlg  = document.querySelector('#versionInfoModal .modal-dialog');
-        dlg.style.left   = (rect.left + window.scrollX) + 'px';
-        dlg.style.top    = (rect.top  + window.scrollY) + 'px';
-        dlg.style.width  = rect.width + 'px';
-        dlg.style.height = 'auto';
-        dlg.style.position = 'fixed';
-        dlg.style.margin = '0';
-        });
-
-        // Reposicionar si cambia el tamaño de ventana
-        window.addEventListener('resize', function(){
-        if ($('#versionInfoModal').hasClass('show')) {
-            const rect = document.getElementById('colInfoDocumento').getBoundingClientRect();
-            const dlg  = document.querySelector('#versionInfoModal .modal-dialog');
-            dlg.style.left  = (rect.left + window.scrollX) + 'px';
-            dlg.style.top   = (rect.top  + window.scrollY) + 'px';
-            dlg.style.width = rect.width + 'px';
-        }
-        });
-    }
-
-
-    // Para la tabla de arriba (versión actual)
-    document.querySelector('.btn-link').addEventListener('click', function() {
-        // Desselecciona todas las filas en la tabla de versiones anteriores
-        var rows = document.querySelectorAll('.table-row');
-        rows.forEach(function(row) {
-            row.classList.remove('selected-row');
-        });
-    });
-
-    // Asigna el evento click a todas las filas de la tabla de versiones anteriores
-    document.querySelectorAll('.table-row').forEach(function(row) {
-        row.addEventListener('click', function() {
-            // Elimina la clase 'selected-row' de todas las filas
-            document.querySelectorAll('.table-row').forEach(function(r) {
-                r.classList.remove('selected-row');
+        //Maneja la apertura de la modal para aprobar
+        $(document).ready(
+            function() {
+                $('#AprobarModalBtn').on('click', function() {
+                    $('#aprobarModal').modal('show');
+                });
             });
 
-            // Añade la clase 'selected-row' a la fila actual
-            this.classList.add('selected-row');
+        //Maneja la apertura de la modal para descargar
+        $(document).ready(function() {
+            $('#uploadModalBtn').on('click', function() {
+                $('#uploadModal').modal('show');
+            });
         });
-    });
 
-    //Para cargar el documento en el viewer apenas carga la vista 
-    document.addEventListener('DOMContentLoaded', function() {
-        // Llame a viewVersion con la URL del documento actual y su extensión
-        var currentDocumentUrl = '{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}';
-        var currentDocumentExtension = '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}';
-        viewVersion(currentDocumentUrl, currentDocumentExtension);
-    });
+        //Controla la accion en la modal de upload
+        document.getElementById('uploadBtn').addEventListener('click', function() {
+            const fileInput = document.getElementById('nuevoArchivo');
+            const contenidoActualizado = document.getElementById('contenidoActualizado').value;
 
-    //Para manejar el colapso de la columna izquierda
-    const toggleBtn = document.getElementById('toggleDetails');
-    if (toggleBtn) {
-    toggleBtn.addEventListener('click', function() {
-        var colInfo = document.getElementById('colInfoDocumento');
-        var colContent = document.getElementById('colContenidoDocumento');
-        var collapseDetails = document.getElementById('collapseDetalles');
+            let valid = true;
 
-        if (colInfo.classList.contains('collapsed')) {
-        colInfo.classList.remove('collapsed');
-        colContent.classList.remove('expanded');
-        if (collapseDetails) collapseDetails.style.display = 'block';
-        } else {
-        colInfo.classList.add('collapsed');
-        colContent.classList.add('expanded');
-        if (collapseDetails) collapseDetails.style.display = 'none';
+            // Validar archivo
+            if (fileInput.files.length === 0) {
+                alert('Debe seleccionar un archivo para continuar.');
+                valid = false;
+            }
+
+            // Validar contenido actualizado
+            if (contenidoActualizado.trim() === '') {
+                alert('Debe completar el contenido para continuar.');
+                valid = false;
+            }
+
+            // Si ambos campos son válidos, enviar el formulario
+            if (valid) {
+                const form = document.getElementById('uploadForm');
+                form.submit();
+            }
+        });
+
+        //Controla la accion de revert
+        function confirmRevert(linkEl) {
+            const action = linkEl.getAttribute('data-action');
+            // Abrir modal
+            $('#confirmModal').modal('show');
+
+            // Al confirmar
+            document.getElementById('confirmButton').onclick = function() {
+                const form = document.getElementById('revert-global-form');
+                form.setAttribute('action', action);
+                form.submit();
+            };
         }
-    });
-    }
 
+        // Para previsualizar la versión historica
+        const estadoColors = {
+            'pendiente de aprobación': 'red',
+            'aprobado': 'green',
+            'registro': 'blue'
+        };
 
-    //Muestra detalle de version
-    function mostrarPopoverContenido(event, contenido) {
-        const popover = document.getElementById('contenidoPopover');
-        popover.innerText = contenido;
-        popover.style.display = 'block';
-
-        // Posicionar al lado derecho del botón
-        const rect = event.currentTarget.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-
-        popover.style.top = (rect.top + scrollTop) + 'px';
-        popover.style.left = (rect.right + scrollLeft + 10) + 'px';
-
-        // Reiniciar timeout
-        clearTimeout(popoverTimeout);
-        popoverTimeout = setTimeout(() => {
-            popover.style.display = 'none';
-        }, 3000);
-    }
-
-    // Ocultar el popover al hacer clic fuera
-    document.addEventListener('click', function (e) {
-        const popover = document.getElementById('contenidoPopover');
-        if (!popover.contains(e.target) && !e.target.closest('.btn-light')) {
-            popover.style.display = 'none';
-            clearTimeout(popoverTimeout);
+        function paintBadge(el, estado) {
+            const color = estadoColors[estado] || 'black';
+            el.textContent = estado || '';
+            el.style.borderColor = color;
+            el.style.color = color;
         }
-    });
 
-</script>
+        // Mantengo tu viewVersion (solo le agrego encodeURIComponent)
+        function viewVersion(url, extension) {
+            const iframe = document.getElementById('documentViewer');
+            let viewerUrl;
+            switch (extension) {
+                case 'pdf':
+                    viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+                    break;
+                case 'docx':
+                case 'xlsx':
+                case 'pptx':
+                    viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+                    break;
+                default:
+                    alert('Formato no soportado para vista previa');
+                    return;
+            }
+            iframe.src = viewerUrl;
+        }
 
-<style>
-    .btn-custom {
-        border: 2px solid #333;
-        background-color: #e9ecef;
-        color: #000;
-        transition: background-color 0.3s ease, box-shadow 0.3s ease; /* Efecto de transición suave */
-    }
+        // Cargar iframe + abrir modal con datos
+        function viewAndShowMeta(url, extension, meta) {
+            viewVersion(url, extension);
+            openVersionModal(meta);
+        }
 
-    .btn-custom:hover {
-        background-color: #dcdcdc; /* Color de fondo al pasar el mouse */
-        color: #000;
-        border-color: #666;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Añadir sombra al pasar el mouse */
-    }
+        // Abre la modal para ver la info de versiones anteriores
+        // function openVersionModal(meta) {
+        //     // Completar campos
+        //     document.getElementById('versionInfoLabel').textContent = `Versión ${meta.version}`;
+        //     document.getElementById('m_titulo').textContent = meta.titulo || '';
+        //     document.getElementById('m_version').textContent = meta.version ?? '';
+        //     document.getElementById('m_categoria').textContent = meta.categoria || '';
+        //     paintBadge(document.getElementById('m_estadoBadge'), meta.estado || '');
 
-    .mt-5 {
-        margin-top: 3rem !important; /* Añade margen superior para que el grupo de botones no quede tapado */
-    }
+        //     const showApr = (meta.estado === 'aprobado') && !!meta.aprobador;
+        //     document.getElementById('m_aprobadorRow').style.display = showApr ? '' : 'none';
+        //     document.getElementById('m_fechaAprRow').style.display = showApr ? '' : 'none';
+        //     document.getElementById('m_aprobador').textContent = meta.aprobador || '';
+        //     document.getElementById('m_fecha_aprobacion').textContent = meta.fecha_aprobacion || '';
 
-    /* Estilos para animar el colapso de derecha a izquierda */
-    #colInfoDocumento.collapsed {
-        transition: margin-right 0.5s ease, width 0.5s ease;
-        margin-right: -25%;
-        width: 0;
-    }
+        //     document.getElementById('m_creador').textContent = meta.creador || '';
+        //     document.getElementById('m_fecha_creacion').textContent = meta.fecha_creacion || '';
+        //     document.getElementById('m_ultimo_editor').textContent = meta.ultimo_editor || '';
+        //     document.getElementById('m_fecha_ultima').textContent = meta.fecha_ultima_modif || '';
+        //     document.getElementById('m_contenido').textContent = meta.contenido || 'Sin contenido';
 
-    #colContenidoDocumento.expanded {
-        transition: width 0.5s ease;
-        width: 100%;
-    }
+        //     // Mostrar modal manualmente sin Bootstrap JS
+        //     const modal = document.getElementById('versionInfoModal');
+        //     modal.classList.add('show');
+        //     modal.style.display = 'block';
+        //     modal.setAttribute('aria-modal', 'true');
+        //     modal.removeAttribute('aria-hidden');
 
-    #overlay {
-        display: none; /* Oculto por defecto */
-        position: fixed; /* Posición fija para cubrir toda la pantalla */
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5); /* Fondo semi-transparente */
-        z-index: 9999; /* Asegura que esté por encima de todos los elementos */
-        text-align: center;
-        color: white;
-    }
+        //     // Evitar efectos secundarios de Bootstrap
+        //     document.body.classList.remove('modal-open');
 
-    #overlay div {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%); /* Centrar el texto */
-    }
+        //     // Posicionar la modal sobre colInfoDocumento
+        //     const rect = document.getElementById('colInfoDocumento').getBoundingClientRect();
+        //     const dlg = modal.querySelector('.modal-dialog');
+        //     dlg.style.left = (rect.left + window.scrollX) + 'px';
+        //     dlg.style.top = (rect.top + window.scrollY) + 'px';
+        //     dlg.style.width = rect.width + 'px';
+        //     dlg.style.height = 'auto';
+        //     dlg.style.position = 'fixed';
+        //     dlg.style.margin = '0';
+        // }
 
-</style>
+        // Código actualizado para mostrar el panel sobre el bloque "Versión Actual"
 
-@endsection
+        function openVersionModal(meta) {
+            const anchor = document.getElementById("bloqueVersionActual");
+            const panel = document.getElementById("versionInfoPanel");
 
-</body>
-</html>
+            if (anchor && panel) {
+                const rect = anchor.getBoundingClientRect();
+                panel.style.position = "absolute";
+                panel.style.top = `${window.scrollY + rect.top}px`;
+                panel.style.left = `${window.scrollX + rect.left}px`;
+                panel.style.display = 'block'; // Asegura visibilidad
+            }
+
+            document.getElementById('versionInfoLabel').textContent = `Versión ${meta.version}`;
+            document.getElementById('m_titulo').textContent = meta.titulo || '';
+            document.getElementById('m_version').textContent = meta.version || '';
+            document.getElementById('m_categoria').textContent = meta.categoria || '';
+            paintBadge(document.getElementById('m_estadoBadge'), meta.estado || '');
+
+            const showApr = meta.estado === 'aprobado' && !!meta.aprobador;
+            document.getElementById('m_aprobadorRow').style.display = showApr ? '' : 'none';
+            document.getElementById('m_fechaAprRow').style.display = showApr ? '' : 'none';
+            document.getElementById('m_aprobador').textContent = meta.aprobador || '';
+            document.getElementById('m_fecha_aprobacion').textContent = meta.fecha_aprobacion || '';
+            document.getElementById('m_creador').textContent = meta.creador || '';
+            document.getElementById('m_fecha_creacion').textContent = meta.fecha_creacion || '';
+            document.getElementById('m_ultimo_editor').textContent = meta.ultimo_editor || '';
+            document.getElementById('m_fecha_ultima').textContent = meta.fecha_ultima_modif || '';
+            document.getElementById('m_contenido').textContent = meta.contenido || 'Sin contenido';
+
+            panel.classList.add('show');
+        }
+
+        function cerrarVersionInfoPanel() {
+            const panel = document.getElementById('versionInfoPanel');
+            if (panel) {
+                panel.classList.remove('show');
+                panel.style.display = 'none'; // por si sigue ocupando espacio
+            }
+
+            // Restaurar la vista de la versión actual
+            const currentUrl = "{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}";
+            const currentExtension = "{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}";
+
+            viewVersion(currentUrl, currentExtension);
+        }
+
+            // Cierra la modal para ver la info de versiones anteriores
+            // function cerrarVersionModal() {
+            //     const modal = document.getElementById('versionInfoModal');
+            //     modal.classList.remove('show');
+            //     modal.style.display = 'none';
+            //     modal.setAttribute('aria-hidden', 'true');
+            //     modal.removeAttribute('aria-modal');
+
+            //     // Volver a mostrar la versión actual
+            //     var currentDocumentUrl = '{{ sprintf('
+            //     https: //%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}';
+            //         var currentDocumentExtension = '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}';
+            //     viewVersion(currentDocumentUrl, currentDocumentExtension);
+
+            //     // Quitar selección de fila
+            //     document.querySelectorAll('.table-row').forEach(function(r) {
+            //         r.classList.remove('selected-row');
+            //     });
+            // }
+
+            // Para la tabla de arriba (versión actual)
+            document.querySelector('.btn-link').addEventListener('click', function() {
+                // Desselecciona todas las filas en la tabla de versiones anteriores
+                var rows = document.querySelectorAll('.table-row');
+                rows.forEach(function(row) {
+                    row.classList.remove('selected-row');
+                });
+            });
+
+            // Asigna el evento click a todas las filas de la tabla de versiones anteriores
+            document.querySelectorAll('.table-row').forEach(function(row) {
+                row.addEventListener('click', function() {
+                    // Elimina la clase 'selected-row' de todas las filas
+                    document.querySelectorAll('.table-row').forEach(function(r) {
+                        r.classList.remove('selected-row');
+                    });
+
+                    // Añade la clase 'selected-row' a la fila actual
+                    this.classList.add('selected-row');
+                });
+            });
+
+            //Para cargar el documento en el viewer apenas carga la vista 
+            document.addEventListener('DOMContentLoaded', function() {
+                var currentDocumentUrl = "{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}";
+                var currentDocumentExtension = "{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}";
+                viewVersion(currentDocumentUrl, currentDocumentExtension);
+            });
+
+            //Para manejar el colapso de la columna izquierda
+            const toggleBtn = document.getElementById('toggleDetails');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    var colInfo = document.getElementById('colInfoDocumento');
+                    var colContent = document.getElementById('colContenidoDocumento');
+                    var collapseDetails = document.getElementById('collapseDetalles');
+
+                    if (colInfo.classList.contains('collapsed')) {
+                        colInfo.classList.remove('collapsed');
+                        colContent.classList.remove('expanded');
+                        if (collapseDetails) collapseDetails.style.display = 'block';
+                    } else {
+                        colInfo.classList.add('collapsed');
+                        colContent.classList.add('expanded');
+                        if (collapseDetails) collapseDetails.style.display = 'none';
+                    }
+                });
+            }
+
+            //Muestra detalle de version
+            function mostrarPopoverContenido(event, contenido) {
+                const popover = document.getElementById('contenidoPopover');
+                popover.innerText = contenido;
+                popover.style.display = 'block';
+
+                // Posicionar al lado derecho del botón
+                const rect = event.currentTarget.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+                popover.style.top = (rect.top + scrollTop) + 'px';
+                popover.style.left = (rect.right + scrollLeft + 10) + 'px';
+
+                // Reiniciar timeout
+                clearTimeout(popoverTimeout);
+                popoverTimeout = setTimeout(() => {
+                    popover.style.display = 'none';
+                }, 3000);
+            }
+
+            // Ocultar el popover al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                const popover = document.getElementById('contenidoPopover');
+                if (!popover.contains(e.target) && !e.target.closest('.btn-light')) {
+                    popover.style.display = 'none';
+                    clearTimeout(popoverTimeout);
+                }
+            });
+    </script>
+
+    <style>
+        .btn-custom {
+            border: 2px solid #333;
+            background-color: #e9ecef;
+            color: #000;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            /* Efecto de transición suave */
+        }
+
+        .btn-custom:hover {
+            background-color: #dcdcdc;
+            /* Color de fondo al pasar el mouse */
+            color: #000;
+            border-color: #666;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            /* Añadir sombra al pasar el mouse */
+        }
+
+        .mt-5 {
+            margin-top: 3rem !important;
+            /* Añade margen superior para que el grupo de botones no quede tapado */
+        }
+
+        /* Estilos para animar el colapso de derecha a izquierda */
+        #colInfoDocumento.collapsed {
+            transition: margin-right 0.5s ease, width 0.5s ease;
+            margin-right: -25%;
+            width: 0;
+        }
+
+        #colContenidoDocumento.expanded {
+            transition: width 0.5s ease;
+            width: 100%;
+        }
+
+        #overlay {
+            display: none;
+            /* Oculto por defecto */
+            position: fixed;
+            /* Posición fija para cubrir toda la pantalla */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            /* Fondo semi-transparente */
+            z-index: 9999;
+            /* Asegura que esté por encima de todos los elementos */
+            text-align: center;
+            color: white;
+        }
+
+        #overlay div {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            /* Centrar el texto */
+        }
+    </style>
+
+    @endsection
+
+    </body>
+
+    </html>

@@ -268,107 +268,115 @@
 
 @section('scripting')
 <script>
-// Manejo de datatable
-$(document).ready(function() {
-    var table = $('#documentosTable').DataTable({
-        paging: true,
-        ordering: true,
-        searching: true,
-        pageLength: -1,
-        lengthMenu: [
-            [8, 20, 50, -1],
-            [8, 20, 50, "Todos"]
-        ],
-        order: [[2, 'asc']], // Ordena por la columna de categoría
-        rowGroup: {
-            dataSrc: 2 // Agrupa por la columna de categoría (índice 2)
-        },
-        responsive: false,
-        autoWidth: false, // Desactiva el ajuste automático del ancho
-        columnDefs: [
-            { width: "30%", targets: 0 }, // Título
-            { width: "10%", targets: 1 }, // Estado
-            { width: "15%", targets: 2 }, // Categoría
-            { width: "10%", targets: 3 }, // Creado
-            { width: "15%", targets: 4 }, // Modificado
-            { width: "10%", targets: 5 }, // Usuario
-            { width: "10%", targets: 6 }  // Acciones
-        ]
-    });
-
-    // Expansión y contracción de categorías al hacer clic en la fila de agrupación
-    $('#documentosTable tbody').on('click', 'tr.dtrg-group', function() {
-        var groupName = $(this).children('td').text(); // Obtener el nombre del grupo (categoría)
-        var rows = table.rows().nodes(); // Obtener todas las filas de la tabla
-
-        $(rows).each(function() {
-            var data = table.row(this).data();
-            if (data && data[2] === groupName) { // Si la fila pertenece a la categoría clicada
-                $(this).toggle(); // Alternar la visibilidad de la fila
-            }
-        });
-
-        $(this).toggleClass('expanded'); // Alternar la clase para indicar que está expandido/colapsado
-    });
-
-    // Funcionalidad de Expandir/Contraer todo
-    $('#toggleExpandAll').on('change', function () {
-        var isChecked = $(this).is(':checked'); // Verifica si el switch está activado
-        var rows = table.rows().nodes(); // Obtiene todas las filas de la tabla
-
-        $(rows).each(function () {
-            var row = $(this);
-            if (!row.hasClass('dtrg-group')) {
-                if (isChecked) {
-                    row.show(); // Expande todas las filas
-                } else {
-                    row.hide(); // Contrae todas las filas
-                }
-            }
-        });
-
-        // Cambia la clase de las categorías agrupadas
-        if (isChecked) {
-            $('tr.dtrg-group').addClass('expanded');
-        } else {
-            $('tr.dtrg-group').removeClass('expanded');
+    // Confirmacion para el borrado de documentos        
+    function confirmAndRedirect(event, form) {
+        event.preventDefault();
+        if (confirm("¿Estás seguro de que deseas eliminar este documento?")) {
+            form.submit();
         }
-    });
-
-    // Ocultar todas las filas inicialmente (excepto las filas de agrupación)
-    table.rows().every(function() {
-        var row = this.node();
-        if (!$(row).hasClass('dtrg-group')) {
-            $(row).hide(); // Oculta todas las filas que no son de agrupación
-        }
-    });
-
-    // Manejo de borrado de documentos
-    let deleteForm;
-    function confirmDelete(form) {
-        deleteForm = form; // Guarda el formulario que se va a enviar
-        $('#confirmDeleteModal').modal('show'); // Muestra el modal de confirmación
     }
+    
+    // Manejo de datatable
+    $(document).ready(function() {
+        var table = $('#documentosTable').DataTable({
+            paging: true,
+            ordering: true,
+            searching: true,
+            pageLength: -1,
+            lengthMenu: [
+                [8, 20, 50, -1],
+                [8, 20, 50, "Todos"]
+            ],
+            order: [[2, 'asc']], // Ordena por la columna de categoría
+            rowGroup: {
+                dataSrc: 2 // Agrupa por la columna de categoría (índice 2)
+            },
+            responsive: false,
+            autoWidth: false, // Desactiva el ajuste automático del ancho
+            columnDefs: [
+                { width: "30%", targets: 0 }, // Título
+                { width: "10%", targets: 1 }, // Estado
+                { width: "15%", targets: 2 }, // Categoría
+                { width: "10%", targets: 3 }, // Creado
+                { width: "15%", targets: 4 }, // Modificado
+                { width: "10%", targets: 5 }, // Usuario
+                { width: "10%", targets: 6 }  // Acciones
+            ]
+        });
 
-    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-        if (deleteForm) {
-            deleteForm.submit(); // Envía el formulario cuando se confirme la acción
+        // Expansión y contracción de categorías al hacer clic en la fila de agrupación
+        $('#documentosTable tbody').on('click', 'tr.dtrg-group', function() {
+            var groupName = $(this).children('td').text(); // Obtener el nombre del grupo (categoría)
+            var rows = table.rows().nodes(); // Obtener todas las filas de la tabla
+
+            $(rows).each(function() {
+                var data = table.row(this).data();
+                if (data && data[2] === groupName) { // Si la fila pertenece a la categoría clicada
+                    $(this).toggle(); // Alternar la visibilidad de la fila
+                }
+            });
+
+            $(this).toggleClass('expanded'); // Alternar la clase para indicar que está expandido/colapsado
+        });
+
+        // Funcionalidad de Expandir/Contraer todo
+        $('#toggleExpandAll').on('change', function () {
+            var isChecked = $(this).is(':checked'); // Verifica si el switch está activado
+            var rows = table.rows().nodes(); // Obtiene todas las filas de la tabla
+
+            $(rows).each(function () {
+                var row = $(this);
+                if (!row.hasClass('dtrg-group')) {
+                    if (isChecked) {
+                        row.show(); // Expande todas las filas
+                    } else {
+                        row.hide(); // Contrae todas las filas
+                    }
+                }
+            });
+
+            // Cambia la clase de las categorías agrupadas
+            if (isChecked) {
+                $('tr.dtrg-group').addClass('expanded');
+            } else {
+                $('tr.dtrg-group').removeClass('expanded');
+            }
+        });
+
+        // Ocultar todas las filas inicialmente (excepto las filas de agrupación)
+        table.rows().every(function() {
+            var row = this.node();
+            if (!$(row).hasClass('dtrg-group')) {
+                $(row).hide(); // Oculta todas las filas que no son de agrupación
+            }
+        });
+
+        // Manejo de borrado de documentos
+        let deleteForm;
+        function confirmDelete(form) {
+            deleteForm = form; // Guarda el formulario que se va a enviar
+            $('#confirmDeleteModal').modal('show'); // Muestra el modal de confirmación
         }
-    });
 
-    // Para el manejo del tiempo del mensaje de alerta
-    document.addEventListener("DOMContentLoaded", function() {
-        var alert = document.getElementById('success-alert');
-        if (alert) {
-            setTimeout(function() {
-                alert.style.transition = 'opacity 1s ease';
-                alert.style.opacity = '0';
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            if (deleteForm) {
+                deleteForm.submit(); // Envía el formulario cuando se confirme la acción
+            }
+        });
+
+        // Para el manejo del tiempo del mensaje de alerta
+        document.addEventListener("DOMContentLoaded", function() {
+            var alert = document.getElementById('success-alert');
+            if (alert) {
                 setTimeout(function() {
-                    alert.style.display = 'none';
-                }, 1000);
-            }, 2000);
-        }
+                    alert.style.transition = 'opacity 1s ease';
+                    alert.style.opacity = '0';
+                    setTimeout(function() {
+                        alert.style.display = 'none';
+                    }, 1000);
+                }, 2000);
+            }
+        });
     });
-});
 </script>
 @endsection
