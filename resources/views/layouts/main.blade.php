@@ -154,7 +154,7 @@
                 </a>
                 <a class="nav-link categorias" href="{{ route('categorias.index') }}" role="button"
                     aria-haspopup="true" aria-expanded="false">
-                    Categorías en test
+                    Categorías
                 </a>
             </ul>
         </div>
