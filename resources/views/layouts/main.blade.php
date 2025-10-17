@@ -154,11 +154,10 @@
                 </a>
                 <a class="nav-link categorias" href="{{ route('categorias.index') }}" role="button"
                     aria-haspopup="true" aria-expanded="false">
-                    Categorías
+                    Categorías en test
                 </a>
             </ul>
         </div>
-        <div>TEST</div>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav ml-auto">
                 <li class="nav-item dropdown">
