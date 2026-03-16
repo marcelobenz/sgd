@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invitation;
 use App\Models\User;
-use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,9 +18,22 @@ class RegisteredUserController extends Controller
     /**
      * Display the registration view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('auth.register');
+        $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        $invitation = Invitation::where('token', $request->token)->first();
+
+        if (! $invitation || ! $invitation->isValid()) {
+            abort(403, 'La invitación no es válida o ya venció.');
+        }
+
+        return view('auth.register', [
+            'token' => $request->token,
+            'invitedEmail' => $invitation->email,
+        ]);
     }
 
     /**
@@ -31,10 +44,25 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'token' => 'required|string',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
+
+        $invitation = Invitation::where('token', $request->token)->first();
+
+        if (! $invitation || ! $invitation->isValid()) {
+            return back()->withErrors([
+                'email' => 'La invitación no es válida o venció.',
+            ])->withInput();
+        }
+
+        if (strcasecmp($invitation->email, $request->email) !== 0) {
+            return back()->withErrors([
+                'email' => 'El email no coincide con el de la invitación.',
+            ])->withInput();
+        }
 
         $user = User::create([
             'name' => $request->name,
@@ -42,10 +70,13 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        $invitation->used_at = now();
+        $invitation->save();
+
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(RouteServiceProvider::HOME);
+        return redirect(route('dashboard', absolute: false));
     }
 }

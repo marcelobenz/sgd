@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\GoController;
+use App\Http\Controllers\InvitationController;
 
 Route::get('/go', GoController::class)->name('go');
 
@@ -31,6 +32,23 @@ Route::middleware('auth')->group(function () {
     Route::post('/perfil/update', [UserProfileController::class, 'update'])->name('profile.update');
     Route::resource('documentos', DocumentoController::class);
     Route::resource('categorias', CategoriaController::class);
+    
+    Route::get('/invitations/create', [InvitationController::class, 'create'])
+        ->middleware('can:create-invitations')
+        ->name('invitations.create');
+
+    Route::post('/invitations', [InvitationController::class, 'store'])
+        ->middleware('can:create-invitations')
+        ->name('invitations.store');
+
+Route::post('/invitations/{invitation}/resend', [InvitationController::class, 'resend'])
+    ->middleware('can:create-invitations')
+    ->name('invitations.resend');
+
+Route::post('/invitations/{invitation}/revoke', [InvitationController::class, 'revoke'])
+    ->middleware('can:create-invitations')
+    ->name('invitations.revoke');
+
 });
 
 require __DIR__.'/auth.php';

@@ -152,10 +152,18 @@
                     aria-haspopup="true" aria-expanded="false">
                     Documentos
                 </a>
+
                 <a class="nav-link categorias" href="{{ route('categorias.index') }}" role="button"
                     aria-haspopup="true" aria-expanded="false">
                     Categorías
                 </a>
+
+                @if (auth()->user()->role === 'admin')
+                    <a class="nav-link invitaciones" href="{{ route('invitations.create') }}" role="button"
+                        aria-haspopup="true" aria-expanded="false">
+                        Invitaciones
+                    </a>
+                @endif
             </ul>
         </div>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
