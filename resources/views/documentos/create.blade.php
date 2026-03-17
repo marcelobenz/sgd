@@ -22,7 +22,11 @@
                                     <input type="text" name="titulo" id="titulo" class="form-control" required>
                                 </div>
                             </div>
-
+                            <div class="form-group">
+                                <label for="archivo">Archivo</label>
+                                <input type="file" name="archivo" id="archivo" class="form-control" required
+                                    accept=".pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx">
+                            </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="id_categoria">Categoría</label>
