@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\GoController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\UserController;
 
 Route::get('/go', GoController::class)->name('go');
 
@@ -41,13 +42,17 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:create-invitations')
         ->name('invitations.store');
 
-Route::post('/invitations/{invitation}/resend', [InvitationController::class, 'resend'])
-    ->middleware('can:create-invitations')
-    ->name('invitations.resend');
+    Route::post('/invitations/{invitation}/resend', [InvitationController::class, 'resend'])
+        ->middleware('can:create-invitations')
+        ->name('invitations.resend');
 
-Route::post('/invitations/{invitation}/revoke', [InvitationController::class, 'revoke'])
-    ->middleware('can:create-invitations')
-    ->name('invitations.revoke');
+    Route::post('/invitations/{invitation}/revoke', [InvitationController::class, 'revoke'])
+        ->middleware('can:create-invitations')
+        ->name('invitations.revoke');
+    
+    // Gestión de usuarios (solo admin)
+    Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
+    Route::post('/usuarios/{id}/toggle-habilitado', [UserController::class, 'toggleHabilitado'])->name('usuarios.toggleHabilitado');
 
 });
 

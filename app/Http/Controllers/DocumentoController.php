@@ -36,7 +36,7 @@ class DocumentoController extends Controller
         $categorias = Categoria::orderBy('nombre_categoria', 'asc')->get();
 
         //$usuarios = User::all(); // Obtener todos los usuarios
-        $usuarios = User::orderBy('email', 'asc')->get();
+        $usuarios = User::habilitados()->orderBy('email', 'asc')->get();
 
         return view('documentos.create', compact('categorias', 'usuarios'));
     }
@@ -77,20 +77,26 @@ class DocumentoController extends Controller
         );
 
         if (isset($validated['permisos'])) {
-            //Asigna los permisos seleccionados al resto de los usuarios
             foreach ($validated['permisos'] as $userId => $permisos) {
+
+                // Evitar permisos a usuarios deshabilitados
+                $user = User::habilitados()->find($userId);
+
+                if (!$user) {
+                    continue;
+                }
+
                 DocumentoPermiso::updateOrCreate(
                     ['documento_id' => $documento->id, 'user_id' => $userId],
                     [
-                        'puede_leer' => isset($permisos['puede_leer']) ? true : false,
-                        'puede_escribir' => isset($permisos['puede_escribir']) ? true : false,
-                        'puede_aprobar' => isset($permisos['puede_aprobar']) ? true : false,
-                        'puede_eliminar' => isset($permisos['puede_eliminar']) ? true : false,
+                        'puede_leer' => isset($permisos['puede_leer']),
+                        'puede_escribir' => isset($permisos['puede_escribir']),
+                        'puede_aprobar' => isset($permisos['puede_aprobar']),
+                        'puede_eliminar' => isset($permisos['puede_eliminar']),
                     ]
                 );
-                // Si el usuario tiene permiso de aprobar, envía una notificación
+
                 if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar']) {
-                    $user = User::find($userId);
                     $user->notify(new DocumentoPendienteAprobacion($documento));
                 }
             }
@@ -313,6 +319,13 @@ class DocumentoController extends Controller
 
         // Asignación para el resto
         foreach ($request->input('permisos', []) as $userId => $permisos) {
+
+            $user = User::habilitados()->find($userId);
+
+            if (!$user) {
+                continue;
+            }
+            
             DocumentoPermiso::create([
                 'documento_id' => $documento->id,
                 'user_id' => $userId,
@@ -495,7 +508,9 @@ class DocumentoController extends Controller
     {
         $documento = Documento::findOrFail($id);
         $categorias = Categoria::all();
-        $usuarios = User::all();
+        //$usuarios = User::orderBy('email', 'asc')->get();
+        $usuarios = User::habilitados()->orderBy('email', 'asc')->get();
+
         return view('documentos.edit', compact('documento', 'categorias', 'usuarios'));
     }
 

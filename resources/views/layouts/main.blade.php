@@ -163,6 +163,10 @@
                         aria-haspopup="true" aria-expanded="false">
                         Invitaciones
                     </a>
+                    <a class="nav-link" href="{{ route('usuarios.index') }}" role="button" aria-haspopup="true"
+                        aria-expanded="false">
+                        Gestión de usuarios
+                    </a>
                 @endif
             </ul>
         </div>
