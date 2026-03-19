@@ -12,85 +12,32 @@ class DocumentoRecordatorioController extends Controller
 {
     public function store(Request $request, Documento $documento)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'mensaje' => 'nullable|string',
-            'fecha_inicio' => 'required|date',
-            'frecuencia' => 'required|in:no_repite,diario,semanal,mensual,anual',
-            'usuarios' => 'required|array|min:1',
-            'usuarios.*' => 'exists:users,id',
-        ], [
-            'nombre.required' => 'Debe ingresar un nombre para el recordatorio.',
-            'fecha_inicio.required' => 'Debe seleccionar una fecha.',
-            'frecuencia.required' => 'Debe seleccionar una repetición.',
-            'usuarios.required' => 'Debe seleccionar al menos un usuario destinatario.',
-        ]);
+        $data = $this->validarRecordatorio($request);
 
-        $fechaInicio = Carbon::parse($request->fecha_inicio);
+        $recordatorio = DocumentoRecordatorio::create(
+            $this->armarPayload($data, $documento->id)
+        );
 
-        // Hora fija por defecto del sistema
-        $horaEnvio = '09:00:00';
-
-        $fechaConHora = Carbon::parse($fechaInicio->format('Y-m-d') . ' ' . $horaEnvio);
-
-        $diaSemana = (int) $fechaInicio->dayOfWeekIso; // 1=lunes ... 7=domingo
-        $diaMes = (int) $fechaInicio->day;
-        $mesAnual = (int) $fechaInicio->month;
-
-        $recordatorio = DocumentoRecordatorio::create([
-            'documento_id' => $documento->id,
-            'nombre' => $request->nombre,
-            'mensaje' => $request->mensaje,
-            'frecuencia' => $request->frecuencia,
-            'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-            'hora_envio' => $horaEnvio,
-            'dia_semana' => $request->frecuencia === 'semanal' ? $diaSemana : null,
-            'dia_mes' => in_array($request->frecuencia, ['mensual', 'anual']) ? $diaMes : null,
-            'mes_anual' => $request->frecuencia === 'anual' ? $mesAnual : null,
-            'notificar_interno' => $request->has('notificar_interno'),
-            'notificar_email' => $request->has('notificar_email'),
-            'activo' => $request->has('activo'),
-            'proxima_ejecucion' => $this->calcularProximaEjecucionInicial($fechaConHora, $request->frecuencia),
-            'created_by' => Auth::id(),
-        ]);
-
-        $recordatorio->usuarios()->sync($request->usuarios);
+        $recordatorio->usuarios()->sync($data['usuarios']);
 
         return redirect()
             ->route('documentos.edit', $documento->id)
             ->with('success', 'Recordatorio creado correctamente.');
     }
 
-    private function calcularProximaEjecucionInicial(Carbon $fechaBase, string $frecuencia): Carbon
+    public function update(Request $request, DocumentoRecordatorio $recordatorio)
     {
-        $ahora = now();
+        $data = $this->validarRecordatorio($request);
 
-        if ($frecuencia === 'no_repite') {
-            return $fechaBase;
-        }
+        $recordatorio->update(
+            $this->armarPayload($data, $recordatorio->documento_id)
+        );
 
-        $proxima = $fechaBase->copy();
+        $recordatorio->usuarios()->sync($data['usuarios']);
 
-        while ($proxima->lessThanOrEqualTo($ahora)) {
-            switch ($frecuencia) {
-                case 'diario':
-                    $proxima->addDay();
-                    break;
-                case 'semanal':
-                    $proxima->addWeek();
-                    break;
-                case 'mensual':
-                    $proxima->addMonthNoOverflow();
-                    break;
-                case 'anual':
-                    $proxima->addYear();
-                    break;
-                default:
-                    return $fechaBase;
-            }
-        }
-
-        return $proxima;
+        return redirect()
+            ->route('documentos.edit', $recordatorio->documento_id)
+            ->with('success', 'Recordatorio actualizado correctamente.');
     }
 
     public function destroy(DocumentoRecordatorio $recordatorio)
@@ -105,52 +52,6 @@ class DocumentoRecordatorioController extends Controller
             ->with('success', 'Recordatorio eliminado correctamente.');
     }
 
-    public function update(Request $request, DocumentoRecordatorio $recordatorio)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'mensaje' => 'nullable|string',
-            'fecha_inicio' => 'required|date',
-            'frecuencia' => 'required|in:no_repite,diario,semanal,mensual,anual',
-            'usuarios' => 'required|array|min:1',
-            'usuarios.*' => 'exists:users,id',
-        ], [
-            'nombre.required' => 'Debe ingresar un nombre para el recordatorio.',
-            'fecha_inicio.required' => 'Debe seleccionar una fecha.',
-            'frecuencia.required' => 'Debe seleccionar una repetición.',
-            'usuarios.required' => 'Debe seleccionar al menos un usuario destinatario.',
-        ]);
-
-        $fechaInicio = \Carbon\Carbon::parse($request->fecha_inicio);
-        $horaEnvio = '09:00:00';
-        $fechaConHora = \Carbon\Carbon::parse($fechaInicio->format('Y-m-d') . ' ' . $horaEnvio);
-
-        $diaSemana = (int) $fechaInicio->dayOfWeekIso;
-        $diaMes = (int) $fechaInicio->day;
-        $mesAnual = (int) $fechaInicio->month;
-
-        $recordatorio->update([
-            'nombre' => $request->nombre,
-            'mensaje' => $request->mensaje,
-            'frecuencia' => $request->frecuencia,
-            'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-            'hora_envio' => $horaEnvio,
-            'dia_semana' => $request->frecuencia === 'semanal' ? $diaSemana : null,
-            'dia_mes' => in_array($request->frecuencia, ['mensual', 'anual']) ? $diaMes : null,
-            'mes_anual' => $request->frecuencia === 'anual' ? $mesAnual : null,
-            'notificar_interno' => $request->has('notificar_interno'),
-            'notificar_email' => $request->has('notificar_email'),
-            'activo' => $request->has('activo'),
-            'proxima_ejecucion' => $this->calcularProximaEjecucionInicial($fechaConHora, $request->frecuencia),
-        ]);
-
-        $recordatorio->usuarios()->sync($request->usuarios);
-
-        return redirect()
-            ->route('documentos.edit', $recordatorio->documento_id)
-            ->with('success', 'Recordatorio actualizado correctamente.');
-    }
-
     public function toggleActivo(DocumentoRecordatorio $recordatorio)
     {
         $recordatorio->activo = !$recordatorio->activo;
@@ -161,4 +62,97 @@ class DocumentoRecordatorioController extends Controller
             ->with('success', 'Estado del recordatorio actualizado correctamente.');
     }
 
+    private function validarRecordatorio(Request $request): array
+    {
+        return $request->validate([
+            'nombre' => 'required|string|max:255',
+            'mensaje' => 'nullable|string',
+            'fecha_inicio' => 'required|date',
+            'frecuencia' => 'required|in:no_repite,diario,semanal,mensual,anual',
+            'usuarios' => 'required|array|min:1',
+            'usuarios.*' => 'exists:users,id',
+            'notificar_interno' => 'nullable|boolean',
+            'notificar_email' => 'nullable|boolean',
+            'activo' => 'nullable|boolean',
+        ], [
+            'nombre.required' => 'Debe ingresar un nombre para el recordatorio.',
+            'fecha_inicio.required' => 'Debe seleccionar una fecha.',
+            'fecha_inicio.date' => 'La fecha seleccionada no es válida.',
+            'frecuencia.required' => 'Debe seleccionar una repetición.',
+            'frecuencia.in' => 'La repetición seleccionada no es válida.',
+            'usuarios.required' => 'Debe seleccionar al menos un usuario destinatario.',
+            'usuarios.array' => 'La lista de usuarios no es válida.',
+            'usuarios.min' => 'Debe seleccionar al menos un usuario destinatario.',
+            'usuarios.*.exists' => 'Uno de los usuarios seleccionados no existe.',
+        ]);
+    }
+
+    private function armarPayload(array $data, int $documentoId): array
+    {
+        $fechaInicio = Carbon::parse($data['fecha_inicio']);
+        $horaEnvio = '09:00:00';
+
+        $fechaConHora = Carbon::parse(
+            $fechaInicio->format('Y-m-d') . ' ' . $horaEnvio
+        );
+
+        $frecuencia = $data['frecuencia'];
+
+        $diaSemana = (int) $fechaInicio->dayOfWeekIso; // 1=lunes ... 7=domingo
+        $diaMes = (int) $fechaInicio->day;
+        $mesAnual = (int) $fechaInicio->month;
+
+        return [
+            'documento_id' => $documentoId,
+            'nombre' => $data['nombre'],
+            'mensaje' => $data['mensaje'] ?? null,
+            'frecuencia' => $frecuencia,
+            'fecha_inicio' => $fechaInicio->format('Y-m-d'),
+            'hora_envio' => $horaEnvio,
+            'dia_semana' => $frecuencia === 'semanal' ? $diaSemana : null,
+            'dia_mes' => in_array($frecuencia, ['mensual', 'anual']) ? $diaMes : null,
+            'mes_anual' => $frecuencia === 'anual' ? $mesAnual : null,
+            'notificar_interno' => !empty($data['notificar_interno']),
+            'notificar_email' => !empty($data['notificar_email']),
+            'activo' => !empty($data['activo']),
+            'proxima_ejecucion' => $this->calcularProximaEjecucionInicial($fechaConHora, $frecuencia),
+            'created_by' => Auth::id(),
+        ];
+    }
+
+    private function calcularProximaEjecucionInicial(Carbon $fechaBase, string $frecuencia): ?Carbon
+    {
+        if (!in_array($frecuencia, ['no_repite', 'diario', 'semanal', 'mensual', 'anual'])) {
+            return null;
+        }
+
+        if ($frecuencia === 'no_repite') {
+            return $fechaBase;
+        }
+
+        $ahora = now();
+        $proxima = $fechaBase->copy();
+
+        while ($proxima->lessThanOrEqualTo($ahora)) {
+            switch ($frecuencia) {
+                case 'diario':
+                    $proxima->addDay();
+                    break;
+
+                case 'semanal':
+                    $proxima->addWeek();
+                    break;
+
+                case 'mensual':
+                    $proxima->addMonthNoOverflow();
+                    break;
+
+                case 'anual':
+                    $proxima->addYear();
+                    break;
+            }
+        }
+
+        return $proxima;
+    }
 }
