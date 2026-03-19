@@ -48,7 +48,7 @@
         </form>
 
         <div class="table-responsive">
-            <table class="table table-bordered table-hover">
+            <table id="tablaUsuarios" class="table table-bordered table-hover">
                 <thead>
                     <tr>
                         <th>Nombre</th>
@@ -91,4 +91,24 @@
             </table>
         </div>
     </div>
+@endsection
+@section('scripting')
+    <script>
+        $(document).ready(function() {
+            $('#tablaUsuarios').DataTable({
+                order: [
+                    [0, 'asc']
+                ], // orden por nombre
+                columnDefs: [{
+                        orderable: false,
+                        targets: 4
+                    } // columna Acción
+                ],
+                pageLength: 10,
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                }
+            });
+        });
+    </script>
 @endsection
