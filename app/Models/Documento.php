@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\DocumentoRecordatorio;
 
 class Documento extends Model
 {
@@ -82,4 +83,9 @@ class Documento extends Model
             ->first();                          // Obtener la última versión aprobada
     }
     
+    public function recordatorios()
+    {
+        return $this->hasMany(DocumentoRecordatorio::class, 'documento_id');
+    }
+
 }

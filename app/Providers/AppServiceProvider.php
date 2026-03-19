@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Carbon\Carbon;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 👉 Locale para fechas (Carbon)
+        Carbon::setLocale('es');
+
         Gate::define('create-invitations', function ($user) {
             return $user->role === 'admin';
         });

@@ -171,7 +171,95 @@
             </ul>
         </div>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
             <ul class="navbar-nav ml-auto">
+
+                {{-- 🔔 CAMPANITA DE NOTIFICACIONES --}}
+                <li class="nav-item dropdown">
+                    <a class="nav-link mr-2" data-toggle="dropdown" href="#" style="position: relative;">
+                        <i class="fa-solid fa-bell"></i>
+
+                        @if (auth()->user()->unreadNotifications->count())
+                            <span
+                                style="
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    background: red;
+                    color: white;
+                    border-radius: 50%;
+                    font-size: 10px;
+                    padding: 2px 6px;">
+                                {{ auth()->user()->unreadNotifications->count() }}
+                            </span>
+                        @endif
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-right" style="width: 350px;">
+
+                        <div class="dropdown-header d-flex justify-content-between align-items-center">
+                            <span>Notificaciones</span>
+
+                            <form action="{{ route('notificaciones.leerTodas') }}" method="POST">
+                                @csrf
+                                <button class="btn btn-sm btn-link">Marcar todas</button>
+                            </form>
+                        </div>
+
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            @forelse(auth()->user()->notifications()->latest()->limit(10)->get() as $notificacion)
+                                @php
+                                    $data = $notificacion->data;
+                                @endphp
+
+                                <div class="dropdown-item {{ is_null($notificacion->read_at) ? 'bg-light' : '' }}">
+
+                                    <strong>{{ $data['recordatorio_nombre'] ?? 'Notificación' }}</strong>
+
+                                    <br>
+                                    <small>
+                                        {{ $data['documento_titulo'] ?? '' }}
+                                    </small>
+
+                                    @if (!empty($data['mensaje']))
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ $data['mensaje'] }}
+                                        </small>
+                                    @endif
+
+                                    <div class="mt-2 d-flex justify-content-between">
+
+                                        <a href="{{ $data['url'] ?? '#' }}" class="btn btn-sm btn-primary">
+                                            Ver
+                                        </a>
+
+                                        @if (is_null($notificacion->read_at))
+                                            <form action="{{ route('notificaciones.leer', $notificacion->id) }}"
+                                                method="POST">
+                                                @csrf
+                                                <button class="btn btn-sm btn-outline-secondary">
+                                                    Marcar leída
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-divider"></div>
+
+                            @empty
+                                <div class="dropdown-item text-muted text-center">
+                                    Sin notificaciones
+                                </div>
+                            @endforelse
+                        </div>
+
+                    </div>
+                </li>
+
+                {{-- 👤 USUARIO --}}
                 <li class="nav-item dropdown">
                     <a class="nav-link sesion" href="#" id="userDropdown" role="button" data-toggle="dropdown"
                         aria-haspopup="true" aria-expanded="false">
@@ -187,10 +275,11 @@
                         </form>
                     </div>
                 </li>
+
             </ul>
+
         </div>
     </nav>
-
 
 
     <!-- Contenedor principal con margen superior ajustado -->

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\DocumentoRecordatorio;
 
 class User extends Authenticatable 
 {
@@ -59,4 +60,15 @@ class User extends Authenticatable
     {
         return $query->where('habilitado', false);
     }
+
+    public function recordatoriosDocumento()
+    {
+        return $this->belongsToMany(
+            DocumentoRecordatorio::class,
+            'documento_recordatorio_user',
+            'user_id',
+            'documento_recordatorio_id'
+        )->withTimestamps();
+    }
+
 }

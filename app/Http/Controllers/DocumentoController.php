@@ -504,14 +504,22 @@ class DocumentoController extends Controller
 
 
     // Editar
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
         $categorias = Categoria::all();
         //$usuarios = User::orderBy('email', 'asc')->get();
         $usuarios = User::habilitados()->orderBy('email', 'asc')->get();
 
-        return view('documentos.edit', compact('documento', 'categorias', 'usuarios'));
+        $recordatorioEnEdicion = null;
+
+        if ($request->filled('edit_recordatorio')) {
+            $recordatorioEnEdicion = $documento->recordatorios
+                ->where('id', (int) $request->edit_recordatorio)
+                ->first();
+        }
+
+        return view('documentos.edit', compact('documento', 'categorias', 'usuarios', 'recordatorioEnEdicion'));
     }
 
     /**

@@ -9,10 +9,32 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\GoController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DocumentoRecordatorioController;
 
 Route::get('/go', GoController::class)->name('go');
 
 Route::middleware('auth')->group(function () {
+    // Gestión de recordatorios para documentos
+    Route::post('/documentos/{documento}/recordatorios', [DocumentoRecordatorioController::class, 'store'])
+    ->name('documentos.recordatorios.store');
+    Route::delete('/documentos/recordatorios/{recordatorio}', [DocumentoRecordatorioController::class, 'destroy'])
+    ->name('documentos.recordatorios.destroy');
+    Route::put('/documentos/recordatorios/{recordatorio}', [DocumentoRecordatorioController::class, 'update'])
+    ->name('documentos.recordatorios.update');
+    Route::patch('/documentos/recordatorios/{recordatorio}/toggle-activo', [DocumentoRecordatorioController::class, 'toggleActivo'])
+    ->name('documentos.recordatorios.toggleActivo');
+
+    Route::post('/notificaciones/{id}/leer', function ($id) {
+    $notificacion = auth()->user()->notifications()->findOrFail($id);
+    $notificacion->markAsRead();
+    return back();
+    })->name('notificaciones.leer');
+
+    Route::post('/notificaciones/leer-todas', function () {
+    auth()->user()->unreadNotifications->markAsRead();
+    return back();
+    })->name('notificaciones.leerTodas');
+
     Route::post('/documentos/{id}/rechazar', [DocumentoController::class, 'rechazar'])->name('documentos.rechazar');
     Route::get('/documentos/exportar-pdf/{id}', [DocumentoController::class, 'exportarPdf'])->name('documentos.exportarPdf');
     Route::get('/documentos/{id}/validapermiso', [DocumentoController::class, 'validaPermiso'])->name('documentos.validaPermiso');
@@ -53,6 +75,7 @@ Route::middleware('auth')->group(function () {
     // Gestión de usuarios (solo admin)
     Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
     Route::post('/usuarios/{id}/toggle-habilitado', [UserController::class, 'toggleHabilitado'])->name('usuarios.toggleHabilitado');
+
 
 });
 
