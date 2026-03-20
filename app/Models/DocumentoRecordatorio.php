@@ -52,4 +52,9 @@ class DocumentoRecordatorio extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function ejecuciones()
+    {
+        return $this->hasMany(RecordatorioEjecucion::class, 'documento_recordatorio_id');
+    }
 }

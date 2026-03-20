@@ -24,6 +24,16 @@ Route::middleware(['auth', 'usuario.habilitado'])->group(function () {
     ->name('documentos.recordatorios.update');
     Route::patch('/documentos/recordatorios/{recordatorio}/toggle-activo', [DocumentoRecordatorioController::class, 'toggleActivo'])
     ->name('documentos.recordatorios.toggleActivo');
+    Route::get('/mis-recordatorios', [DocumentoRecordatorioController::class, 'misRecordatorios'])
+    ->name('recordatorios.mis');
+    Route::patch('/recordatorios-ejecuciones/{ejecucion}/resolver', [DocumentoRecordatorioController::class, 'resolverEjecucion'])
+    ->name('recordatorios.ejecuciones.resolver');
+    Route::patch('/recordatorios-ejecuciones/{ejecucion}/postergar', [DocumentoRecordatorioController::class, 'postergarEjecucion'])
+    ->name('recordatorios.ejecuciones.postergar');
+    Route::get('/recordatorios/calendario', [DocumentoRecordatorioController::class, 'calendario'])
+    ->name('recordatorios.calendario');
+    Route::get('/recordatorios/eventos', [DocumentoRecordatorioController::class, 'eventosCalendario'])
+    ->name('recordatorios.eventos');
 
     Route::post('/notificaciones/{id}/leer', function ($id) {
     $notificacion = auth()->user()->notifications()->findOrFail($id);

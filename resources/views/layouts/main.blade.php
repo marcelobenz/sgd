@@ -17,9 +17,7 @@
         /* Estilo del navbar */
         .navbar {
             background-color: rgba(34, 45, 50, 0.9);
-            /* Fondo oscuro con transparencia */
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-            /* Sombra */
         }
 
         /* Logo de la empresa */
@@ -42,10 +40,15 @@
             color: white;
         }
 
+        /* Item activo */
+        .nav-link.active {
+            background-color: #546899;
+            color: #ffffff !important;
+        }
+
         /* Iconos de FontAwesome */
         .nav-link.sesion::before {
             content: '\f2bd';
-            /* Icono de usuario */
             font-family: 'Font Awesome 5 Free';
             font-weight: 900;
             margin-right: 8px;
@@ -57,12 +60,9 @@
             border-radius: 8px;
             box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
             width: 100%;
-            /* Ajusta el ancho del dropdown */
             min-width: 200px;
-            /* Establece un ancho mínimo adecuado */
         }
 
-        /* Asegurar que el dropdown sea al menos tan ancho como el enlace */
         .nav-item.dropdown {
             position: relative;
         }
@@ -70,14 +70,10 @@
         .dropdown-menu {
             left: auto;
             right: 0;
-            /* Hace que el dropdown se alinee a la derecha */
             width: auto;
-            /* Hace que el dropdown tenga un ancho adecuado */
             min-width: 180px;
-            /* Puedes ajustar este valor según lo necesites */
         }
 
-        /* Hover en las opciones del dropdown */
         .dropdown-item:hover {
             background-color: #546899;
             color: white;
@@ -90,17 +86,22 @@
             border-radius: 8px;
             background-color: #ffffff;
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-            /* Añadir sombra al logo */
         }
 
         .navbar {
             z-index: 3000;
-            /* por encima del iframe */
         }
 
         .navbar .dropdown-menu {
             z-index: 4000;
-            /* por encima de todo lo normal */
+        }
+
+        .modal {
+            z-index: 5000 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 4990 !important;
         }
     </style>
 
@@ -137,41 +138,51 @@
         </script>
     @endif
 
-
     <nav class="navbar navbar-expand-lg fixed-top">
         <a class="navbar-brand" href="/dashboard">
             <img src="{{ asset('images/logo.png') }}" alt="Logo">
         </a>
+
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
+
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
-                <a class="nav-link documentos" href="{{ route('documentos.index') }}" role="button"
-                    aria-haspopup="true" aria-expanded="false">
+                <a class="nav-link {{ request()->routeIs('documentos.*') ? 'active' : '' }}"
+                    href="{{ route('documentos.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
                     Documentos
                 </a>
 
-                <a class="nav-link categorias" href="{{ route('categorias.index') }}" role="button"
-                    aria-haspopup="true" aria-expanded="false">
+                <a class="nav-link {{ request()->routeIs('categorias.*') ? 'active' : '' }}"
+                    href="{{ route('categorias.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
                     Categorías
                 </a>
 
+                <a class="nav-link {{ request()->routeIs('recordatorios.*') ? 'active' : '' }}"
+                    href="{{ session('recordatorios_view') === 'calendario'
+                        ? route('recordatorios.calendario')
+                        : route('recordatorios.mis') }}">
+                    Recordatorios
+                </a>
+
                 @if (auth()->user()->role === 'admin')
-                    <a class="nav-link invitaciones" href="{{ route('invitations.create') }}" role="button"
-                        aria-haspopup="true" aria-expanded="false">
+                    <a class="nav-link {{ request()->routeIs('invitations.*') ? 'active' : '' }}"
+                        href="{{ route('invitations.create') }}" role="button" aria-haspopup="true"
+                        aria-expanded="false">
                         Invitaciones
                     </a>
-                    <a class="nav-link" href="{{ route('usuarios.index') }}" role="button" aria-haspopup="true"
-                        aria-expanded="false">
+
+                    <a class="nav-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}"
+                        href="{{ route('usuarios.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
                         Gestión de usuarios
                     </a>
                 @endif
             </ul>
         </div>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
 
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav ml-auto">
 
                 {{-- 🔔 CAMPANITA DE NOTIFICACIONES --}}
@@ -196,7 +207,6 @@
                     </a>
 
                     <div class="dropdown-menu dropdown-menu-right" style="width: 350px;">
-
                         <div class="dropdown-header d-flex justify-content-between align-items-center">
                             <span>Notificaciones</span>
 
@@ -213,7 +223,6 @@
                                 @endphp
 
                                 <div class="dropdown-item {{ is_null($notificacion->read_at) ? 'bg-light' : '' }}">
-
                                     <strong>{{ $data['recordatorio_nombre'] ?? 'Notificación' }}</strong>
 
                                     <br>
@@ -229,7 +238,6 @@
                                     @endif
 
                                     <div class="mt-2 d-flex justify-content-between">
-
                                         <a href="{{ $data['url'] ?? '#' }}" class="btn btn-sm btn-primary">
                                             Ver
                                         </a>
@@ -243,19 +251,16 @@
                                                 </button>
                                             </form>
                                         @endif
-
                                     </div>
                                 </div>
 
                                 <div class="dropdown-divider"></div>
-
                             @empty
                                 <div class="dropdown-item text-muted text-center">
                                     Sin notificaciones
                                 </div>
                             @endforelse
                         </div>
-
                     </div>
                 </li>
 
@@ -268,8 +273,9 @@
                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
                         <a class="dropdown-item" href="{{ route('profile.show') }}">Perfil</a>
                         <a class="dropdown-item" href="#"
-                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Cerrar
-                            sesión</a>
+                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                            Cerrar sesión
+                        </a>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
                             @csrf
                         </form>
@@ -277,15 +283,14 @@
                 </li>
 
             </ul>
-
         </div>
     </nav>
-
 
     <!-- Contenedor principal con margen superior ajustado -->
     <div class="content-container">
         @yield('contenidoPrincipal')
     </div>
+
     <!-- jQuery, Popper.js, Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
@@ -296,11 +301,11 @@
     <!-- Incluye sweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // Para el tooltip
         $(function() {
             $('[data-toggle="tooltip"]').tooltip()
         })
     </script>
+
     @yield('scripting')
     </body>
 

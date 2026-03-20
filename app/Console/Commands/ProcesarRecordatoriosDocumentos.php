@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\DocumentoRecordatorio;
+use App\Models\RecordatorioEjecucion;
 use App\Notifications\RecordatorioDocumentoNotification;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -23,7 +24,24 @@ class ProcesarRecordatoriosDocumentos extends Command
             ->get();
 
         foreach ($recordatorios as $recordatorio) {
+            // Guardamos la fecha que se está ejecutando ahora
+            $fechaEjecucionActual = $recordatorio->proxima_ejecucion;
+
             foreach ($recordatorio->usuarios as $usuario) {
+                // Crear ejecución pendiente para el usuario si todavía no existe
+                RecordatorioEjecucion::firstOrCreate(
+                    [
+                        'documento_recordatorio_id' => $recordatorio->id,
+                        'documento_id' => $recordatorio->documento_id,
+                        'user_id' => $usuario->id,
+                        'fecha_programada' => $fechaEjecucionActual,
+                    ],
+                    [
+                        'estado' => 'pendiente',
+                    ]
+                );
+
+                // Mantener notificación actual
                 $usuario->notify(new RecordatorioDocumentoNotification($recordatorio));
             }
 
