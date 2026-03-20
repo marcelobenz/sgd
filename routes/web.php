@@ -13,7 +13,8 @@ use App\Http\Controllers\DocumentoRecordatorioController;
 
 Route::get('/go', GoController::class)->name('go');
 
-Route::middleware('auth')->group(function () {
+//Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'usuario.habilitado'])->group(function () {
     // Gestión de recordatorios para documentos
     Route::post('/documentos/{documento}/recordatorios', [DocumentoRecordatorioController::class, 'store'])
     ->name('documentos.recordatorios.store');
