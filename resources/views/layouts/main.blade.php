@@ -168,16 +168,26 @@
                 </a>
 
                 @if (auth()->user()->role === 'admin')
-                    <a class="nav-link {{ request()->routeIs('invitations.*') ? 'active' : '' }}"
-                        href="{{ route('invitations.create') }}" role="button" aria-haspopup="true"
-                        aria-expanded="false">
-                        Invitaciones
-                    </a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle 
+            {{ request()->routeIs('usuarios.*') || request()->routeIs('invitations.*') ? 'active' : '' }}"
+                            href="#" id="usuariosDropdown" role="button" data-toggle="dropdown"
+                            aria-haspopup="true" aria-expanded="false">
+                            Usuarios
+                        </a>
 
-                    <a class="nav-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}"
-                        href="{{ route('usuarios.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
-                        Gestión de usuarios
-                    </a>
+                        <div class="dropdown-menu" aria-labelledby="usuariosDropdown">
+                            <a class="dropdown-item {{ request()->routeIs('usuarios.*') ? 'active' : '' }}"
+                                href="{{ route('usuarios.index') }}">
+                                Gestión de usuarios
+                            </a>
+
+                            <a class="dropdown-item {{ request()->routeIs('invitations.*') ? 'active' : '' }}"
+                                href="{{ route('invitations.create') }}">
+                                Invitaciones
+                            </a>
+                        </div>
+                    </li>
                 @endif
             </ul>
         </div>
