@@ -1,28 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ config('app.name', 'Sistema de Gestion Documental') }}</title>
-    <!-- Incluye Bootstrap CSS -->
+
+    <!-- Bootstrap / DataTables / FontAwesome -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" type="text/css"
         href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css" />
-    @yield('heading')
+
     <style>
         /* Estilo del navbar */
         .navbar {
             background-color: rgba(34, 45, 50, 0.9);
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 3000;
         }
 
         /* Logo de la empresa */
         .navbar-brand img {
             max-height: 50px;
+            padding: 5px;
+            border: 2px solid white;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         /* Estilo general para los enlaces */
@@ -34,7 +41,7 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* Estilos de hover para los enlaces */
+        /* Hover para enlaces */
         .nav-link:hover {
             background-color: #546899;
             color: white;
@@ -46,7 +53,7 @@
             color: #ffffff !important;
         }
 
-        /* Iconos de FontAwesome */
+        /* Icono sesión */
         .nav-link.sesion::before {
             content: '\f2bd';
             font-family: 'Font Awesome 5 Free';
@@ -54,24 +61,20 @@
             margin-right: 8px;
         }
 
-        /* Dropdown personalizado */
-        .dropdown-menu {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            min-width: 200px;
-        }
-
+        /* Dropdown */
         .nav-item.dropdown {
             position: relative;
         }
 
         .dropdown-menu {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
             left: auto;
             right: 0;
             width: auto;
             min-width: 180px;
+            z-index: 4000;
         }
 
         .dropdown-item:hover {
@@ -79,23 +82,7 @@
             color: white;
         }
 
-        .navbar-brand img {
-            max-height: 50px;
-            padding: 5px;
-            border: 2px solid white;
-            border-radius: 8px;
-            background-color: #ffffff;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .navbar {
-            z-index: 3000;
-        }
-
-        .navbar .dropdown-menu {
-            z-index: 4000;
-        }
-
+        /* Modales */
         .modal {
             z-index: 5000 !important;
         }
@@ -103,7 +90,36 @@
         .modal-backdrop {
             z-index: 4990 !important;
         }
+
+        /* Contenedor principal */
+        .content-container {
+            margin-top: 85px;
+            padding: 0 15px 20px 15px;
+        }
+
+        @media (max-width: 991.98px) {
+            .content-container {
+                margin-top: 95px;
+            }
+        }
     </style>
+
+    {{-- Estilos específicos de cada vista --}}
+    @stack('styles')
+
+    {{-- Compatibilidad legacy: si alguna vista vieja metía <style> en heading, seguirá funcionando --}}
+    @hasSection('heading')
+        @php
+            $headingContent = trim($__env->yieldContent('heading'));
+        @endphp
+
+        @if (str_starts_with($headingContent, '<style') || str_contains($headingContent, '<style'))
+            {!! $headingContent !!}
+        @endif
+    @endif
+</head>
+
+<body>
 
     {{-- SweetAlert2 por sesión --}}
     @if (session('swal'))
@@ -126,6 +142,7 @@
             });
         </script>
     @endif
+
     @if (session('success'))
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -169,8 +186,7 @@
 
                 @if (auth()->user()->role === 'admin')
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle 
-            {{ request()->routeIs('usuarios.*') || request()->routeIs('invitations.*') ? 'active' : '' }}"
+                        <a class="nav-link dropdown-toggle {{ request()->routeIs('usuarios.*') || request()->routeIs('invitations.*') ? 'active' : '' }}"
                             href="#" id="usuariosDropdown" role="button" data-toggle="dropdown"
                             aria-haspopup="true" aria-expanded="false">
                             Usuarios
@@ -194,8 +210,7 @@
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav ml-auto">
-
-                {{-- 🔔 CAMPANITA DE NOTIFICACIONES --}}
+                {{-- Campanita --}}
                 <li class="nav-item dropdown">
                     <a class="nav-link mr-2" data-toggle="dropdown" href="#" style="position: relative;">
                         <i class="fa-solid fa-bell"></i>
@@ -203,14 +218,14 @@
                         @if (auth()->user()->unreadNotifications->count())
                             <span
                                 style="
-                    position: absolute;
-                    top: 0;
-                    right: 0;
-                    background: red;
-                    color: white;
-                    border-radius: 50%;
-                    font-size: 10px;
-                    padding: 2px 6px;">
+                                    position: absolute;
+                                    top: 0;
+                                    right: 0;
+                                    background: red;
+                                    color: white;
+                                    border-radius: 50%;
+                                    font-size: 10px;
+                                    padding: 2px 6px;">
                                 {{ auth()->user()->unreadNotifications->count() }}
                             </span>
                         @endif
@@ -236,9 +251,7 @@
                                     <strong>{{ $data['recordatorio_nombre'] ?? 'Notificación' }}</strong>
 
                                     <br>
-                                    <small>
-                                        {{ $data['documento_titulo'] ?? '' }}
-                                    </small>
+                                    <small>{{ $data['documento_titulo'] ?? '' }}</small>
 
                                     @if (!empty($data['mensaje']))
                                         <br>
@@ -274,7 +287,7 @@
                     </div>
                 </li>
 
-                {{-- 👤 USUARIO --}}
+                {{-- Usuario --}}
                 <li class="nav-item dropdown">
                     <a class="nav-link sesion" href="#" id="userDropdown" role="button" data-toggle="dropdown"
                         aria-haspopup="true" aria-expanded="false">
@@ -291,32 +304,30 @@
                         </form>
                     </div>
                 </li>
-
             </ul>
         </div>
     </nav>
 
-    <!-- Contenedor principal con margen superior ajustado -->
     <div class="content-container">
         @yield('contenidoPrincipal')
     </div>
 
-    <!-- jQuery, Popper.js, Bootstrap JS -->
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
-
-    <!-- Incluye sweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         $(function() {
-            $('[data-toggle="tooltip"]').tooltip()
-        })
+            $('[data-toggle="tooltip"]').tooltip();
+        });
     </script>
 
     @yield('scripting')
-    </body>
+    @stack('scripts')
+</body>
 
 </html>
