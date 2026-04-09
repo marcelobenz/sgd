@@ -257,23 +257,26 @@ class DocumentoRecordatorioController extends Controller
     public function eventosCalendario()
     {
         $userId = auth()->id();
+        $eventos = collect();
 
+        // 1) Traer ejecuciones reales del usuario
         $ejecuciones = RecordatorioEjecucion::with(['documento', 'recordatorio'])
             ->where('user_id', $userId)
             ->whereIn('estado', ['pendiente', 'postergado', 'resuelto'])
             ->get();
 
-        $eventos = $ejecuciones->map(function ($ejecucion) {
+        foreach ($ejecuciones as $ejecucion) {
             $fecha = $ejecucion->postergado_hasta ?? $ejecucion->fecha_programada;
 
-            return [
-                'id' => $ejecucion->id,
-                'title' => ($ejecucion->documento->titulo ?? 'Documento') . ' - ' . ($ejecucion->recordatorio->nombre ?? 'Recordatorio'),
-                'start' => $fecha ? $fecha->format('Y-m-d\TH:i:s') : null,
-                'allDay' => false,
-                'backgroundColor' => $this->colorEventoRecordatorio($ejecucion, $fecha),
-                'borderColor' => $this->colorEventoRecordatorio($ejecucion, $fecha),
+            $eventos->push([
+                'id' => 'ejecucion_' . $ejecucion->id,
+                'title' => $ejecucion->recordatorio->nombre ?? 'Recordatorio',
+                'start' => $fecha ? $fecha->format('Y-m-d') : null,
+                'allDay' => true,
+                'backgroundColor' => $this->colorEventoRecordatorio($ejecucion->estado, $fecha),
+                'borderColor' => $this->colorEventoRecordatorio($ejecucion->estado, $fecha),
                 'extendedProps' => [
+                    'tipo' => 'ejecucion',
                     'documento_id' => $ejecucion->documento?->id,
                     'documento_titulo' => $ejecucion->documento->titulo ?? 'Sin documento',
                     'recordatorio_nombre' => $ejecucion->recordatorio->nombre ?? '-',
@@ -289,19 +292,75 @@ class DocumentoRecordatorioController extends Controller
                     'resolver_url' => route('recordatorios.ejecuciones.resolver', $ejecucion->id),
                     'postergar_url' => route('recordatorios.ejecuciones.postergar', $ejecucion->id),
                 ],
-            ];
-        })->values();
+            ]);
+        }
 
-        return response()->json($eventos);
+        // 2) Traer recordatorios configurados donde participa el usuario
+        $recordatorios = DocumentoRecordatorio::with(['documento', 'usuarios'])
+            ->where('activo', true)
+            ->whereHas('usuarios', function ($q) use ($userId) {
+                $q->where('users.id', $userId);
+            })
+            ->whereNotNull('proxima_ejecucion')
+            ->get();
+
+        foreach ($recordatorios as $recordatorio) {
+            $fechaProgramada = $recordatorio->proxima_ejecucion;
+
+            if (!$fechaProgramada) {
+                continue;
+            }
+
+            // Si ya existe una ejecución real para esta fecha/usuario, no duplicar
+            $yaExisteEjecucion = $ejecuciones->contains(function ($ejecucion) use ($recordatorio, $fechaProgramada) {
+                $fechaEjecucion = $ejecucion->postergado_hasta ?? $ejecucion->fecha_programada;
+
+                return (int) $ejecucion->documento_recordatorio_id === (int) $recordatorio->id
+                    && $fechaEjecucion
+                    && $fechaEjecucion->format('Y-m-d H:i:s') === $fechaProgramada->format('Y-m-d H:i:s');
+            });
+
+            if ($yaExisteEjecucion) {
+                continue;
+            }
+
+            $eventos->push([
+                'id' => 'programado_' . $recordatorio->id,
+                'title' => $recordatorio->nombre,
+                'start' => $fechaProgramada->format('Y-m-d'),
+                'allDay' => true,
+                'backgroundColor' => '#6c757d',
+                'borderColor' => '#6c757d',
+                'extendedProps' => [
+                    'tipo' => 'programado',
+                    'documento_id' => $recordatorio->documento?->id,
+                    'documento_titulo' => $recordatorio->documento->titulo ?? 'Sin documento',
+                    'recordatorio_nombre' => $recordatorio->nombre ?? '-',
+                    'mensaje' => $recordatorio->mensaje ?? '',
+                    'estado' => 'programado',
+                    'observacion' => 'Pendiente de ejecución automática',
+                    'fecha' => $fechaProgramada->format('d/m/Y H:i'),
+                    'url_documento' => $recordatorio->documento ? route('documentos.validaPermiso', [
+                        'id' => $recordatorio->documento->id,
+                        'ruta' => 'documentos.show',
+                        'permiso' => 'puedeLeer'
+                    ]) : null,
+                    'resolver_url' => null,
+                    'postergar_url' => null,
+                ],
+            ]);
+        }
+
+        return response()->json($eventos->values());
     }
 
-    private function colorEventoRecordatorio($ejecucion, $fecha)
+    private function colorEventoRecordatorio(string $estado, $fecha = null)
     {
-        if ($ejecucion->estado === 'resuelto') {
+        if ($estado === 'resuelto') {
             return '#28a745';
         }
 
-        if ($ejecucion->estado === 'postergado') {
+        if ($estado === 'postergado') {
             return '#17a2b8';
         }
 
@@ -315,4 +374,5 @@ class DocumentoRecordatorioController extends Controller
 
         return '#007bff';
     }
+    
 }

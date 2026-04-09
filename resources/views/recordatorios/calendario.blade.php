@@ -59,6 +59,8 @@
 
                     <span class="badge badge-pill px-2 py-1"
                         style="background-color: #28a745; color: white;">Resuelto</span>
+                    <span class="badge badge-pill px-2 py-1"
+                        style="background-color: #6c757d; color: white;">Programado</span>
                 </div>
             </div>
         </div>
@@ -347,13 +349,22 @@
                     document.getElementById('modal_mensaje').textContent = props.mensaje || '-';
                     document.getElementById('modal_observacion').textContent = props.observacion || '-';
 
-                    formPostergar.action = props.postergar_url;
-                    formResolver.action = props.resolver_url;
+                    formPostergar.action = props.postergar_url || '';
+                    formResolver.action = props.resolver_url || '';
                     btnVerDocumento.href = props.url_documento || '#';
 
-                    btnResolver.onclick = function() {
-                        formResolver.submit();
-                    };
+                    if (props.tipo === 'programado') {
+                        btnResolver.style.display = 'none';
+                        formPostergar.querySelector('button[type="submit"]').style.display = 'none';
+                    } else {
+                        btnResolver.style.display = 'inline-block';
+                        formPostergar.querySelector('button[type="submit"]').style.display =
+                            'inline-block';
+
+                        btnResolver.onclick = function() {
+                            formResolver.submit();
+                        };
+                    }
 
                     modal.modal('show');
                 }
