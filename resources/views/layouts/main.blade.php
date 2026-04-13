@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ config('app.name', 'Sistema de Gestion Documental') }}</title>
+    <!-- Incluye Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" type="text/css"
+        href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css" />
+    @yield('heading')
+    <style>
+        /* Estilo del navbar */
+        .navbar {
+            background-color: rgba(34, 45, 50, 0.9);
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Logo de la empresa */
+        .navbar-brand img {
+            max-height: 50px;
+        }
+
+        /* Estilo general para los enlaces */
+        .nav-link {
+            color: #ffffff;
+            font-weight: 500;
+            padding: 10px 15px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Estilos de hover para los enlaces */
+        .nav-link:hover {
+            background-color: #546899;
+            color: white;
+        }
+
+        /* Item activo */
+        .nav-link.active {
+            background-color: #546899;
+            color: #ffffff !important;
+        }
+
+        /* Iconos de FontAwesome */
+        .nav-link.sesion::before {
+            content: '\f2bd';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            margin-right: 8px;
+        }
+
+        /* Dropdown personalizado */
+        .dropdown-menu {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            min-width: 200px;
+        }
+
+        .nav-item.dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            left: auto;
+            right: 0;
+            width: auto;
+            min-width: 180px;
+        }
+
+        .dropdown-item:hover {
+            background-color: #546899;
+            color: white;
+        }
+
+        .navbar-brand img {
+            max-height: 50px;
+            padding: 5px;
+            border: 2px solid white;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .navbar {
+            z-index: 3000;
+        }
+
+        .navbar .dropdown-menu {
+            z-index: 4000;
+        }
+
+        .modal {
+            z-index: 5000 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 4990 !important;
+        }
+    </style>
+
+    {{-- SweetAlert2 por sesión --}}
+    @if (session('swal'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire(@json(session('swal')));
+            });
+        </script>
+    @endif
+
+    {{-- Compatibilidad con mensajes flash clásicos --}}
+    @if (session('error'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Acceso denegado',
+                    text: @json(session('error')),
+                });
+            });
+        </script>
+    @endif
+    @if (session('success'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Operación exitosa',
+                    text: @json(session('success')),
+                });
+            });
+        </script>
+    @endif
+
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <a class="navbar-brand" href="/dashboard">
+            <img src="{{ asset('images/logo.png') }}" alt="Logo">
+        </a>
+
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <a class="nav-link {{ request()->routeIs('documentos.*') ? 'active' : '' }}"
+                    href="{{ route('documentos.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
+                    Documentos
+                </a>
+
+                <a class="nav-link {{ request()->routeIs('categorias.*') ? 'active' : '' }}"
+                    href="{{ route('categorias.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
+                    Categorías
+                </a>
+
+                <a class="nav-link {{ request()->routeIs('recordatorios.*') ? 'active' : '' }}"
+                    href="{{ session('recordatorios_view') === 'calendario'
+                        ? route('recordatorios.calendario')
+                        : route('recordatorios.mis') }}">
+                    Recordatorios
+                </a>
+
+                @if (auth()->user()->role === 'admin')
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle 
+            {{ request()->routeIs('usuarios.*') || request()->routeIs('invitations.*') ? 'active' : '' }}"
+                            href="#" id="usuariosDropdown" role="button" data-toggle="dropdown"
+                            aria-haspopup="true" aria-expanded="false">
+                            Usuarios
+                        </a>
+
+                        <div class="dropdown-menu" aria-labelledby="usuariosDropdown">
+                            <a class="dropdown-item {{ request()->routeIs('usuarios.*') ? 'active' : '' }}"
+                                href="{{ route('usuarios.index') }}">
+                                Gestión de usuarios
+                            </a>
+
+                            <a class="dropdown-item {{ request()->routeIs('invitations.*') ? 'active' : '' }}"
+                                href="{{ route('invitations.create') }}">
+                                Invitaciones
+                            </a>
+                        </div>
+                    </li>
+                @endif
+            </ul>
+        </div>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto">
+
+                {{-- 🔔 CAMPANITA DE NOTIFICACIONES --}}
+                <li class="nav-item dropdown">
+                    <a class="nav-link mr-2" data-toggle="dropdown" href="#" style="position: relative;">
+                        <i class="fa-solid fa-bell"></i>
+
+                        @if (auth()->user()->unreadNotifications->count())
+                            <span
+                                style="
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    background: red;
+                    color: white;
+                    border-radius: 50%;
+                    font-size: 10px;
+                    padding: 2px 6px;">
+                                {{ auth()->user()->unreadNotifications->count() }}
+                            </span>
+                        @endif
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-right" style="width: 350px;">
+                        <div class="dropdown-header d-flex justify-content-between align-items-center">
+                            <span>Notificaciones</span>
+
+                            <form action="{{ route('notificaciones.leerTodas') }}" method="POST">
+                                @csrf
+                                <button class="btn btn-sm btn-link">Marcar todas</button>
+                            </form>
+                        </div>
+
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            @forelse(auth()->user()->notifications()->latest()->limit(10)->get() as $notificacion)
+                                @php
+                                    $data = $notificacion->data;
+                                @endphp
+
+                                <div class="dropdown-item {{ is_null($notificacion->read_at) ? 'bg-light' : '' }}">
+                                    <strong>{{ $data['recordatorio_nombre'] ?? 'Notificación' }}</strong>
+
+                                    <br>
+                                    <small>
+                                        {{ $data['documento_titulo'] ?? '' }}
+                                    </small>
+
+                                    @if (!empty($data['mensaje']))
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ $data['mensaje'] }}
+                                        </small>
+                                    @endif
+
+                                    <div class="mt-2 d-flex justify-content-between">
+                                        <a href="{{ $data['url'] ?? '#' }}" class="btn btn-sm btn-primary">
+                                            Ver
+                                        </a>
+
+                                        @if (is_null($notificacion->read_at))
+                                            <form action="{{ route('notificaciones.leer', $notificacion->id) }}"
+                                                method="POST">
+                                                @csrf
+                                                <button class="btn btn-sm btn-outline-secondary">
+                                                    Marcar leída
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-divider"></div>
+                            @empty
+                                <div class="dropdown-item text-muted text-center">
+                                    Sin notificaciones
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </li>
+
+                {{-- 👤 USUARIO --}}
+                <li class="nav-item dropdown">
+                    <a class="nav-link sesion" href="#" id="userDropdown" role="button" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
+                        <strong>{{ auth()->user()->name }}</strong>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                        <a class="dropdown-item" href="{{ route('profile.show') }}">Perfil</a>
+                        <a class="dropdown-item" href="#"
+                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                            Cerrar sesión
+                        </a>
+                        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                            @csrf
+                        </form>
+                    </div>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Contenedor principal con margen superior ajustado -->
+    <div class="content-container">
+        @yield('contenidoPrincipal')
+    </div>
+
+    <!-- jQuery, Popper.js, Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.1.2/js/dataTables.rowGroup.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+
+    <!-- Incluye sweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(function() {
+            $('[data-toggle="tooltip"]').tooltip()
+        })
+    </script>
+
+    @yield('scripting')
+    </body>
+
+</html>

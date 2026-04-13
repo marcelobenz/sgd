@@ -1,0 +1,91 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Models\DocumentoRecordatorio;
+
+class Documento extends Model
+{
+    protected $fillable = ['titulo', 'path', 'contenido', 'estado', 'id_categoria', 'id_usr_creador', 'id_usr_ultima_modif', 'fecha_aprobacion', 'updated_at'];
+
+    public function categoria()
+    {
+        return $this->belongsTo(Categoria::class, 'id_categoria');
+    }
+
+    public function creador()
+    {
+        return $this->belongsTo(User::class, 'id_usr_creador');
+    }
+
+    public function aprobador()
+    {
+        return $this->belongsTo(User::class, 'id_usr_aprobador');
+    }
+
+    public function ultimaModificacion()
+    {
+        return $this->belongsTo(User::class, 'id_usr_ultima_modif');
+    }
+
+    public function historial()
+    {
+        return $this->hasMany(HistorialDocumento::class, 'id_documento');
+    }
+
+    public function versiones()
+    {
+        return $this->hasMany(DocumentoVersiones::class);
+    }
+
+    public function activeVersion()
+    {
+        return $this->hasOne(DocumentoVersiones::class)->where('is_active', true);
+    }
+
+    public function permisos()
+    {
+        return $this->hasMany(DocumentoPermiso::class);
+    }
+
+    // Cualquiera de los permisos que tenga asignado permite leer
+    public function puedeLeer(User $user)
+    {
+        return $this->permisos()->where('user_id', $user->id)->where(function ($query) {
+            $query->where('puede_leer', true)
+                ->orWhere('puede_escribir', true)
+                ->orWhere('puede_aprobar', true)
+                ->orWhere('puede_eliminar', true);
+        })->exists();
+    }
+
+    public function puedeEscribir(User $user)
+    {
+        return $this->permisos()->where('user_id', $user->id)->where('puede_escribir', true)->exists();
+    }
+
+    public function puedeAprobar(User $user)
+    {
+        return $this->permisos()->where('user_id', $user->id)->where('puede_aprobar', true)->exists();
+    }
+
+    public function puedeEliminar(User $user)
+    {
+        return $this->permisos()->where('user_id', $user->id)->where('puede_eliminar', true)->exists();
+    }
+
+    public function ultimaVersionAprobada()
+    {
+        return $this->historial()
+            ->where('estado', 'aprobado')       // Solo versiones aprobadas
+            ->orderByDesc('fecha_aprobacion')   // Ordenar por la fecha_aprobacion en orden descendente
+            ->first();                          // Obtener la última versión aprobada
+    }
+    
+    public function recordatorios()
+    {
+        return $this->hasMany(DocumentoRecordatorio::class, 'documento_id');
+    }
+
+}

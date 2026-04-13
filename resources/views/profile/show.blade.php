@@ -1,0 +1,71 @@
+@extends('layouts.main')
+
+@section('heading')
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+@endsection
+
+@section('contenidoPrincipal')
+
+<div class="container" style="margin-top: 40px;">
+    <br>
+    <div class="w-100 mt-4" style="background-color: #f8f9fa;">
+        <h2 class="text-center">Mi Perfil</h2>
+    </div>
+
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+    <form action="{{ route('profile.update') }}" method="POST">
+        @csrf
+        <div class="form-group">
+            <label for="name">Nombre</label>
+            <input type="text" id="name" name="name" class="form-control" value="{{ $user->name }}" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Correo Electrónico</label>
+            <input type="email" id="email" name="email" class="form-control" value="{{ $user->email }}" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Contraseña (dejar en blanco si no desea cambiarla)</label>
+            <input type="password" id="password" name="password" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="password_confirmation">Confirmar Contraseña</label>
+            <input type="password" id="password_confirmation" name="password_confirmation" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary">Actualizar</button>
+        <button type="button" class="btn btn-secondary" onclick="confirmAndRedirect();">Volver</button>
+    </form>
+</div>
+@endsection
+@section('scripting')
+<script>
+    function confirmAndRedirect() {
+        Swal.fire({
+            title: 'Volver sin guardar',
+            text: 'Los datos cargados se perderán ¿Estás seguro de que deseas volver?',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, volver',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+            confirmButton: 'btn btn-warning', // Cambia 'btn btn-danger' al color que desees
+            cancelButton: 'btn btn-primary' // Cambia 'btn btn-secondary' al color que desees
+        },
+        buttonsStyling: false
+    }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "{{ route('documentos.index') }}";
+            }
+        });
+    }
+</script>
+@endsection

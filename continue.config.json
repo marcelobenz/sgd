@@ -1,0 +1,14 @@
+{
+  "models": [
+    {
+      "title": "GPT-4 (ChatGPT Web)",
+      "provider": "chatgpt-web",
+      "model": "gpt-4"
+    }
+  ],
+  "providerBackends": [
+    {
+      "provider": "chatgpt-web"
+    }
+  ]
+}
