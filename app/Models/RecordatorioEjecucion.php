@@ -12,11 +12,13 @@ class RecordatorioEjecucion extends Model
         'documento_recordatorio_id',
         'documento_id',
         'user_id',
+        'resuelto_por_user_id',
         'fecha_programada',
         'estado',
         'fecha_resolucion',
         'postergado_hasta',
         'observacion',
+        'observacion_resolucion',
     ];
 
     protected $casts = [
@@ -38,5 +40,10 @@ class RecordatorioEjecucion extends Model
     public function recordatorio()
     {
         return $this->belongsTo(DocumentoRecordatorio::class, 'documento_recordatorio_id');
+    }
+
+    public function resueltoPor()
+    {
+        return $this->belongsTo(User::class, 'resuelto_por_user_id');
     }
 }

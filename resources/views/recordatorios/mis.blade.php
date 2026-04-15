@@ -170,16 +170,11 @@
                                                 </a>
                                             @endif
 
-                                            <form
-                                                action="{{ route('recordatorios.ejecuciones.resolver', $ejecucion->id) }}"
-                                                method="POST" class="m-0">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="btn btn-sm btn-outline-success"
-                                                    data-toggle="tooltip" title="Resolver">
-                                                    <i class="fa fa-check"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-sm btn-outline-success"
+                                                data-toggle="modal" data-target="#modalResolver{{ $ejecucion->id }}"
+                                                title="Resolver">
+                                                <i class="fa fa-check"></i>
+                                            </button>
 
                                             <button type="button" class="btn btn-sm btn-outline-warning"
                                                 data-toggle="modal" data-target="#modalPostergar{{ $ejecucion->id }}"
@@ -234,6 +229,56 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <div class="modal fade" id="modalResolver{{ $ejecucion->id }}" tabindex="-1"
+                                            role="dialog">
+                                            <div class="modal-dialog" role="document">
+                                                <div class="modal-content border-0 shadow">
+                                                    <form
+                                                        action="{{ route('recordatorios.ejecuciones.resolver', $ejecucion->id) }}"
+                                                        method="POST">
+                                                        @csrf
+                                                        @method('PATCH')
+
+                                                        <div class="modal-header bg-light">
+                                                            <h5 class="modal-title">
+                                                                <i class="fa fa-check mr-2"></i>Registrar revisión
+                                                            </h5>
+                                                            <button type="button" class="close" data-dismiss="modal"
+                                                                aria-label="Cerrar">
+                                                                <span aria-hidden="true">&times;</span>
+                                                            </button>
+                                                        </div>
+
+                                                        <div class="modal-body">
+                                                            <p class="mb-2">
+                                                                <strong>Documento:</strong>
+                                                                {{ $ejecucion->documento->titulo ?? 'Sin documento' }}
+                                                            </p>
+
+                                                            <p class="mb-3">
+                                                                <strong>Recordatorio:</strong>
+                                                                {{ $ejecucion->recordatorio->nombre ?? '-' }}
+                                                            </p>
+
+                                                            <div class="form-group mb-0">
+                                                                <label>Constancia de revisión</label>
+                                                                <textarea name="observacion_resolucion" class="form-control" rows="4" required
+                                                                    placeholder="Ej: Se revisó el documento, continúa vigente y no requiere cambios."></textarea>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="modal-footer">
+                                                            <button type="submit" class="btn btn-success">Registrar
+                                                                revisión</button>
+                                                            <button type="button" class="btn btn-secondary"
+                                                                data-dismiss="modal">Cancelar</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </td>
                                 </tr>
                             @empty
