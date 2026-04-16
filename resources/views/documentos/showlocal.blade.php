@@ -40,7 +40,7 @@
             position: absolute;
             top: 60px;
             left: 0;
-            width: 430px;
+            width: 344px;
             max-width: 95%;
             min-height: 420px;
             max-height: 78vh;
@@ -103,7 +103,7 @@
         }
 
         #versionInfoPanel .vip-label {
-            width: 38%;
+            width: 50%;
             background-color: #f8f9fa;
             font-weight: 600;
             color: #495057;
