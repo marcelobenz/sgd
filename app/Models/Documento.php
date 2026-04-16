@@ -88,4 +88,8 @@ class Documento extends Model
         return $this->hasMany(DocumentoRecordatorio::class, 'documento_id');
     }
 
+    public function ejecucionesRecordatorio()
+    {
+        return $this->hasMany(RecordatorioEjecucion::class, 'documento_id');
+    }
 }

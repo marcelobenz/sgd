@@ -119,6 +119,8 @@ class DocumentoController extends Controller
             'historial.creador',
             'historial.ultimaModificacion',
             'historial.aprobador',
+            'ejecucionesRecordatorio.recordatorio',
+            'ejecucionesRecordatorio.resueltoPor',
         ])->findOrFail($id);
 
         if (!$documento->puedeLeer(auth()->user())) {
@@ -136,8 +138,11 @@ class DocumentoController extends Controller
         $baseUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/";
         $fileUrl = $baseUrl . $documento->path;
         $fileExtension = pathinfo($documento->path, PATHINFO_EXTENSION);
+        $revisionesCumplidas = $documento->ejecucionesRecordatorio
+            ->where('estado', 'resuelto')
+            ->sortByDesc('fecha_resolucion');
 
-        return view('documentos.showlocal', compact('documento', 'fileUrl', 'fileExtension'));
+        return view('documentos.showlocal', compact('documento', 'fileUrl', 'fileExtension', 'revisionesCumplidas'));
     }
 
     public function aprobar(Request $request, $id)

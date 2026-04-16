@@ -208,18 +208,22 @@ class DocumentoRecordatorioController extends Controller
         }
 
         $data = $request->validate([
-            'observacion' => 'nullable|string|max:1000',
+            'observacion_resolucion' => 'required|string|max:1000',
+        ], [
+            'observacion_resolucion.required' => 'Debés dejar una constancia de la revisión realizada.',
+            'observacion_resolucion.max' => 'La constancia no puede superar los 1000 caracteres.',
         ]);
 
         $ejecucion->update([
             'estado' => 'resuelto',
             'fecha_resolucion' => now(),
-            'observacion' => $data['observacion'] ?? null,
+            'resuelto_por_user_id' => auth()->id(),
+            'observacion_resolucion' => $data['observacion_resolucion'],
         ]);
 
         return redirect()
             ->route('recordatorios.mis')
-            ->with('success', 'Recordatorio marcado como resuelto.');
+            ->with('success', 'Revisión registrada correctamente.');
     }
 
     public function postergarEjecucion(Request $request, RecordatorioEjecucion $ejecucion)
