@@ -27,6 +27,16 @@ class ProcesarRecordatoriosDocumentos extends Command
             // Guardamos la fecha que se está ejecutando ahora
             $fechaEjecucionActual = $recordatorio->proxima_ejecucion;
 
+            if ($recordatorio->usuarios->isEmpty()) {
+                \Log::warning('Recordatorio vencido sin usuarios asociados. No se avanza.', [
+                    'recordatorio_id' => $recordatorio->id,
+                    'documento_id' => $recordatorio->documento_id,
+                    'proxima_ejecucion' => $recordatorio->proxima_ejecucion,
+                ]);
+
+                continue;
+            }
+
             foreach ($recordatorio->usuarios as $usuario) {
                 // Crear ejecución pendiente para el usuario si todavía no existe
                 RecordatorioEjecucion::firstOrCreate(

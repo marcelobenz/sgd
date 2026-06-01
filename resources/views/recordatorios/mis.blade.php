@@ -181,6 +181,11 @@
                                                 title="Postergar">
                                                 <i class="fa fa-clock"></i>
                                             </button>
+
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-toggle="modal"
+                                                data-target="#modalEliminar{{ $ejecucion->id }}" title="Eliminar">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
                                         </div>
 
                                         <div class="modal fade" id="modalPostergar{{ $ejecucion->id }}" tabindex="-1"
@@ -235,10 +240,9 @@
                                             <div class="modal-dialog" role="document">
                                                 <div class="modal-content border-0 shadow">
                                                     <form
-                                                        action="{{ route('recordatorios.ejecuciones.resolver', $ejecucion->id) }}"
-                                                        method="POST">
+                                                        action="{{ route('recordatorioEjecuciones.resolverConRevision', $ejecucion->id) }}"
+                                                        method="POST" enctype="multipart/form-data">
                                                         @csrf
-                                                        @method('PATCH')
 
                                                         <div class="modal-header bg-light">
                                                             <h5 class="modal-title">
@@ -261,10 +265,31 @@
                                                                 {{ $ejecucion->recordatorio->nombre ?? '-' }}
                                                             </p>
 
-                                                            <div class="form-group mb-0">
+                                                            <div class="form-group">
+                                                                <label>Resultado de la revisión</label>
+                                                                <select name="resultado" class="form-control" required>
+                                                                    <option value="conforme">Conforme - no requiere cambios
+                                                                    </option>
+                                                                    <option value="requiere_nueva_version">Requiere nueva
+                                                                        versión</option>
+                                                                    <option value="no_aplica">No aplica</option>
+                                                                </select>
+                                                            </div>
+
+                                                            <div class="form-group">
                                                                 <label>Constancia de revisión</label>
                                                                 <textarea name="observacion_resolucion" class="form-control" rows="4" required
                                                                     placeholder="Ej: Se revisó el documento, continúa vigente y no requiere cambios."></textarea>
+                                                            </div>
+
+                                                            <div class="form-group mb-0">
+                                                                <label>Evidencia adjunta opcional</label>
+                                                                <input type="file" name="archivo_evidencia"
+                                                                    class="form-control-file">
+                                                                <small class="text-muted">
+                                                                    Podés adjuntar un PDF, imagen u otro archivo como
+                                                                    evidencia de la revisión.
+                                                                </small>
                                                             </div>
                                                         </div>
 
@@ -275,6 +300,71 @@
                                                                 data-dismiss="modal">Cancelar</button>
                                                         </div>
                                                     </form>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal fade" id="modalEliminar{{ $ejecucion->id }}" tabindex="-1"
+                                            role="dialog">
+                                            <div class="modal-dialog" role="document">
+                                                <div class="modal-content border-0 shadow">
+
+                                                    <div class="modal-header bg-light">
+                                                        <h5 class="modal-title">
+                                                            <i class="fa fa-trash mr-2 text-danger"></i>Eliminar
+                                                            recordatorio
+                                                        </h5>
+                                                        <button type="button" class="close" data-dismiss="modal"
+                                                            aria-label="Cerrar">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="modal-body">
+                                                        <p>
+                                                            ¿Qué querés eliminar?
+                                                        </p>
+
+                                                        <p class="mb-1">
+                                                            <strong>Documento:</strong>
+                                                            {{ $ejecucion->documento->titulo ?? 'Sin documento' }}
+                                                        </p>
+
+                                                        <p>
+                                                            <strong>Recordatorio:</strong>
+                                                            {{ $ejecucion->recordatorio->nombre ?? '-' }}
+                                                        </p>
+
+                                                        <div class="alert alert-warning mb-0 text-wrap">
+                                                            Si eliminás todos los futuros, el recordatorio recurrente
+                                                            quedará desactivado.
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="modal-footer d-flex justify-content-between">
+                                                        <form
+                                                            action="{{ route('recordatorioEjecuciones.eliminarActual', $ejecucion->id) }}"
+                                                            method="POST">
+                                                            @csrf
+                                                            @method('DELETE')
+
+                                                            <button type="submit" class="btn btn-outline-danger">
+                                                                Eliminar solo este evento
+                                                            </button>
+                                                        </form>
+
+                                                        <form
+                                                            action="{{ route('recordatorioEjecuciones.eliminarFuturos', $ejecucion->id) }}"
+                                                            method="POST">
+                                                            @csrf
+                                                            @method('DELETE')
+
+                                                            <button type="submit" class="btn btn-danger">
+                                                                Eliminar todos los futuros
+                                                            </button>
+                                                        </form>
+                                                    </div>
+
                                                 </div>
                                             </div>
                                         </div>

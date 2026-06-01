@@ -92,4 +92,10 @@ class Documento extends Model
     {
         return $this->hasMany(RecordatorioEjecucion::class, 'documento_id');
     }
+
+    public function revisiones()
+    {
+        return $this->hasMany(DocumentoRevision::class);
+    }
+
 }
