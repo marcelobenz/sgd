@@ -46,4 +46,10 @@ class RecordatorioEjecucion extends Model
     {
         return $this->belongsTo(User::class, 'resuelto_por_user_id');
     }
+
+    public function revision()
+    {
+        return $this->hasOne(DocumentoRevision::class, 'recordatorio_ejecucion_id');
+    }
+
 }
