@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\DocumentoRevision;
+use App\Models\RecordatorioEjecucion;
+use Illuminate\Support\Facades\Auth;
 
 class DocumentoRecordatorio extends Model
 {

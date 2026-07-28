@@ -87,6 +87,21 @@ Route::middleware(['auth', 'usuario.habilitado'])->group(function () {
     Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
     Route::post('/usuarios/{id}/toggle-habilitado', [UserController::class, 'toggleHabilitado'])->name('usuarios.toggleHabilitado');
 
+    //recordatorios
+    Route::post(
+        '/recordatorio-ejecuciones/{id}/resolver-con-revision',
+        [DocumentoRecordatorioController::class, 'resolverConRevision']
+    )->name('recordatorioEjecuciones.resolverConRevision');
+    
+    Route::delete(
+        '/recordatorio-ejecuciones/{id}/eliminar-actual',
+        [DocumentoRecordatorioController::class, 'eliminarEjecucionActual']
+    )->name('recordatorioEjecuciones.eliminarActual');
+
+    Route::delete(
+        '/recordatorio-ejecuciones/{id}/eliminar-futuros',
+        [DocumentoRecordatorioController::class, 'eliminarEjecucionesFuturas']
+    )->name('recordatorioEjecuciones.eliminarFuturos');
 
 });
 

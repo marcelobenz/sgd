@@ -439,7 +439,9 @@
                                                     <tr>
                                                         <th>Recordatorio</th>
                                                         <th>Fecha revisión</th>
+                                                        <th>Resultado</th>
                                                         <th>Usuario</th>
+                                                        <th>Evidencia</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -467,9 +469,40 @@
                                                                 @endif
                                                             </td>
                                                             <td>
+                                                                @if (isset($revision->revision) && $revision->revision)
+                                                                    @if ($revision->revision->resultado === 'conforme')
+                                                                        <span class="badge badge-success">
+                                                                            Conforme
+                                                                        </span>
+                                                                    @elseif($revision->revision->resultado === 'requiere_nueva_version')
+                                                                        <span class="badge badge-warning">
+                                                                            Nueva versión requerida
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="badge badge-secondary">
+                                                                            No aplica
+                                                                        </span>
+                                                                    @endif
+                                                                @else
+                                                                    <span class="text-muted">-</span>
+                                                                @endif
+                                                            </td>
+                                                            <td>
                                                                 <span class="revision-usuario">
                                                                     {{ $revision->resueltoPor->name ?? '-' }}
                                                                 </span>
+                                                            </td>
+                                                            <td>
+                                                                @if (isset($revision->revision) && $revision->revision && $revision->revision->archivo_evidencia)
+                                                                    <a href="{{ Storage::disk('s3')->url($revision->revision->archivo_evidencia) }}"
+                                                                        target="_blank"
+                                                                        class="btn btn-sm btn-outline-primary">
+
+                                                                        <i class="fa fa-paperclip"></i>
+                                                                    </a>
+                                                                @else
+                                                                    <span class="text-muted">-</span>
+                                                                @endif
                                                             </td>
                                                         </tr>
                                                     @endforeach

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\RecordatorioEjecucion;
 use Illuminate\Support\Facades\DB;
+use App\Models\DocumentoRevision;
 
 class DocumentoRecordatorioController extends Controller
 {
@@ -99,7 +100,7 @@ class DocumentoRecordatorioController extends Controller
         );
 
         $frecuencia = $data['frecuencia'];
-
+        $permitirVencida = $frecuencia === 'anual';
         $diaSemana = (int) $fechaInicio->dayOfWeekIso; // 1=lunes ... 7=domingo
         $diaMes = (int) $fechaInicio->day;
         $mesAnual = (int) $fechaInicio->month;
@@ -117,18 +118,22 @@ class DocumentoRecordatorioController extends Controller
             'notificar_interno' => !empty($data['notificar_interno']),
             'notificar_email' => !empty($data['notificar_email']),
             'activo' => !empty($data['activo']),
-            'proxima_ejecucion' => $this->calcularProximaEjecucionInicial($fechaConHora, $frecuencia),
+            'proxima_ejecucion' => $this->calcularProximaEjecucionInicial($fechaConHora, $frecuencia, $permitirVencida),
             'created_by' => Auth::id(),
         ];
     }
 
-    private function calcularProximaEjecucionInicial(Carbon $fechaBase, string $frecuencia): ?Carbon
+    private function calcularProximaEjecucionInicial(
+        Carbon $fechaBase,
+        string $frecuencia,
+        bool $permitirVencida = false
+    ): ?Carbon
     {
         if (!in_array($frecuencia, ['no_repite', 'diario', 'semanal', 'mensual', 'anual'])) {
             return null;
         }
 
-        if ($frecuencia === 'no_repite') {
+        if ($frecuencia === 'no_repite' || $permitirVencida) {
             return $fechaBase;
         }
 
@@ -281,6 +286,7 @@ class DocumentoRecordatorioController extends Controller
                 'borderColor' => $this->colorEventoRecordatorio($ejecucion->estado, $fecha),
                 'extendedProps' => [
                     'tipo' => 'ejecucion',
+                    'ejecucion_id' => $ejecucion->id,
                     'documento_id' => $ejecucion->documento?->id,
                     'documento_titulo' => $ejecucion->documento->titulo ?? 'Sin documento',
                     'recordatorio_nombre' => $ejecucion->recordatorio->nombre ?? '-',
@@ -293,8 +299,10 @@ class DocumentoRecordatorioController extends Controller
                         'ruta' => 'documentos.show',
                         'permiso' => 'puedeLeer'
                     ]) : null,
-                    'resolver_url' => route('recordatorios.ejecuciones.resolver', $ejecucion->id),
+                    'resolver_url' => route('recordatorioEjecuciones.resolverConRevision', $ejecucion->id),
                     'postergar_url' => route('recordatorios.ejecuciones.postergar', $ejecucion->id),
+                    'eliminar_actual_url' => route('recordatorioEjecuciones.eliminarActual', $ejecucion->id),
+                    'eliminar_futuros_url' => route('recordatorioEjecuciones.eliminarFuturos', $ejecucion->id),
                 ],
             ]);
         }
@@ -337,6 +345,9 @@ class DocumentoRecordatorioController extends Controller
                 'borderColor' => '#6c757d',
                 'extendedProps' => [
                     'tipo' => 'programado',
+                    'ejecucion_id' => null,
+                    'eliminar_actual_url' => null,
+                    'eliminar_futuros_url' => null,
                     'documento_id' => $recordatorio->documento?->id,
                     'documento_titulo' => $recordatorio->documento->titulo ?? 'Sin documento',
                     'recordatorio_nombre' => $recordatorio->nombre ?? '-',
@@ -378,5 +389,84 @@ class DocumentoRecordatorioController extends Controller
 
         return '#007bff';
     }
+
+    public function resolverConRevision(Request $request, $id)
+    {
+        $request->validate([
+            'resultado' => 'required|string',
+            'observacion_resolucion' => 'nullable|string',
+            'archivo_evidencia' => 'nullable|file|max:10240',
+        ]);
+
+        $ejecucion = RecordatorioEjecucion::findOrFail($id);
+
+        $archivoPath = null;
+
+        if ($request->hasFile('archivo_evidencia')) {
+
+            $archivoPath = $request->file('archivo_evidencia')
+                ->store('evidencias_revisiones', 's3');
+        }
+
+        DocumentoRevision::create([
+            'documento_id' => $ejecucion->documento_id,
+            'recordatorio_id' => $ejecucion->documento_recordatorio_id,
+            'recordatorio_ejecucion_id' => $ejecucion->id,
+            'user_id' => Auth::id(),
+            'fecha_revision' => now(),
+            'resultado' => $request->resultado,
+            'observacion' => $request->observacion_resolucion,
+            'requiere_nueva_version' =>
+                $request->resultado === 'requiere_nueva_version',
+            'archivo_evidencia' => $archivoPath,
+        ]);
+
+        $ejecucion->update([
+            'estado' => 'resuelto',
+            'resuelto_por_user_id' => Auth::id(),
+            'fecha_resolucion' => now(),
+            'observacion_resolucion' => $request->observacion_resolucion,
+        ]);
+
+        return back()->with(
+            'success',
+            'Revisión registrada y recordatorio resuelto correctamente.'
+        );
+    }
+
+    public function eliminarEjecucionActual($id)
+    {
+        $ejecucion = RecordatorioEjecucion::findOrFail($id);
+
+        if ($ejecucion->estado === 'resuelto') {
+            return back()->with('error', 'No se puede eliminar una revisión ya resuelta.');
+        }
+
+        $ejecucion->delete();
+
+        return back()->with('success', 'Tarea eliminada correctamente.');
+    }
     
+    public function eliminarEjecucionesFuturas($id)
+    {
+        $ejecucion = RecordatorioEjecucion::with('recordatorio')->findOrFail($id);
+
+        $recordatorio = $ejecucion->recordatorio;
+
+        if (!$recordatorio) {
+            return back()->with('error', 'No se encontró el recordatorio asociado.');
+        }
+
+        // Desactiva la recurrencia
+        $recordatorio->activo = 0;
+        $recordatorio->save();
+
+        // Elimina tareas no resueltas asociadas
+        RecordatorioEjecucion::where('documento_recordatorio_id', $recordatorio->id)
+            ->whereIn('estado', ['pendiente', 'postergado', 'vencido'])
+            ->delete();
+
+        return back()->with('success', 'Recordatorio recurrente eliminado para futuras ejecuciones.');
+    }
+
 }

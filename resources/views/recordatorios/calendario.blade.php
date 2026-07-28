@@ -157,16 +157,141 @@
                             <button type="submit" class="btn btn-warning">
                                 <i class="fa fa-clock mr-1"></i> Postergar
                             </button>
+                            <button type="button" class="btn btn-outline-danger" id="btnEliminarRecordatorio">
+                                <i class="fa fa-trash"></i>
+                                Eliminar
+                            </button>
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">
                                 Cerrar
                             </button>
                         </div>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
 
-                <form id="formResolverDesdeCalendario" method="POST" style="display:none;">
+    // Modal para confirmar eliminación recordatorio
+    <div class="modal fade" id="modalEliminarRecordatorio" tabindex="-1" role="dialog">
+
+        <div class="modal-dialog" role="document">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">
+                        <i class="fa fa-trash text-danger mr-2"></i>
+                        Eliminar recordatorio
+                    </h5>
+
+                    <button type="button" class="close" data-dismiss="modal">
+
+                        <span>&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <p>
+                        ¿Qué querés eliminar?
+                    </p>
+
+                    <div class="alert alert-warning" style="white-space: normal; word-break: break-word;">
+
+                        Si eliminás todos los futuros,
+                        el recordatorio recurrente quedará desactivado.
+                    </div>
+
+                </div>
+
+                <div class="modal-footer d-flex flex-wrap gap-2">
+
+                    <form id="formEliminarActualCalendario" method="POST" class="w-100 mb-2">
+
+                        @csrf
+                        @method('DELETE')
+
+                        <button type="submit" class="btn btn-outline-danger btn-block">
+
+                            Eliminar solo este evento
+                        </button>
+                    </form>
+
+                    <form id="formEliminarFuturosCalendario" method="POST" class="w-100">
+
+                        @csrf
+                        @method('DELETE')
+
+                        <button type="submit" class="btn btn-danger btn-block">
+
+                            Eliminar todos los futuros
+                        </button>
+                    </form>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    // Modal para resolver con revisión desde calendario
+    <div class="modal fade" id="modalResolverConRevisionCalendario" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content border-0 shadow">
+                <form id="formResolverConRevisionCalendario" method="POST" enctype="multipart/form-data">
                     @csrf
-                    @method('PATCH')
+
+                    <div class="modal-header bg-light">
+                        <h5 class="modal-title">
+                            <i class="fa fa-check mr-2"></i>Registrar revisión
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+                        <p class="mb-2">
+                            <strong>Documento:</strong>
+                            <span id="resolver_documento_titulo">-</span>
+                        </p>
+
+                        <p class="mb-3">
+                            <strong>Recordatorio:</strong>
+                            <span id="resolver_recordatorio_nombre">-</span>
+                        </p>
+
+                        <div class="form-group">
+                            <label>Resultado de la revisión</label>
+                            <select name="resultado" class="form-control" required>
+                                <option value="conforme">Conforme - no requiere cambios</option>
+                                <option value="requiere_nueva_version">Requiere nueva versión</option>
+                                <option value="no_aplica">No aplica</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Constancia de revisión</label>
+                            <textarea name="observacion_resolucion" class="form-control" rows="4" required
+                                placeholder="Ej: Se revisó el documento, continúa vigente y no requiere cambios."></textarea>
+                        </div>
+
+                        <div class="form-group mb-0">
+                            <label>Evidencia adjunta opcional</label>
+                            <input type="file" name="archivo_evidencia" class="form-control-file">
+                            <small class="text-muted">
+                                Podés adjuntar un PDF, imagen u otro archivo como evidencia de la revisión.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">
+                            Registrar revisión
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            Cancelar
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -309,8 +434,9 @@
             const modal = $('#modalEventoRecordatorio');
 
             const formPostergar = document.getElementById('formPostergarDesdeCalendario');
-            const formResolver = document.getElementById('formResolverDesdeCalendario');
+            const formResolverRevision = document.getElementById('formResolverConRevisionCalendario');
             const btnResolver = document.getElementById('btnResolver');
+            const btnEliminarRecordatorio = document.getElementById('btnEliminarRecordatorio');
             const btnVerDocumento = document.getElementById('btnVerDocumento');
 
             const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -339,6 +465,20 @@
                 eventClick: function(info) {
                     const e = info.event;
                     const props = e.extendedProps;
+                    const ejecucionId = props.ejecucion_id;
+
+                    $('#btnEliminarRecordatorio').off('click').on('click', function() {
+                        if (!props.eliminar_actual_url || !props.eliminar_futuros_url) {
+                            return;
+                        }
+
+                        $('#formEliminarActualCalendario').attr('action', props
+                            .eliminar_actual_url);
+                        $('#formEliminarFuturosCalendario').attr('action', props
+                            .eliminar_futuros_url);
+
+                        $('#modalEliminarRecordatorio').modal('show');
+                    });
 
                     document.getElementById('modal_documento_titulo').textContent = props
                         .documento_titulo || '-';
@@ -350,19 +490,32 @@
                     document.getElementById('modal_observacion').textContent = props.observacion || '-';
 
                     formPostergar.action = props.postergar_url || '';
-                    formResolver.action = props.resolver_url || '';
+                    formResolverRevision.action = props.resolver_url || '';
                     btnVerDocumento.href = props.url_documento || '#';
 
                     if (props.tipo === 'programado') {
                         btnResolver.style.display = 'none';
+                        btnEliminarRecordatorio.style.display = 'none';
                         formPostergar.querySelector('button[type="submit"]').style.display = 'none';
                     } else {
                         btnResolver.style.display = 'inline-block';
+                        btnEliminarRecordatorio.style.display = 'inline-block';
                         formPostergar.querySelector('button[type="submit"]').style.display =
                             'inline-block';
 
                         btnResolver.onclick = function() {
-                            formResolver.submit();
+                            if (!props.resolver_url) {
+                                return;
+                            }
+
+                            document.getElementById('resolver_documento_titulo').textContent =
+                                props.documento_titulo || '-';
+
+                            document.getElementById('resolver_recordatorio_nombre').textContent =
+                                props.recordatorio_nombre || '-';
+
+                            modal.modal('hide');
+                            $('#modalResolverConRevisionCalendario').modal('show');
                         };
                     }
 
