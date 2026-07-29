@@ -182,6 +182,30 @@ class DocumentoRecordatorioController extends Controller
             ->orderByRaw("COALESCE(postergado_hasta, fecha_programada) ASC")
             ->get();
 
+        $recordatoriosProgramados = DocumentoRecordatorio::with([
+            'documento',
+            'ejecuciones' => function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            },
+        ])
+            ->where('activo', true)
+            ->whereHas('usuarios', function ($query) use ($userId) {
+                $query->where('users.id', $userId);
+            })
+            ->whereNotNull('proxima_ejecucion')
+            ->orderBy('proxima_ejecucion')
+            ->get()
+            ->reject(function ($recordatorio) {
+                return $recordatorio->ejecuciones->contains(function ($ejecucion) use ($recordatorio) {
+                    $fechaEjecucion = $ejecucion->postergado_hasta ?? $ejecucion->fecha_programada;
+
+                    return $fechaEjecucion
+                        && $fechaEjecucion->format('Y-m-d H:i:s')
+                            === $recordatorio->proxima_ejecucion->format('Y-m-d H:i:s');
+                });
+            })
+            ->values();
+
         $cantidadVencidos = RecordatorioEjecucion::where('user_id', $userId)
             ->whereIn('estado', ['pendiente', 'postergado'])
             ->whereRaw('COALESCE(postergado_hasta, fecha_programada) < NOW()')
@@ -200,6 +224,7 @@ class DocumentoRecordatorioController extends Controller
 
         return view('recordatorios.mis', compact(
             'ejecuciones',
+            'recordatoriosProgramados',
             'cantidadVencidos',
             'cantidadHoy',
             'cantidadProximos7'

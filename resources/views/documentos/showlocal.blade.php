@@ -20,6 +20,13 @@
         /* Ajustes opcionales para una mejor presentación */
         .table-row {
             cursor: pointer;
+            transition: background-color .15s ease;
+        }
+
+        .table-row:hover,
+        .table-row:focus {
+            background-color: #eef7f9;
+            outline: none;
         }
 
         .btn-link {
@@ -37,38 +44,31 @@
         }
 
         #versionInfoPanel {
-            position: absolute;
-            top: 60px;
-            left: 0;
-            width: 344px;
-            max-width: 95%;
-            min-height: 420px;
-            max-height: 78vh;
+            width: 100%;
             background-color: #ffffff;
             border: 1px solid #dcdfe3;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-            z-index: 2000;
-            display: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
             overflow: hidden;
         }
 
-        #versionInfoPanel.show {
-            display: block;
+        #versionDetailRow > td {
+            padding: 0;
+            border-top: 0;
         }
 
         #versionInfoPanel .vip-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 14px 16px;
+            padding: 10px 12px;
             background: #f8f9fa;
             border-bottom: 1px solid #e9ecef;
         }
 
         #versionInfoPanel .vip-title {
             margin: 0;
-            font-size: 1.4rem;
+            font-size: 1rem;
             font-weight: 700;
             color: #1f2d3d;
         }
@@ -87,9 +87,7 @@
         }
 
         #versionInfoPanel .vip-body {
-            padding: 14px 16px;
-            max-height: calc(78vh - 65px);
-            overflow-y: auto;
+            padding: 10px 12px;
         }
 
         #versionInfoPanel .vip-table {
@@ -129,9 +127,11 @@
             text-align: center;
         }
 
-        #versionInfoPanel .vip-header {
-            cursor: move;
-            user-select: none;
+        #versionInfoPanel .vip-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         .tabla-revisiones td,
@@ -292,7 +292,7 @@
                                 <i class="fa-regular fa-thumbs-up"></i>
                             </button>
                             @if ($documento->puedeAprobar(auth()->user()) && $documento->estado === 'pendiente de aprobación')
-                                <button type="button" class="btn btn-custom" data-toggle="modal"
+                                <button type="button" id="RechazarModalBtn" class="btn btn-custom" data-toggle="modal"
                                     data-target="#modalRechazo" title="Rechazar documento">
                                     <i class="fas fa-thumbs-down"></i>
                                 </button>
@@ -380,23 +380,27 @@
                                                                 $estadoColor = 'black';
                                                         }
                                                     @endphp
-                                                    <span
+                                                    <span id="estadoDocumentoActual"
                                                         style="border: 2px solid {{ $estadoColor }}; color: {{ $estadoColor }}; padding: 5px; border-radius: 4px; display: inline-block; width: 80%; text-align: center;">
                                                         {{ $documento->estado }}
                                                     </span>
                                                 </td>
                                             </tr>
 
-                                            @if ($documento->aprobador && $documento->estado === 'aprobado')
-                                                <tr>
-                                                    <td>Aprobador:</td>
-                                                    <td colspan="3">{{ $documento->aprobador->name }}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Fecha:</td>
-                                                    <td colspan="3">{{ $documento->fecha_aprobacion }}</td>
-                                                </tr>
-                                            @endif
+                                            <tr id="aprobadorDocumentoRow"
+                                                style="{{ $documento->aprobador && $documento->estado === 'aprobado' ? '' : 'display: none;' }}">
+                                                <td>Aprobador:</td>
+                                                <td colspan="3" id="aprobadorDocumento">
+                                                    {{ optional($documento->aprobador)->name }}
+                                                </td>
+                                            </tr>
+                                            <tr id="fechaAprobacionDocumentoRow"
+                                                style="{{ $documento->aprobador && $documento->estado === 'aprobado' ? '' : 'display: none;' }}">
+                                                <td>Fecha:</td>
+                                                <td colspan="3" id="fechaAprobacionDocumento">
+                                                    {{ $documento->fecha_aprobacion }}
+                                                </td>
+                                            </tr>
 
                                             <tr>
                                                 <td>Creador:</td>
@@ -535,10 +539,9 @@
                                             <tr>
                                                 <th scope="col">#</th>
                                                 <th scope="col">Fecha</th>
-                                                <th scope="col" colspan="3">Acciones</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody id="versionHistoryBody">
                                             @foreach ($documento->historial as $index => $versionhistorial)
                                                 @php
                                                     $histMeta = [
@@ -567,30 +570,19 @@
                                                     $histExt = pathinfo($versionhistorial->path, PATHINFO_EXTENSION);
                                                 @endphp
 
-                                                <tr class="table-row">
+                                                <tr class="table-row version-history-row" tabindex="0" role="button"
+                                                    data-url="{{ $histUrl }}"
+                                                    data-extension="{{ $histExt }}"
+                                                    data-meta="{{ json_encode($histMeta, JSON_UNESCAPED_UNICODE) }}"
+                                                    data-action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
+                                                    aria-label="Ver detalle de la versión {{ $versionhistorial->version }}">
                                                     <td>{{ $versionhistorial->version }}</td>
                                                     <td>{{ $versionhistorial->created_at }}</td>
-
-                                                    <td class="text-center">
-                                                        <a href="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
-                                                            data-action="{{ route('documentos.revert', [$documento->id, $versionhistorial->id]) }}"
-                                                            onclick="event.preventDefault(); confirmRevert(this);"
-                                                            class="btn btn-light p-0" data-toggle="tooltip"
-                                                            data-placement="top" title="Revertir a esta versión">
-                                                            <i class="fa-solid fa-repeat"></i>
-                                                        </a>
-                                                    </td>
-
-                                                    <td class="text-center">
-                                                        <button type="button" class="btn btn-light p-0"
-                                                            onclick='viewAndShowMeta(@json($histUrl), @json($histExt), @json($histMeta))'
-                                                            data-toggle="tooltip" data-placement="top"
-                                                            title="Ver esta versión">
-                                                            <i class="fa-solid fa-eye"></i>
-                                                        </button>
-                                                    </td>
                                                 </tr>
                                             @endforeach
+                                            <tr id="versionDetailRow" style="display: none;">
+                                                <td colspan="2" id="versionDetailCell"></td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -734,16 +726,7 @@
 
     @endsection
 
-    <div id="versionInfoBackdrop"
-        style="
-        display:none;
-        position:fixed;
-        inset:0;
-        background: rgba(0,0,0,0.25);
-        z-index: 1990;">
-    </div>
-
-    <div id="versionInfoPanel">
+    <div id="versionInfoPanel" style="display: none;">
         <div class="vip-header">
             <h5 class="vip-title" id="versionInfoLabel">Versión</h5>
             <button type="button" class="vip-close" onclick="cerrarVersionInfoPanel()" aria-label="Cerrar">
@@ -800,6 +783,15 @@
                     </tr>
                 </tbody>
             </table>
+            <div class="vip-actions">
+                <button type="button" id="revertSelectedVersion" class="btn btn-warning btn-sm">
+                    <i class="fa-solid fa-repeat"></i>
+                    Revertir a esta versión
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="cerrarVersionInfoPanel()">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
 
@@ -810,6 +802,73 @@
             $(document).ready(function() {
                 $('#AprobarModalBtn').on('click', function() {
                     $('#aprobarModal').modal('show');
+                });
+
+                $('#formAprobarDoc').on('submit', async function(event) {
+                    event.preventDefault();
+
+                    const form = this;
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+
+                    try {
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            body: new FormData(form),
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        const result = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(result.message || 'No se pudo aprobar el documento.');
+                        }
+
+                        $('#aprobarModal').modal('hide');
+
+                        const estado = document.getElementById('estadoDocumentoActual');
+                        estado.textContent = result.estado;
+                        estado.style.borderColor = 'green';
+                        estado.style.color = 'green';
+
+                        document.getElementById('aprobadorDocumento').textContent = result.aprobador || '';
+                        document.getElementById('fechaAprobacionDocumento').textContent =
+                            result.fecha_aprobacion || '';
+                        document.getElementById('aprobadorDocumentoRow').style.display = '';
+                        document.getElementById('fechaAprobacionDocumentoRow').style.display = '';
+
+                        document.getElementById('AprobarModalBtn').style.display = 'none';
+                        const rejectButton = document.getElementById('RechazarModalBtn');
+                        if (rejectButton) {
+                            rejectButton.style.display = 'none';
+                        }
+
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Documento aprobado',
+                                text: result.message,
+                                confirmButtonText: 'Aceptar'
+                            });
+                        } else {
+                            alert(result.message);
+                        }
+                    } catch (error) {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'No se pudo aprobar',
+                                text: error.message,
+                                confirmButtonText: 'Aceptar'
+                            });
+                        } else {
+                            alert(error.message);
+                        }
+                    } finally {
+                        submitButton.disabled = false;
+                    }
                 });
             });
 
@@ -841,8 +900,10 @@
                 }
             });
 
-            function confirmRevert(linkEl) {
-                const action = linkEl.getAttribute('data-action');
+            function confirmRevert(actionOrElement) {
+                const action = typeof actionOrElement === 'string'
+                    ? actionOrElement
+                    : actionOrElement.getAttribute('data-action');
                 $('#confirmModal').modal('show');
 
                 document.getElementById('confirmButton').onclick = function() {
@@ -884,29 +945,7 @@
                 iframe.src = viewerUrl;
             }
 
-            function viewAndShowMeta(url, extension, meta) {
-                viewVersion(url, extension);
-                openVersionModal(meta);
-            }
-
-            function openVersionModal(meta) {
-                const anchor = document.getElementById("bloqueVersionActual");
-                const panel = document.getElementById("versionInfoPanel");
-                const backdrop = document.getElementById('versionInfoBackdrop');
-
-                if (backdrop) {
-                    backdrop.style.display = 'block';
-                }
-
-                if (anchor && panel) {
-                    const rect = anchor.getBoundingClientRect();
-
-                    panel.style.position = "absolute";
-                    panel.style.top = `${window.scrollY + rect.top + 40}px`;
-                    panel.style.left = `${window.scrollX + rect.left + 15}px`;
-                    panel.style.display = 'block';
-                }
-
+            function fillVersionDetails(meta) {
                 document.getElementById('versionInfoLabel').textContent = `Versión ${meta.version ?? ''}`;
                 document.getElementById('m_titulo').textContent = meta.titulo || '';
                 document.getElementById('m_version').textContent = meta.version || '';
@@ -924,22 +963,53 @@
                 document.getElementById('m_ultimo_editor').textContent = meta.ultimo_editor || '';
                 document.getElementById('m_fecha_ultima').textContent = meta.fecha_ultima_modif || '';
                 document.getElementById('m_contenido').textContent = meta.contenido || 'Sin contenido';
+            }
 
-                panel.classList.add('show');
+            function openHistoricalVersion(row) {
+                const detailRow = document.getElementById('versionDetailRow');
+                const panel = document.getElementById('versionInfoPanel');
+                const detailCell = document.getElementById('versionDetailCell');
+                let meta;
+
+                try {
+                    meta = JSON.parse(row.dataset.meta);
+                } catch (error) {
+                    console.error('No se pudo leer el detalle de la versión.', error);
+                    return;
+                }
+
+                document.querySelectorAll('.version-history-row').forEach(function(historyRow) {
+                    historyRow.classList.remove('selected-row');
+                    historyRow.setAttribute('aria-expanded', 'false');
+                });
+
+                row.classList.add('selected-row');
+                row.setAttribute('aria-expanded', 'true');
+                row.parentNode.insertBefore(detailRow, row.nextSibling);
+                detailCell.appendChild(panel);
+
+                fillVersionDetails(meta);
+                document.getElementById('revertSelectedVersion').dataset.action = row.dataset.action;
+                detailRow.style.display = 'table-row';
+                panel.style.display = 'block';
+                viewVersion(row.dataset.url, row.dataset.extension);
             }
 
             function cerrarVersionInfoPanel() {
+                const detailRow = document.getElementById('versionDetailRow');
                 const panel = document.getElementById('versionInfoPanel');
-                const backdrop = document.getElementById('versionInfoBackdrop');
 
+                if (detailRow) {
+                    detailRow.style.display = 'none';
+                }
                 if (panel) {
-                    panel.classList.remove('show');
                     panel.style.display = 'none';
                 }
 
-                if (backdrop) {
-                    backdrop.style.display = 'none';
-                }
+                document.querySelectorAll('.version-history-row').forEach(function(row) {
+                    row.classList.remove('selected-row');
+                    row.setAttribute('aria-expanded', 'false');
+                });
 
                 const currentUrl =
                     "{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}";
@@ -948,25 +1018,28 @@
                 viewVersion(currentUrl, currentExtension);
             }
 
-            const btnLink = document.querySelector('.btn-link');
-            if (btnLink) {
-                btnLink.addEventListener('click', function() {
-                    var rows = document.querySelectorAll('.table-row');
-                    rows.forEach(function(row) {
-                        row.classList.remove('selected-row');
-                    });
-                });
-            }
+            document.querySelectorAll('.version-history-row').forEach(function(row) {
+                row.setAttribute('aria-expanded', 'false');
 
-            document.querySelectorAll('.table-row').forEach(function(row) {
                 row.addEventListener('click', function() {
-                    document.querySelectorAll('.table-row').forEach(function(r) {
-                        r.classList.remove('selected-row');
-                    });
+                    openHistoricalVersion(this);
+                });
 
-                    this.classList.add('selected-row');
+                row.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openHistoricalVersion(this);
+                    }
                 });
             });
+
+            const revertSelectedVersion = document.getElementById('revertSelectedVersion');
+            if (revertSelectedVersion) {
+                revertSelectedVersion.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    confirmRevert(this.dataset.action);
+                });
+            }
 
             document.addEventListener('DOMContentLoaded', function() {
                 var currentDocumentUrl =
@@ -1020,63 +1093,22 @@
                 }
             });
 
-            (function makeVersionPanelDraggable() {
-                const panel = document.getElementById('versionInfoPanel');
-                const header = panel ? panel.querySelector('.vip-header') : null;
+            document.addEventListener('click', function(event) {
+                const detailRow = document.getElementById('versionDetailRow');
+                if (!detailRow || detailRow.style.display === 'none') {
+                    return;
+                }
 
-                if (!panel || !header) return;
-
-                let isDragging = false;
-                let offsetX = 0;
-                let offsetY = 0;
-
-                header.addEventListener('mousedown', function(e) {
-                    isDragging = true;
-
-                    const rect = panel.getBoundingClientRect();
-                    offsetX = e.clientX - rect.left;
-                    offsetY = e.clientY - rect.top;
-
-                    panel.style.margin = '0';
-                    panel.style.right = 'auto';
-                    panel.style.bottom = 'auto';
-
-                    document.body.style.userSelect = 'none';
-                });
-
-                document.addEventListener('mousemove', function(e) {
-                    if (!isDragging) return;
-
-                    let left = e.clientX - offsetX + window.scrollX;
-                    let top = e.clientY - offsetY + window.scrollY;
-
-                    const minLeft = window.scrollX + 10;
-                    const minTop = window.scrollY + 10;
-                    const maxLeft = window.scrollX + window.innerWidth - panel.offsetWidth - 10;
-                    const maxTop = window.scrollY + window.innerHeight - panel.offsetHeight - 10;
-
-                    left = Math.max(minLeft, Math.min(left, maxLeft));
-                    top = Math.max(minTop, Math.min(top, maxTop));
-
-                    panel.style.left = `${left}px`;
-                    panel.style.top = `${top}px`;
-                });
-
-                document.addEventListener('mouseup', function() {
-                    isDragging = false;
-                    document.body.style.userSelect = '';
-                });
-            })();
-
-            const versionBackdrop = document.getElementById('versionInfoBackdrop');
-            if (versionBackdrop) {
-                versionBackdrop.addEventListener('click', cerrarVersionInfoPanel);
-            }
+                if (!event.target.closest('#versionInfoPanel') &&
+                    !event.target.closest('.version-history-row')) {
+                    cerrarVersionInfoPanel();
+                }
+            });
 
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
-                    const panel = document.getElementById('versionInfoPanel');
-                    if (panel && panel.classList.contains('show')) {
+                    const detailRow = document.getElementById('versionDetailRow');
+                    if (detailRow && detailRow.style.display !== 'none') {
                         cerrarVersionInfoPanel();
                     }
                 }

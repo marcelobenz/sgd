@@ -260,7 +260,7 @@
                                     );
                                 @endphp
 
-                                @foreach ($usuarios as $usuario)
+                                @foreach ($usuariosRecordatorio as $usuario)
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="usuarios[]"
                                             value="{{ $usuario->id }}" id="usuario_recordatorio_{{ $usuario->id }}"

@@ -25,9 +25,61 @@ class DocumentoController extends Controller
      */
     public function index()
     {
-        //$documentos = Documento::all();
-        $documentos = Documento::with(['categoria.parent', 'ultimaModificacion'])->get();
-        return view('documentos.index', compact('documentos'));    
+        $documentos = Documento::with(['categoria.parent', 'ultimaModificacion'])
+            ->get();
+
+        $categoriasDocumentos = $documentos
+            ->filter(fn ($documento) => $documento->categoria)
+            ->groupBy(function ($documento) {
+                return $documento->categoria->parent_id ?? $documento->categoria->id;
+            })
+            ->map(function ($documentosCategoria) {
+                $primero = $documentosCategoria->first();
+                $categoriaRaiz = $primero->categoria->parent ?? $primero->categoria;
+                $documentosDirectos = $documentosCategoria
+                    ->where('id_categoria', $categoriaRaiz->id)
+                    ->sortBy(fn ($documento) => mb_strtolower($documento->titulo))
+                    ->values();
+
+                $subcategorias = $documentosCategoria
+                    ->filter(fn ($documento) => $documento->categoria->parent_id === $categoriaRaiz->id)
+                    ->groupBy('id_categoria')
+                    ->map(function ($documentosSubcategoria) {
+                        return $this->armarGrupoCategoria(
+                            $documentosSubcategoria->first()->categoria,
+                            $documentosSubcategoria
+                        );
+                    })
+                    ->sortBy(fn ($grupo) => mb_strtolower($grupo['categoria']->nombre_categoria))
+                    ->values();
+
+                return array_merge(
+                    $this->armarGrupoCategoria($categoriaRaiz, $documentosCategoria),
+                    [
+                        'documentos_directos' => $documentosDirectos,
+                        'subcategorias' => $subcategorias,
+                    ]
+                );
+            })
+            ->sortBy(fn ($grupo) => mb_strtolower($grupo['categoria']->nombre_categoria))
+            ->values();
+
+        return view('documentos.index', compact('documentos', 'categoriasDocumentos'));
+    }
+
+    private function armarGrupoCategoria(Categoria $categoria, $documentos): array
+    {
+        return [
+            'categoria' => $categoria,
+            'documentos' => $documentos
+                ->sortBy(fn ($documento) => mb_strtolower($documento->titulo))
+                ->values(),
+            'total' => $documentos->count(),
+            'aprobados' => $documentos->where('estado', 'aprobado')->count(),
+            'pendientes' => $documentos->where('estado', 'pendiente de aprobación')->count(),
+            'registros' => $documentos->where('estado', 'registro')->count(),
+            'ultima_modificacion' => $documentos->max('updated_at'),
+        ];
     }
 
     public function create()
@@ -36,7 +88,10 @@ class DocumentoController extends Controller
         $categorias = Categoria::orderBy('nombre_categoria', 'asc')->get();
 
         //$usuarios = User::all(); // Obtener todos los usuarios
-        $usuarios = User::habilitados()->orderBy('email', 'asc')->get();
+        $usuarios = User::habilitados()
+            ->where('id', '!=', auth()->id())
+            ->orderBy('email', 'asc')
+            ->get();
 
         return view('documentos.create', compact('categorias', 'usuarios'));
     }
@@ -78,6 +133,9 @@ class DocumentoController extends Controller
 
         if (isset($validated['permisos'])) {
             foreach ($validated['permisos'] as $userId => $permisos) {
+                if ((int) $userId === (int) auth()->id()) {
+                    continue;
+                }
 
                 // Evitar permisos a usuarios deshabilitados
                 $user = User::habilitados()->find($userId);
@@ -142,6 +200,20 @@ class DocumentoController extends Controller
             ->where('estado', 'resuelto')
             ->sortByDesc('fecha_resolucion');
 
+        // Una versión restaurada continúa existiendo en el historial, pero no debe
+        // mostrarse como anterior mientras su número sea el de la versión activa.
+        $documento->setRelation(
+            'historial',
+            $documento->historial
+                ->reject(function ($versionHistorial) use ($documento) {
+                    return (int) $versionHistorial->version === (int) $documento->version;
+                })
+                ->unique(function ($versionHistorial) {
+                    return (int) $versionHistorial->version;
+                })
+                ->values()
+        );
+
         return view('documentos.showlocal', compact('documento', 'fileUrl', 'fileExtension', 'revisionesCumplidas'));
     }
 
@@ -150,6 +222,12 @@ class DocumentoController extends Controller
         $documento = Documento::with('ultimaModificacion')->findOrFail($id);
 
         if (!$documento->puedeAprobar(auth()->user())) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'No tienes permiso para aprobar este documento.',
+                ], 403);
+            }
+
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
@@ -192,6 +270,15 @@ class DocumentoController extends Controller
         } else {
             Log::info('No se envía notificación (checkbox no tildado)', [
                 'doc_id' => $documento->id,
+            ]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'El documento ha sido aprobado.',
+                'estado' => $documento->estado,
+                'aprobador' => auth()->user()->name,
+                'fecha_aprobacion' => (string) $documento->fecha_aprobacion,
             ]);
         }
 
@@ -324,6 +411,9 @@ class DocumentoController extends Controller
 
         // Asignación para el resto
         foreach ($request->input('permisos', []) as $userId => $permisos) {
+            if ((int) $userId === (int) $documento->id_usr_creador) {
+                continue;
+            }
 
             $user = User::habilitados()->find($userId);
 
@@ -331,14 +421,15 @@ class DocumentoController extends Controller
                 continue;
             }
             
-            DocumentoPermiso::create([
-                'documento_id' => $documento->id,
-                'user_id' => $userId,
-                'puede_leer' => isset($permisos['puede_leer']),
-                'puede_escribir' => isset($permisos['puede_escribir']),
-                'puede_aprobar' => isset($permisos['puede_aprobar']),
-                'puede_eliminar' => isset($permisos['puede_eliminar']),
-            ]);
+            DocumentoPermiso::updateOrCreate(
+                ['documento_id' => $documento->id, 'user_id' => $userId],
+                [
+                    'puede_leer' => isset($permisos['puede_leer']),
+                    'puede_escribir' => isset($permisos['puede_escribir']),
+                    'puede_aprobar' => isset($permisos['puede_aprobar']),
+                    'puede_eliminar' => isset($permisos['puede_eliminar']),
+                ]
+            );
 
             // Avisamos solo si efectivamente está pendiente de aprobación
             if (
@@ -514,7 +605,13 @@ class DocumentoController extends Controller
         $documento = Documento::findOrFail($id);
         $categorias = Categoria::all();
         //$usuarios = User::orderBy('email', 'asc')->get();
-        $usuarios = User::habilitados()->orderBy('email', 'asc')->get();
+        $usuarios = User::habilitados()
+            ->where('id', '!=', $documento->id_usr_creador)
+            ->orderBy('email', 'asc')
+            ->get();
+        $usuariosRecordatorio = User::habilitados()
+            ->orderBy('email', 'asc')
+            ->get();
 
         $recordatorioEnEdicion = null;
 
@@ -524,7 +621,13 @@ class DocumentoController extends Controller
                 ->first();
         }
 
-        return view('documentos.edit', compact('documento', 'categorias', 'usuarios', 'recordatorioEnEdicion'));
+        return view('documentos.edit', compact(
+            'documento',
+            'categorias',
+            'usuarios',
+            'usuariosRecordatorio',
+            'recordatorioEnEdicion'
+        ));
     }
 
     /**
@@ -597,7 +700,13 @@ class DocumentoController extends Controller
             $documentoAprobado = $documento->ultimaVersionAprobada();
             if (!$documentoAprobado) {
                 // No hay versiones aprobadas
-                return redirect()->route('documentos.index')->with('error', 'No existe ninguna versión aprobada para el documento que intenta descargar.');
+                return redirect()
+                    ->route('documentos.show', $documentId)
+                    ->with('swal', [
+                        'icon' => 'warning',
+                        'title' => 'Exportación no disponible',
+                        'text' => 'No existe ninguna versión aprobada para el documento que intenta descargar.',
+                    ]);
             }
             $documento = $documentoAprobado; // Cambiamos al historial del documento aprobado
         }
@@ -771,4 +880,3 @@ class DocumentoController extends Controller
     }
 
 }
-
