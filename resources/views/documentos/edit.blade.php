@@ -164,22 +164,184 @@
         </div>
     </div>
 
+    <style>
+        #modalRecordatorios .modal-dialog {
+            max-width: 1080px;
+        }
+
+        #modalRecordatorios .modal-body {
+            max-height: calc(100vh - 190px);
+            overflow-y: auto;
+        }
+
+        .recordatorio-tabs .nav-link {
+            border: 0;
+            border-bottom: 3px solid transparent;
+            color: #6c757d;
+            font-weight: 600;
+            padding: 0.8rem 1rem;
+        }
+
+        .recordatorio-tabs .nav-link.active {
+            background: #007bff;
+            border-bottom-color: #007bff;
+            color: #fff !important;
+        }
+
+        .recordatorio-tabs .nav-link.active .badge {
+            background: #fff;
+            color: #007bff;
+        }
+
+        .recordatorio-section-heading {
+            align-items: center;
+            display: flex;
+            margin-bottom: 1rem;
+        }
+
+        .recordatorio-section-icon {
+            align-items: center;
+            background: #eaf2ff;
+            border-radius: 8px;
+            color: #007bff;
+            display: inline-flex;
+            height: 36px;
+            justify-content: center;
+            margin-right: 0.75rem;
+            width: 36px;
+        }
+
+        .recordatorio-summary {
+            align-items: center;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            color: #495057;
+            display: flex;
+            min-height: 38px;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .recordatorio-disclosure {
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+        }
+
+        .recordatorio-disclosure[aria-expanded="true"] .recordatorio-disclosure-icon {
+            transform: rotate(180deg);
+        }
+
+        .recordatorio-disclosure-icon {
+            transition: transform 0.2s ease;
+        }
+
+        .recordatorio-collapsible-panel {
+            background: #f8fafc;
+            border: 1px solid #dbe5f0;
+            border-radius: 0 0 8px 8px;
+            border-top: 0;
+            padding: 1rem;
+        }
+
+        .recordatorio-users-list {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            max-height: 230px;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .recordatorio-user-option,
+        .recordatorio-channel-option,
+        .recordatorio-active-option {
+            background: #fff;
+            border: 1px solid #e3e7eb;
+            border-radius: 8px;
+            margin: 0;
+            padding: 10px 12px 10px 36px;
+        }
+
+        .recordatorio-channel-grid {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .recordatorios-table-wrapper {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+
+        .recordatorio-modal-footer {
+            background: #fff;
+            position: sticky;
+            bottom: 0;
+            z-index: 2;
+        }
+
+        #modalDestinatariosRecordatorio {
+            z-index: 1060;
+        }
+
+        #modalDestinatariosRecordatorio .recordatorio-users-list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        @media (max-width: 767px) {
+            .recordatorio-users-list,
+            .recordatorio-channel-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
     <!-- Modal de recordatorios -->
     <div class="modal fade" id="modalRecordatorios" tabindex="-1" role="dialog"
         aria-labelledby="modalRecordatoriosLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content border-0 shadow">
 
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalRecordatoriosLabel">
-                        {{ $recordatorioEnEdicion ? 'Editar recordatorio' : 'Nuevo recordatorio' }}
-                    </h5>
+                <div class="modal-header bg-light align-items-center">
+                    <div>
+                        <h5 class="modal-title" id="modalRecordatoriosLabel">
+                            <i class="fa fa-bell text-primary mr-2"></i>
+                            {{ $recordatorioEnEdicion ? 'Editar recordatorio' : 'Administrar recordatorios' }}
+                        </h5>
+                        <small class="text-muted ml-4">
+                            Programá revisiones y asigná responsables para este documento
+                        </small>
+                    </div>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
 
-                <div class="modal-body">
+                <div class="modal-body p-0">
+                    <ul class="nav nav-tabs recordatorio-tabs px-4 pt-3" id="recordatoriosTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="recordatorio-form-tab" data-toggle="tab"
+                                href="#recordatorio-form-panel" role="tab">
+                                <i class="fa fa-plus-circle mr-1"></i>
+                                {{ $recordatorioEnEdicion ? 'Editar recordatorio' : 'Nuevo recordatorio' }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="recordatorios-configurados-tab" data-toggle="tab"
+                                href="#recordatorios-configurados-panel" role="tab">
+                                <i class="fa fa-list mr-1"></i>
+                                Configurados
+                                <span class="badge badge-light ml-1">{{ $documento->recordatorios->count() }}</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active p-4" id="recordatorio-form-panel" role="tabpanel">
                     <form id="formRecordatorio"
                         action="{{ $recordatorioEnEdicion
                             ? route('documentos.recordatorios.update', $recordatorioEnEdicion->id)
@@ -192,6 +354,14 @@
                         @endif
 
                         <input type="hidden" name="documento_id" value="{{ $documento->id }}">
+
+                        <div class="recordatorio-section-heading">
+                            <span class="recordatorio-section-icon"><i class="fa fa-align-left"></i></span>
+                            <div>
+                                <strong>Información</strong>
+                                <div class="small text-muted">Identificá el objetivo del recordatorio.</div>
+                            </div>
+                        </div>
 
                         <div class="form-group">
                             <label for="recordatorio_nombre">Nombre del recordatorio</label>
@@ -206,6 +376,22 @@
                                 placeholder="Mensaje opcional para la notificación">{{ old('mensaje', $recordatorioEnEdicion->mensaje ?? '') }}</textarea>
                         </div>
 
+                        <button type="button"
+                            class="btn btn-outline-primary btn-block text-left recordatorio-disclosure mt-4"
+                            data-toggle="collapse" data-target="#panelProgramacionRecordatorio"
+                            aria-expanded="{{ old('fecha_inicio', $recordatorioEnEdicion->fecha_inicio ?? null) ? 'true' : 'false' }}"
+                            aria-controls="panelProgramacionRecordatorio">
+                            <span>
+                                <i class="fa fa-calendar-alt mr-2"></i>
+                                <strong>Programación</strong>
+                                <small class="d-block text-muted ml-4">Fecha y opciones de repetición</small>
+                            </span>
+                            <i class="fa fa-chevron-down recordatorio-disclosure-icon"></i>
+                        </button>
+
+                        <div id="panelProgramacionRecordatorio"
+                            class="collapse {{ old('fecha_inicio', $recordatorioEnEdicion->fecha_inicio ?? null) ? 'show' : '' }}">
+                            <div class="recordatorio-collapsible-panel">
                         <div class="form-row">
                             <div class="form-group col-md-12">
                                 <label for="recordatorio_fecha_inicio">Fecha del recordatorio</label>
@@ -219,7 +405,7 @@
                         </div>
 
                         <div class="form-row">
-                            <div class="form-group col-md-6">
+                            <div class="form-group col-md-12 mb-0">
                                 <label for="recordatorio_frecuencia">Repetición</label>
                                 <select class="form-control" id="recordatorio_frecuencia" name="frecuencia">
                                     <option value="no_repite"
@@ -240,49 +426,37 @@
                                 </select>
                             </div>
 
-                            <div class="form-group col-md-6">
-                                <label>Resumen</label>
-                                <input type="text" class="form-control" id="recordatorio_resumen_repeticion" readonly>
+                        </div>
                             </div>
                         </div>
 
-                        <hr>
-
                         <div class="form-group">
-                            <label>Usuarios destinatarios</label>
-                            <div class="border rounded p-3" style="max-height: 220px; overflow-y: auto;">
-                                @php
-                                    $usuariosSeleccionados = old(
-                                        'usuarios',
-                                        isset($recordatorioEnEdicion)
-                                            ? $recordatorioEnEdicion->usuarios->pluck('id')->toArray()
-                                            : [],
-                                    );
-                                @endphp
-
-                                @foreach ($usuarios as $usuario)
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="usuarios[]"
-                                            value="{{ $usuario->id }}" id="usuario_recordatorio_{{ $usuario->id }}"
-                                            {{ in_array($usuario->id, $usuariosSeleccionados) ? 'checked' : '' }}>
-
-                                        <label class="form-check-label" for="usuario_recordatorio_{{ $usuario->id }}">
-                                            {{ $usuario->name }}
-                                            @if (!empty($usuario->email))
-                                                - {{ $usuario->email }}
-                                            @endif
-                                        </label>
-                                    </div>
-                                @endforeach
-                            </div>
+                            <button type="button"
+                                class="btn btn-outline-primary btn-block text-left recordatorio-disclosure mt-4"
+                                data-toggle="modal" data-target="#modalDestinatariosRecordatorio">
+                                <span>
+                                    <i class="fa fa-users mr-2"></i>
+                                    <strong>Destinatarios</strong>
+                                    <small class="d-block text-muted ml-4" id="resumenDestinatariosRecordatorio">
+                                        Ningún usuario seleccionado
+                                    </small>
+                                </span>
+                                <span class="badge badge-primary badge-pill" id="cantidadDestinatariosRecordatorio">0</span>
+                            </button>
+                            @php
+                                $usuariosSeleccionados = old(
+                                    'usuarios',
+                                    isset($recordatorioEnEdicion)
+                                        ? $recordatorioEnEdicion->usuarios->pluck('id')->toArray()
+                                        : [],
+                                );
+                            @endphp
                         </div>
 
                         <hr>
 
                         <div class="form-group mb-2">
-                            <label>Canales de notificación</label>
-
-                            <div class="form-check">
+                            <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" id="recordatorio_notificar_interno"
                                     name="notificar_interno" value="1"
                                     {{ old('notificar_interno', isset($recordatorioEnEdicion) ? $recordatorioEnEdicion->notificar_interno : 1) ? 'checked' : '' }}>
@@ -292,7 +466,7 @@
                                 </label>
                             </div>
 
-                            <div class="form-check">
+                            <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" id="recordatorio_notificar_email"
                                     name="notificar_email" value="1"
                                     {{ old('notificar_email', isset($recordatorioEnEdicion) ? $recordatorioEnEdicion->notificar_email : 0) ? 'checked' : '' }}>
@@ -301,16 +475,16 @@
                                     Correo electrónico
                                 </label>
                             </div>
-                        </div>
 
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="recordatorio_activo" name="activo"
-                                value="1"
-                                {{ old('activo', isset($recordatorioEnEdicion) ? $recordatorioEnEdicion->activo : 1) ? 'checked' : '' }}>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="recordatorio_activo" name="activo"
+                                    value="1"
+                                    {{ old('activo', isset($recordatorioEnEdicion) ? $recordatorioEnEdicion->activo : 1) ? 'checked' : '' }}>
 
-                            <label class="form-check-label" for="recordatorio_activo">
-                                Recordatorio activo
-                            </label>
+                                <label class="form-check-label" for="recordatorio_activo">
+                                    Recordatorio activo
+                                </label>
+                            </div>
 
                             @if ($recordatorioEnEdicion)
                                 <div class="mt-3">
@@ -320,14 +494,18 @@
                                     </a>
                                 </div>
                             @endif
-
                         </div>
                     </form>
+                        </div>
 
-                    <hr>
-
-                    <h6 class="mt-4">Recordatorios configurados</h6>
-                    <div class="table-responsive">
+                    <div class="tab-pane fade p-4" id="recordatorios-configurados-panel" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-1">Recordatorios configurados</h6>
+                            <small class="text-muted">Administrá la programación vigente de este documento.</small>
+                        </div>
+                    </div>
+                    <div class="table-responsive recordatorios-table-wrapper">
                         <table class="table table-bordered table-sm">
                             <thead class="thead-light">
                                 <tr>
@@ -424,8 +602,8 @@
 
                                         <td class="text-nowrap">
                                             <a href="{{ route('documentos.edit', ['documento' => $documento->id, 'edit_recordatorio' => $recordatorio->id]) }}"
-                                                class="btn btn-sm btn-outline-secondary mb-1">
-                                                Editar
+                                                class="btn btn-sm btn-outline-secondary mb-1" title="Editar">
+                                                <i class="fa fa-edit"></i>
                                             </a>
 
                                             <form
@@ -434,8 +612,9 @@
                                                 @csrf
                                                 @method('PATCH')
 
-                                                <button type="submit" class="btn btn-sm btn-outline-warning mb-1">
-                                                    {{ $recordatorio->activo ? 'Desactivar' : 'Activar' }}
+                                                <button type="submit" class="btn btn-sm btn-outline-warning mb-1"
+                                                    title="{{ $recordatorio->activo ? 'Desactivar' : 'Activar' }}">
+                                                    <i class="fa {{ $recordatorio->activo ? 'fa-pause' : 'fa-play' }}"></i>
                                                 </button>
                                             </form>
 
@@ -446,8 +625,9 @@
                                                 @csrf
                                                 @method('DELETE')
 
-                                                <button type="submit" class="btn btn-sm btn-outline-danger mb-1">
-                                                    Eliminar
+                                                <button type="submit" class="btn btn-sm btn-outline-danger mb-1"
+                                                    title="Eliminar">
+                                                    <i class="fa fa-trash"></i>
                                                 </button>
                                             </form>
                                         </td>
@@ -463,8 +643,10 @@
                             </table>
                         </div>
                     </div>
+                    </div>
+                    </div>
 
-                    <div class="modal-footer">
+                    <div class="modal-footer recordatorio-modal-footer" id="recordatorioFormFooter">
                         <button type="submit" class="btn btn-primary" form="formRecordatorio">
                             {{ $recordatorioEnEdicion ? 'Actualizar recordatorio' : 'Guardar recordatorio' }}
                         </button>
@@ -474,6 +656,78 @@
                 </div>
             </div>
         </div>
+        </div>
+
+        <div class="modal fade" id="modalDestinatariosRecordatorio" tabindex="-1" role="dialog"
+            aria-labelledby="modalDestinatariosRecordatorioLabel" aria-hidden="true" data-backdrop="static">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light">
+                        <div>
+                            <h5 class="modal-title" id="modalDestinatariosRecordatorioLabel">
+                                <i class="fa fa-users text-primary mr-2"></i>Seleccionar destinatarios
+                            </h5>
+                            <small class="text-muted">Buscá y seleccioná uno o más usuarios habilitados.</small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                            </div>
+                            <input type="search" class="form-control" id="buscarDestinatarioRecordatorio"
+                                placeholder="Buscar por nombre o correo">
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-outline-primary"
+                                    id="btnAsignarmeRecordatorio" data-user-id="{{ auth()->id() }}">
+                                    <i class="fa fa-user-check mr-1"></i> Asignarme
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="recordatorio-users-list" id="listaDestinatariosRecordatorio">
+                            @foreach ($usuariosRecordatorio as $usuario)
+                                <div class="form-check recordatorio-user-option"
+                                    data-search="{{ \Illuminate\Support\Str::lower($usuario->name . ' ' . $usuario->email) }}">
+                                    <input class="form-check-input recordatorio-destinatario-checkbox" type="checkbox"
+                                        name="usuarios[]" value="{{ $usuario->id }}"
+                                        id="usuario_recordatorio_{{ $usuario->id }}" form="formRecordatorio"
+                                        data-user-name="{{ $usuario->name }}"
+                                        {{ in_array($usuario->id, $usuariosSeleccionados) ? 'checked' : '' }}>
+
+                                    <label class="form-check-label" for="usuario_recordatorio_{{ $usuario->id }}">
+                                        <span class="font-weight-bold">{{ $usuario->name }}</span>
+                                        @if ((int) $usuario->id === (int) auth()->id())
+                                            <span class="badge badge-primary ml-1">Vos</span>
+                                        @endif
+                                        @if (!empty($usuario->email))
+                                            <small class="text-muted d-block">{{ $usuario->email }}</small>
+                                        @endif
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="text-center text-muted py-4" id="sinDestinatariosRecordatorio"
+                            style="display: none;">
+                            No se encontraron usuarios para esa búsqueda.
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <span class="text-muted mr-auto">
+                            <strong id="cantidadDestinatariosModal">0</strong> seleccionados
+                        </span>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">
+                            Confirmar selección
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     @endsection
 
@@ -641,83 +895,63 @@
         </script>
 
         <!-----------------------------
-                                                                                                                                                                Mostrar campos de frecuencia según selección
-                                                                                                                                                                ----------------------------->
+            Interacciones del formulario de recordatorios
+        ----------------------------->
         <script>
             $(document).ready(function() {
 
-                function obtenerNombreDia(fechaTexto) {
-                    if (!fechaTexto) return '';
-
-                    const partes = fechaTexto.split('-');
-                    if (partes.length !== 3) return '';
-
-                    const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
-                    const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-
-                    return dias[fecha.getDay()];
-                }
-
-                function obtenerNombreMes(numeroMes) {
-                    const meses = [
-                        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-                        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-                    ];
-
-                    return meses[numeroMes - 1] || '';
-                }
-
-                function actualizarResumenRepeticion() {
-                    const frecuencia = $('#recordatorio_frecuencia').val();
-                    const fechaTexto = $('#recordatorio_fecha_inicio').val();
-
-                    let resumen = '';
-
-                    if (!fechaTexto) {
-                        $('#recordatorio_resumen_repeticion').val('');
-                        return;
-                    }
-
-                    const partes = fechaTexto.split('-');
-                    const mes = parseInt(partes[1], 10);
-                    const dia = parseInt(partes[2], 10);
-
-                    const nombreDia = obtenerNombreDia(fechaTexto);
-                    const nombreMes = obtenerNombreMes(mes);
-
-                    switch (frecuencia) {
-                        case 'no_repite':
-                            resumen = 'No se repite';
-                            break;
-                        case 'diario':
-                            resumen = 'Cada día';
-                            break;
-                        case 'semanal':
-                            resumen = 'Cada semana los ' + nombreDia;
-                            break;
-                        case 'mensual':
-                            resumen = 'Cada mes el día ' + dia;
-                            break;
-                        case 'anual':
-                            resumen = 'Anualmente el ' + dia + ' de ' + nombreMes;
-                            break;
-                        default:
-                            resumen = '';
-                            break;
-                    }
-
-                    $('#recordatorio_resumen_repeticion').val(resumen);
-                }
-
-                $('#recordatorio_frecuencia').on('change', function() {
-                    actualizarResumenRepeticion();
+                $('#btnAsignarmeRecordatorio').on('click', function() {
+                    const userId = $(this).data('user-id');
+                    $('#usuario_recordatorio_' + userId).prop('checked', true).trigger('change');
                 });
 
-                $('#recordatorio_fecha_inicio').on('change', function() {
-                    actualizarResumenRepeticion();
+                function actualizarDestinatariosSeleccionados() {
+                    const seleccionados = $('.recordatorio-destinatario-checkbox:checked');
+                    const cantidad = seleccionados.length;
+                    const nombres = seleccionados.map(function() {
+                        return $(this).data('user-name');
+                    }).get();
+
+                    $('#cantidadDestinatariosRecordatorio').text(cantidad);
+                    $('#cantidadDestinatariosModal').text(cantidad);
+                    $('#resumenDestinatariosRecordatorio').text(
+                        cantidad === 0 ?
+                        'Ningún usuario seleccionado' :
+                        nombres.slice(0, 3).join(', ') + (cantidad > 3 ? ' y ' + (cantidad - 3) + ' más' : '')
+                    );
+                }
+
+                $('.recordatorio-destinatario-checkbox').on('change',
+                    actualizarDestinatariosSeleccionados);
+
+                $('#buscarDestinatarioRecordatorio').on('input', function() {
+                    const busqueda = $(this).val().trim().toLocaleLowerCase();
+                    let visibles = 0;
+
+                    $('#listaDestinatariosRecordatorio .recordatorio-user-option').each(function() {
+                        const coincide = $(this).data('search').includes(busqueda);
+                        $(this).toggle(coincide);
+                        if (coincide) visibles++;
+                    });
+
+                    $('#sinDestinatariosRecordatorio').toggle(visibles === 0);
                 });
 
-                actualizarResumenRepeticion();
+                $('#modalDestinatariosRecordatorio').on('shown.bs.modal', function() {
+                    $('#buscarDestinatarioRecordatorio').trigger('focus');
+                }).on('hidden.bs.modal', function() {
+                    $('#buscarDestinatarioRecordatorio').val('').trigger('input');
+                    if ($('#modalRecordatorios').hasClass('show')) {
+                        $('body').addClass('modal-open');
+                    }
+                });
+
+                actualizarDestinatariosSeleccionados();
+
+                $('#recordatoriosTabs a[data-toggle="tab"]').on('shown.bs.tab', function(event) {
+                    const mostrandoFormulario = $(event.target).attr('href') === '#recordatorio-form-panel';
+                    $('#recordatorioFormFooter').toggle(mostrandoFormulario);
+                });
             });
         </script>
         <script>

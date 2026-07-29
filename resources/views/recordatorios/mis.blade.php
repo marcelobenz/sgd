@@ -26,7 +26,7 @@
             style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
             <div>
                 <h3 class="mb-1">Recordatorios</h3>
-                <small class="text-muted">Vista operativa de tus tareas pendientes y resueltas</small>
+                <small class="text-muted">Tus tareas generadas y próximos recordatorios programados</small>
             </div>
 
             <div class="btn-group">
@@ -77,6 +77,11 @@
             </div>
         </div>
 
+        <div class="alert alert-light border text-muted py-2 mb-3" role="note">
+            <i class="fa fa-info-circle mr-1"></i>
+            Los indicadores contabilizan únicamente tareas ya generadas; no incluyen recordatorios programados.
+        </div>
+
         <div class="card shadow-sm border-0">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -92,7 +97,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($ejecuciones as $ejecucion)
+                            @foreach ($ejecuciones as $ejecucion)
                                 @php
                                     $fechaReferencia = $ejecucion->postergado_hasta ?? $ejecucion->fecha_programada;
                                     $estaVencido = $fechaReferencia < now();
@@ -371,13 +376,68 @@
 
                                     </td>
                                 </tr>
-                            @empty
+                            @endforeach
+
+                            @foreach ($recordatoriosProgramados as $recordatorio)
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
-                                        No tenés recordatorios pendientes.
+                                    <td class="align-middle">
+                                        <div class="font-weight-bold text-dark">
+                                            {{ $recordatorio->documento->titulo ?? 'Sin documento' }}
+                                        </div>
+                                    </td>
+
+                                    <td class="align-middle">
+                                        <div class="font-weight-500 text-dark">
+                                            {{ $recordatorio->nombre }}
+                                        </div>
+
+                                        @if (!empty($recordatorio->mensaje))
+                                            <small class="text-muted d-block mt-1">
+                                                {{ $recordatorio->mensaje }}
+                                            </small>
+                                        @endif
+                                    </td>
+
+                                    <td class="align-middle">
+                                        <div>{{ $recordatorio->proxima_ejecucion->format('d/m/Y H:i') }}</div>
+                                        <small class="text-muted d-block mt-1">Próxima ejecución</small>
+                                    </td>
+
+                                    <td class="align-middle">
+                                        <span class="badge badge-pill badge-secondary px-3 py-2">
+                                            Programado
+                                        </span>
+                                    </td>
+
+                                    <td class="align-middle">
+                                        <span class="text-muted">Pendiente de generación automática</span>
+                                    </td>
+
+                                    <td class="align-middle text-nowrap">
+                                        @if ($recordatorio->documento)
+                                            <a href="{{ route('documentos.validaPermiso', [
+                                                'id' => $recordatorio->documento->id,
+                                                'ruta' => 'documentos.show',
+                                                'permiso' => 'puedeLeer',
+                                            ]) }}"
+                                                class="btn btn-sm btn-outline-primary" data-toggle="tooltip"
+                                                title="Ver documento">
+                                                <i class="fa fa-eye"></i>
+                                            </a>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
                                     </td>
                                 </tr>
-                            @endforelse
+                            @endforeach
+
+                            @if ($ejecuciones->isEmpty() && $recordatoriosProgramados->isEmpty())
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        No tenés tareas ni recordatorios programados.
+                                    </td>
+                                </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>
