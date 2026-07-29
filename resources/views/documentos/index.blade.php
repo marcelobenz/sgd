@@ -585,11 +585,17 @@
                     <h3 class="section-label">Subcategorías</h3>
                     <div class="category-grid">
                         @foreach ($grupo['subcategorias'] as $subgrupo)
+                            @php
+                                $textoBusquedaSubcategoria = $subgrupo['categoria']->nombre_categoria . ' '
+                                    . $subgrupo['documentos']->pluck('titulo')->implode(' ');
+                            @endphp
                             <article class="category-card subcategory-card"
                                 tabindex="0"
                                 role="button"
                                 data-parent-id="{{ $categoria->id }}"
-                                data-subcategory-id="{{ $subgrupo['categoria']->id }}">
+                                data-subcategory-id="{{ $subgrupo['categoria']->id }}"
+                                data-name="{{ Illuminate\Support\Str::lower($subgrupo['categoria']->nombre_categoria) }}"
+                                data-search="{{ Illuminate\Support\Str::lower($textoBusquedaSubcategoria) }}">
                                 @include('documentos._categoria-card-contenido', [
                                     'grupoTarjeta' => $subgrupo,
                                     'tipoTarjeta' => 'Subcategoría',
@@ -761,6 +767,7 @@
             $categoriesView.hide();
             $('.category-detail, .subcategory-panel').removeClass('active');
             const $detail = $('#categoryDetail-' + categoryId);
+            syncCategoryContentFilters($detail);
             $detail.addClass('active');
             $detail.find('.root-overview').show();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -832,6 +839,49 @@
             const hasDocuments = $listContainer.find('.document-row').length > 0;
             $listContainer.find('.document-filter-empty')
                 .toggleClass('d-none', !hasDocuments || visible > 0);
+
+            return visible;
+        }
+
+        function syncCategoryContentFilters($detail) {
+            const search = normalized($('#categorySearch').val());
+            const status = $('#categoryFilter').val();
+            const categoryId = $detail.data('category-id');
+            const $rootCard = $('.root-category-card[data-category-id="' + categoryId + '"]');
+            const rootNameMatches = search !== ''
+                && normalized($rootCard.data('name')).includes(search);
+            const effectiveStatus = status || 'all';
+            const $rootOverview = $detail.find('.root-overview');
+
+            $rootOverview.find('.document-search').val(rootNameMatches ? '' : search);
+            $rootOverview.find('.document-status-filter').val(effectiveStatus);
+            filterDocuments($rootOverview);
+
+            let visibleSubcategories = 0;
+
+            $detail.find('.subcategory-card').each(function () {
+                const $subcategoryCard = $(this);
+                const subcategoryId = $subcategoryCard.data('subcategory-id');
+                const $panel = $('#subcategoryPanel-' + subcategoryId);
+                const subcategoryNameMatches = search !== ''
+                    && normalized($subcategoryCard.data('name')).includes(search);
+                const effectiveSearch = rootNameMatches || subcategoryNameMatches ? '' : search;
+
+                $panel.find('.document-search').val(effectiveSearch);
+                $panel.find('.document-status-filter').val(effectiveStatus);
+                const matchingDocuments = filterDocuments($panel);
+                const showSubcategory = search === ''
+                    || rootNameMatches
+                    || subcategoryNameMatches
+                    || matchingDocuments > 0;
+
+                $subcategoryCard.toggle(showSubcategory);
+                visibleSubcategories += showSubcategory ? 1 : 0;
+            });
+
+            const $subcategoryGrid = $rootOverview.children('.category-grid');
+            $subcategoryGrid.toggle(visibleSubcategories > 0);
+            $subcategoryGrid.prev('.section-label').toggle(visibleSubcategories > 0);
         }
 
         $categoryCards.on('click', function () {

@@ -80,65 +80,92 @@
                     @csrf
                     @method('PATCH')
 
-                    <div class="modal-header bg-light">
-                        <h5 class="modal-title" id="modalEventoRecordatorioLabel">
-                            <i class="fa fa-bell mr-2"></i>Detalle del recordatorio
-                        </h5>
+                    <div class="modal-header bg-light align-items-center">
+                        <div>
+                            <h5 class="modal-title" id="modalEventoRecordatorioLabel">
+                                <i class="fa fa-bell text-primary mr-2"></i>Detalle del recordatorio
+                            </h5>
+                            <small class="text-muted ml-4">Información y acciones disponibles</small>
+                        </div>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
 
-                    <div class="modal-body">
-                        <div class="row">
+                    <div class="modal-body p-4">
+                        <div class="recordatorio-detail-card p-3 p-md-4 mb-3">
+                            <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="text-muted mb-1">Documento</label>
+                                <div class="recordatorio-detail-label">Documento</div>
                                 <div class="font-weight-bold" id="modal_documento_titulo">-</div>
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label class="text-muted mb-1">Recordatorio</label>
+                                <div class="recordatorio-detail-label">Recordatorio</div>
                                 <div class="font-weight-bold" id="modal_recordatorio_nombre">-</div>
                             </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label class="text-muted mb-1">Fecha</label>
+                            <div class="col-md-6">
+                                <div class="recordatorio-detail-label" id="modal_fecha_label">Fecha</div>
                                 <div id="modal_fecha">-</div>
                             </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label class="text-muted mb-1">Estado</label>
-                                <div id="modal_estado">-</div>
+                            <div class="col-md-6">
+                                <div class="recordatorio-detail-label">Estado</div>
+                                <span id="modal_estado" class="badge badge-pill px-3 py-2">-</span>
                             </div>
+                            </div>
+                        </div>
 
-                            <div class="col-md-12 mb-3">
-                                <label class="text-muted mb-1">Mensaje</label>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="recordatorio-detail-label">Mensaje</div>
                                 <div id="modal_mensaje">-</div>
                             </div>
 
-                            <div class="col-md-12 mb-3">
-                                <label class="text-muted mb-1">Observación actual</label>
+                            <div class="col-md-6 mb-3">
+                                <div class="recordatorio-detail-label">Observación actual</div>
                                 <div id="modal_observacion">-</div>
                             </div>
                         </div>
 
-                        <hr>
-
-                        <div class="alert alert-light border mb-3">
-                            <strong>Postergar recordatorio</strong>
-                            <div class="small text-muted">Podés definir una nueva fecha y dejar una observación.</div>
+                        <div id="alertaRecordatorioProgramado" class="alert alert-secondary border-0 mb-0">
+                            <div class="d-flex">
+                                <i class="fa fa-calendar-alt mt-1 mr-3"></i>
+                                <div>
+                                    <strong>Próxima ejecución programada</strong>
+                                    <div class="small mt-1">
+                                        Todavía no existe una tarea para resolver o postergar. Las acciones estarán
+                                        disponibles cuando el sistema genere la ejecución.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group col-md-5">
-                                <label for="postergado_hasta">Postergar hasta</label>
-                                <input type="date" name="postergado_hasta" id="postergado_hasta" class="form-control">
+                        <div id="contenedorPostergacion" class="recordatorio-action-panel p-3 mt-2"
+                            style="display: none;">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <strong><i class="fa fa-clock text-warning mr-2"></i>Postergar tarea</strong>
+                                    <div class="small text-muted">Definí una nueva fecha y, si querés, dejá el motivo.</div>
+                                </div>
+                                <button type="button" class="close" id="btnCerrarPostergacion" aria-label="Cerrar">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
                             </div>
 
-                            <div class="form-group col-md-7">
-                                <label for="observacion">Observación</label>
-                                <textarea name="observacion" id="observacion" class="form-control" rows="3"
-                                    placeholder="Motivo de la postergación"></textarea>
+                            <div class="form-row">
+                                <div class="form-group col-md-5 mb-md-0">
+                                    <label for="postergado_hasta">Nueva fecha</label>
+                                    <input type="date" name="postergado_hasta" id="postergado_hasta"
+                                        class="form-control">
+                                </div>
+
+                                <div class="form-group col-md-7 mb-0">
+                                    <label for="observacion">Observación</label>
+                                    <textarea name="observacion" id="observacion" class="form-control" rows="2"
+                                        placeholder="Motivo de la postergación (opcional)"></textarea>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -154,8 +181,12 @@
                             <button type="button" id="btnResolver" class="btn btn-success">
                                 <i class="fa fa-check mr-1"></i> Resolver
                             </button>
-                            <button type="submit" class="btn btn-warning">
+                            <button type="button" id="btnMostrarPostergacion" class="btn btn-outline-warning">
                                 <i class="fa fa-clock mr-1"></i> Postergar
+                            </button>
+                            <button type="submit" id="btnConfirmarPostergacion" class="btn btn-warning"
+                                style="display: none;">
+                                <i class="fa fa-save mr-1"></i> Confirmar postergación
                             </button>
                             <button type="button" class="btn btn-outline-danger" id="btnEliminarRecordatorio">
                                 <i class="fa fa-trash"></i>
@@ -411,6 +442,27 @@
             background: #f8f9fa;
         }
 
+        .recordatorio-detail-card {
+            background: #f8fafc;
+            border: 1px solid #e5e9ef;
+            border-radius: 10px;
+        }
+
+        .recordatorio-detail-label {
+            color: #6c757d;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+        }
+
+        .recordatorio-action-panel {
+            background: #fffaf0;
+            border: 1px solid #ffe0a3;
+            border-radius: 10px;
+        }
+
         @media (max-width: 768px) {
             .fc .fc-toolbar-title {
                 font-size: 1.4rem;
@@ -438,6 +490,30 @@
             const btnResolver = document.getElementById('btnResolver');
             const btnEliminarRecordatorio = document.getElementById('btnEliminarRecordatorio');
             const btnVerDocumento = document.getElementById('btnVerDocumento');
+            const btnMostrarPostergacion = document.getElementById('btnMostrarPostergacion');
+            const btnConfirmarPostergacion = document.getElementById('btnConfirmarPostergacion');
+            const btnCerrarPostergacion = document.getElementById('btnCerrarPostergacion');
+            const contenedorPostergacion = document.getElementById('contenedorPostergacion');
+            const alertaProgramado = document.getElementById('alertaRecordatorioProgramado');
+            const inputPostergadoHasta = document.getElementById('postergado_hasta');
+            const modalEstado = document.getElementById('modal_estado');
+
+            function cerrarPostergacion() {
+                contenedorPostergacion.style.display = 'none';
+                btnConfirmarPostergacion.style.display = 'none';
+                btnMostrarPostergacion.style.display = 'inline-block';
+                inputPostergadoHasta.required = false;
+            }
+
+            btnMostrarPostergacion.addEventListener('click', function() {
+                contenedorPostergacion.style.display = 'block';
+                btnConfirmarPostergacion.style.display = 'inline-block';
+                btnMostrarPostergacion.style.display = 'none';
+                inputPostergadoHasta.required = true;
+                inputPostergadoHasta.focus();
+            });
+
+            btnCerrarPostergacion.addEventListener('click', cerrarPostergacion);
 
             const calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
@@ -465,8 +541,6 @@
                 eventClick: function(info) {
                     const e = info.event;
                     const props = e.extendedProps;
-                    const ejecucionId = props.ejecucion_id;
-
                     $('#btnEliminarRecordatorio').off('click').on('click', function() {
                         if (!props.eliminar_actual_url || !props.eliminar_futuros_url) {
                             return;
@@ -485,23 +559,41 @@
                     document.getElementById('modal_recordatorio_nombre').textContent = props
                         .recordatorio_nombre || '-';
                     document.getElementById('modal_fecha').textContent = props.fecha || '-';
-                    document.getElementById('modal_estado').textContent = props.estado || '-';
+                    const estado = props.estado || '-';
+                    const estadoClases = {
+                        programado: 'badge-secondary',
+                        pendiente: 'badge-primary',
+                        postergado: 'badge-info',
+                        resuelto: 'badge-success',
+                        vencido: 'badge-danger'
+                    };
+
+                    modalEstado.textContent = estado.charAt(0).toUpperCase() + estado.slice(1);
+                    modalEstado.className = 'badge badge-pill px-3 py-2 ' +
+                        (estadoClases[estado] || 'badge-secondary');
                     document.getElementById('modal_mensaje').textContent = props.mensaje || '-';
                     document.getElementById('modal_observacion').textContent = props.observacion || '-';
+                    document.getElementById('modal_fecha_label').textContent =
+                        props.tipo === 'programado' ? 'Próxima ejecución' : 'Fecha de la tarea';
 
                     formPostergar.action = props.postergar_url || '';
                     formResolverRevision.action = props.resolver_url || '';
                     btnVerDocumento.href = props.url_documento || '#';
+                    inputPostergadoHasta.value = '';
+                    document.getElementById('observacion').value = '';
+                    cerrarPostergacion();
 
                     if (props.tipo === 'programado') {
+                        alertaProgramado.style.display = 'block';
                         btnResolver.style.display = 'none';
                         btnEliminarRecordatorio.style.display = 'none';
-                        formPostergar.querySelector('button[type="submit"]').style.display = 'none';
+                        btnMostrarPostergacion.style.display = 'none';
+                        btnConfirmarPostergacion.style.display = 'none';
                     } else {
+                        alertaProgramado.style.display = 'none';
                         btnResolver.style.display = 'inline-block';
                         btnEliminarRecordatorio.style.display = 'inline-block';
-                        formPostergar.querySelector('button[type="submit"]').style.display =
-                            'inline-block';
+                        btnMostrarPostergacion.style.display = 'inline-block';
 
                         btnResolver.onclick = function() {
                             if (!props.resolver_url) {
