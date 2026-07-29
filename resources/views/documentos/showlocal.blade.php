@@ -343,7 +343,7 @@
                                                 <td>{{ $documento->version }}</td>
                                                 <td class="text-center">
                                                     <button type="button" class="btn btn-light btn-link mx-1"
-                                                        onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')"
+                                                        onclick="viewVersion('{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', config('filesystems.disks.s3.bucket'), config('filesystems.disks.s3.region'), $documento->path) }}', '{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}')"
                                                         data-toggle="tooltip" data-placement="top"
                                                         title="Ver versión actual">
                                                         <i class="fa-solid fa-eye"></i>
@@ -563,8 +563,8 @@
                                                     ];
                                                     $histUrl = sprintf(
                                                         'https://%s.s3.%s.amazonaws.com/%s',
-                                                        env('AWS_BUCKET'),
-                                                        env('AWS_DEFAULT_REGION'),
+                                                        config('filesystems.disks.s3.bucket'),
+                                                        config('filesystems.disks.s3.region'),
                                                         $versionhistorial->path,
                                                     );
                                                     $histExt = pathinfo($versionhistorial->path, PATHINFO_EXTENSION);
@@ -1012,7 +1012,7 @@
                 });
 
                 const currentUrl =
-                    "{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}";
+                    "{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', config('filesystems.disks.s3.bucket'), config('filesystems.disks.s3.region'), $documento->path) }}";
                 const currentExtension = "{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}";
 
                 viewVersion(currentUrl, currentExtension);
@@ -1043,7 +1043,7 @@
 
             document.addEventListener('DOMContentLoaded', function() {
                 var currentDocumentUrl =
-                    "{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', env('AWS_BUCKET'), env('AWS_DEFAULT_REGION'), $documento->path) }}";
+                    "{{ sprintf('https://%s.s3.%s.amazonaws.com/%s', config('filesystems.disks.s3.bucket'), config('filesystems.disks.s3.region'), $documento->path) }}";
                 var currentDocumentExtension = "{{ pathinfo($documento->path, PATHINFO_EXTENSION) }}";
                 viewVersion(currentDocumentUrl, currentDocumentExtension);
             });
