@@ -191,8 +191,8 @@ class DocumentoController extends Controller
                 ]);
         }
 
-        $bucket = env('AWS_BUCKET');
-        $region = env('AWS_DEFAULT_REGION');
+        $bucket = config('filesystems.disks.s3.bucket');
+        $region = config('filesystems.disks.s3.region');
         $baseUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/";
         $fileUrl = $baseUrl . $documento->path;
         $fileExtension = pathinfo($documento->path, PATHINFO_EXTENSION);
