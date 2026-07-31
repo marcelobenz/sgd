@@ -929,7 +929,7 @@
             function viewVersion(url, extension) {
                 const iframe = document.getElementById('documentViewer');
                 let viewerUrl;
-                switch (extension) {
+                switch ((extension || '').toLowerCase()) {
                     case 'pdf':
                         viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
                         break;

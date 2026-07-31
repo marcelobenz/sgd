@@ -16,10 +16,15 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\DocumentoRechazado;
 use App\Notifications\DocumentoAprobado;
+use Illuminate\Http\UploadedFile;
 
 
 class DocumentoController extends Controller
 {
+    private const EXTENSIONES_PERMITIDAS = [
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+    ];
+
     /**
      * Display a listing of the resource.
      */
@@ -101,13 +106,13 @@ class DocumentoController extends Controller
 
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
-            'archivo' => 'required|file',
+            'archivo' => $this->reglasArchivoDocumento(),
             'id_categoria' => 'required|exists:categorias,id',
             'permisos' => 'array'
         ]);
 
         $file = $request->file('archivo');
-        $path = $file->store('documentos', 's3');
+        $path = $this->guardarArchivoDocumento($file);
         $estado = $request->has('sin_aprobacion') ? 'registro' : 'pendiente de aprobación';
     
         $documento = Documento::create([
@@ -475,17 +480,14 @@ class DocumentoController extends Controller
 
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
-            //'nuevoArchivo' => 'file',
-            'nuevoArchivo' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx',
+            'nuevoArchivo' => $this->reglasArchivoDocumento(),
             'id_categoria' => 'required|exists:categorias,id',
             'contenidoActualizado' => 'required|string', // Agregar validación para el contenido actualizado
-            ], [
-            'nuevoArchivo.mimes' => 'Solo se permiten archivos PDF, Word, Excel o PowerPoint.',
-            ]);
+        ]);
 
         // Subir el nuevo archivo a S3 si se proporciona
         if ($request->hasFile('nuevoArchivo')) {
-            $path = $request->file('nuevoArchivo')->store('documentos', 's3');
+            $path = $this->guardarArchivoDocumento($request->file('nuevoArchivo'));
             $documento->path = $path;
         }
         //dd($request->file('nuevoArchivo'));
@@ -838,6 +840,46 @@ class DocumentoController extends Controller
         $content = Storage::disk('s3')->get($path);
         file_put_contents($localPath, $content);
         return $localPath;
+    }
+
+    /**
+     * Valida la extension informada por el archivo sin depender de finfo.
+     * Algunos DOCX validos se detectan como application/octet-stream y
+     * Laravel les asigna erroneamente la extension .bin.
+     */
+    private function reglasArchivoDocumento(): array
+    {
+        return [
+            'required',
+            'file',
+            'max:10240',
+            function (string $attribute, $archivo, \Closure $fail): void {
+                if (!$archivo instanceof UploadedFile) {
+                    return;
+                }
+
+                $extension = strtolower($archivo->getClientOriginalExtension());
+
+                if (!in_array($extension, self::EXTENSIONES_PERMITIDAS, true)) {
+                    $fail('Solo se permiten archivos PDF, Word, Excel o PowerPoint.');
+                }
+            },
+        ];
+    }
+
+    /**
+     * Genera un nombre aleatorio y conserva la extension original validada.
+     */
+    private function guardarArchivoDocumento(UploadedFile $archivo): string
+    {
+        $extension = strtolower($archivo->getClientOriginalExtension());
+        $nombreBase = pathinfo($archivo->hashName(), PATHINFO_FILENAME);
+
+        return $archivo->storeAs(
+            'documentos',
+            $nombreBase . '.' . $extension,
+            's3'
+        );
     }
 
 
