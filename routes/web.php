@@ -106,3 +106,4 @@ Route::middleware(['auth', 'usuario.habilitado'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+require __DIR__.'/iso.php';

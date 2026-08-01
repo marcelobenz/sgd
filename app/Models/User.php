@@ -71,4 +71,27 @@ class User extends Authenticatable
         )->withTimestamps();
     }
 
+    public function permisoIso()
+    {
+        return $this->hasOne(\App\Models\Iso\UsuarioPermiso::class, 'user_id');
+    }
+
+    public function puedeVerPlanificacion(): bool
+    {
+        $permiso = $this->relationLoaded('permisoIso') ? $this->permisoIso : $this->permisoIso()->first();
+        return $this->isAdmin() || (bool) ($permiso?->puede_ver || $permiso?->puede_gestionar || $permiso?->puede_administrar);
+    }
+
+    public function puedeGestionarPlanificacion(): bool
+    {
+        $permiso = $this->relationLoaded('permisoIso') ? $this->permisoIso : $this->permisoIso()->first();
+        return $this->isAdmin() || (bool) ($permiso?->puede_gestionar || $permiso?->puede_administrar);
+    }
+
+    public function puedeAdministrarPlanificacion(): bool
+    {
+        $permiso = $this->relationLoaded('permisoIso') ? $this->permisoIso : $this->permisoIso()->first();
+        return $this->isAdmin() || (bool) $permiso?->puede_administrar;
+    }
+
 }

@@ -184,6 +184,13 @@
                     Recordatorios
                 </a>
 
+                @if (auth()->user()->puedeVerPlanificacion())
+                    <a class="nav-link {{ request()->routeIs('planificacion.*') ? 'active' : '' }}"
+                        href="{{ route('planificacion.index') }}">
+                        Planificación
+                    </a>
+                @endif
+
                 @if (auth()->user()->role === 'admin')
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {{ request()->routeIs('usuarios.*') || request()->routeIs('invitations.*') ? 'active' : '' }}"
