@@ -20,10 +20,27 @@ class RiesgoController extends Controller
     {
         $periodos = Periodo::orderByDesc('anio')->get();
         $periodo = $request->filled('periodo') ? Periodo::findOrFail($request->integer('periodo')) : (Periodo::where('estado', 'vigente')->first() ?? $periodos->first());
-        $query = $periodo?->riesgos()->with(['contexto', 'responsable', 'acciones']) ?? Riesgo::whereRaw('1=0');
+        $query = Riesgo::query()->with(['contexto', 'responsable', 'acciones'])
+            ->withCount(['acciones as acciones_abiertas_count' => fn ($acciones) => $acciones->whereNotIn('estado', ['completada', 'cancelada'])]);
+        $periodo ? $query->where('periodo_id', $periodo->id) : $query->whereRaw('1=0');
         if ($request->filled('tipo')) $query->where('tipo', $request->string('tipo'));
         if ($request->filled('estado')) $query->where('estado', $request->string('estado'));
-        $riesgos = $query->orderByDesc('indice_inicial')->orderBy('codigo')->get();
+        if ($request->boolean('verificacion_vencida')) {
+            $query->whereNotIn('estado', ['finalizado', 'anulado'])->whereDate('fecha_verificacion_prevista', '<=', today());
+        }
+        $ordenes = [
+            'codigo' => 'codigo', 'tipo' => 'tipo', 'identificacion' => 'identificacion', 'proceso' => 'proceso',
+            'indice' => 'indice_inicial', 'acciones' => 'acciones_abiertas_count', 'estado' => 'estado',
+            'verificacion' => 'fecha_verificacion_prevista',
+        ];
+        $orden = $request->string('orden')->toString();
+        $direccion = $request->string('direccion')->lower()->toString() === 'desc' ? 'desc' : 'asc';
+        if (isset($ordenes[$orden])) {
+            $query->orderBy($ordenes[$orden], $direccion)->orderBy('codigo');
+        } else {
+            $query->orderByDesc('indice_inicial')->orderBy('codigo');
+        }
+        $riesgos = $query->get();
         return view('iso.riesgos.index', compact('periodos', 'periodo', 'riesgos'));
     }
 
@@ -48,6 +65,7 @@ class RiesgoController extends Controller
             'periodo_id' => 'required|exists:iso_periodos,id', 'contexto_id' => 'nullable|exists:iso_contextos,id',
             'tipo' => ['required', Rule::in(['riesgo', 'oportunidad'])], 'proceso' => 'required|string|max:255',
             'identificacion' => 'required|string|max:5000', 'partes_interesadas' => 'nullable|string|max:3000', 'efecto_potencial' => 'required|string|max:5000',
+            'criterio_eficacia' => 'required|string|max:3000',
             'impacto_inicial' => 'required|integer|min:1|max:3', 'probabilidad_inicial' => 'required|integer|min:1|max:3',
             'responsable_id' => 'nullable|exists:users,id', 'fecha_verificacion_prevista' => 'nullable|date',
             'accion_descripcion' => 'nullable|string|max:5000', 'accion_responsable_id' => 'nullable|exists:users,id', 'accion_fecha_objetivo' => 'nullable|date',
@@ -80,7 +98,7 @@ class RiesgoController extends Controller
 
     public function show(Request $request, Riesgo $riesgo)
     {
-        $riesgo->load(['periodo', 'contexto', 'responsable', 'acciones.responsable', 'acciones.seguimientos.documento']);
+        $riesgo->load(['periodo', 'contexto', 'responsable', 'acciones.responsable', 'acciones.seguimientos.documento', 'acciones.transiciones.realizadoPor', 'verificaciones.verificador', 'verificaciones.documento', 'transiciones.realizadoPor']);
         $usuarios = User::habilitados()->orderBy('name')->get();
         $documentos = Documento::whereRaw("LOWER(estado) IN ('aprobado','registro')")
             ->when(!$request->user()->isAdmin(), function ($query) use ($request) {
@@ -100,12 +118,70 @@ class RiesgoController extends Controller
 
     public function verificar(Request $request, Riesgo $riesgo)
     {
+        abort_if($riesgo->estado === 'finalizado', 422, 'El registro está finalizado. Agregá una nueva acción para reabrirlo antes de evaluarlo nuevamente.');
         $data = $request->validate([
-            'eficacia' => ['required', Rule::in(['si', 'parcial', 'no'])], 'conclusion_eficacia' => 'required|string|max:5000',
+            'decision' => ['required', Rule::in(['continuar', 'finalizar'])],
+            'fecha' => 'required|date', 'eficacia' => ['required', Rule::in(['si', 'parcial', 'no'])],
+            'conclusion' => 'required|string|max:5000', 'documento_id' => 'nullable|exists:documentos,id',
+            'enlace_externo' => 'nullable|url|max:2000',
+            'criterio_eficacia' => 'required|string|max:3000',
             'impacto_final' => 'required|integer|min:1|max:3', 'probabilidad_final' => 'required|integer|min:1|max:3',
-            'estado' => ['required', Rule::in(['en_proceso', 'permanente', 'finalizado'])],
+            'proxima_evaluacion' => 'exclude_unless:decision,continuar|nullable|date|after_or_equal:fecha',
+            'justificacion_excepcion' => 'nullable|string|max:3000',
         ]);
-        $riesgo->update($data + ['indice_final' => $data['impacto_final'] * $data['probabilidad_final'], 'actualizado_por' => $request->user()->id, 'finalizado_en' => $data['estado'] === 'finalizado' ? now() : null]);
-        return back()->with('success', 'Eficacia verificada y valoración final registrada.');
+        if (!empty($data['documento_id'])) {
+            $documento = Documento::findOrFail($data['documento_id']);
+            abort_unless($request->user()->isAdmin() || $documento->puedeLeer($request->user()), 403, 'No tenés permiso para vincular este documento.');
+        }
+
+        if ($data['decision'] === 'continuar' && blank($data['proxima_evaluacion'] ?? null)) {
+            return back()->withErrors(['proxima_evaluacion' => 'Indicá la próxima fecha de evaluación para continuar el tratamiento.'])->withInput();
+        }
+        if ($data['decision'] === 'continuar' && $data['eficacia'] === 'si' && blank($data['justificacion_excepcion'] ?? null)) {
+            return back()->withErrors(['justificacion_excepcion' => 'Explicá por qué el tratamiento continuará aunque el resultado haya sido eficaz.'])->withInput();
+        }
+        if ($data['decision'] === 'finalizar' && in_array($data['eficacia'], ['parcial', 'no']) && blank($data['justificacion_excepcion'] ?? null)) {
+            return back()->withErrors(['justificacion_excepcion' => 'Para cerrar con eficacia parcial o no eficaz, justificá expresamente la aceptación del riesgo residual.'])->withInput();
+        }
+        $indiceFinal = $data['impacto_final'] * $data['probabilidad_final'];
+        if ($riesgo->tipo === 'riesgo' && $data['eficacia'] === 'si' && $indiceFinal >= $riesgo->indice_inicial && blank($data['justificacion_excepcion'] ?? null)) {
+            return back()->withErrors(['justificacion_excepcion' => 'Para declarar eficaz un riesgo sin reducción del índice, explicá la excepción y la evidencia que la sustenta.'])->withInput();
+        }
+        if ($riesgo->tipo === 'oportunidad' && $data['eficacia'] === 'si' && $indiceFinal <= $riesgo->indice_inicial && blank($data['justificacion_excepcion'] ?? null)) {
+            return back()->withErrors(['justificacion_excepcion' => 'Para declarar eficaz una oportunidad sin mejora del índice, explicá la excepción y la evidencia que la sustenta.'])->withInput();
+        }
+
+        $finaliza = $data['decision'] === 'finalizar';
+        DB::transaction(function () use ($riesgo, $request, $data, $indiceFinal, $finaliza) {
+            $riesgo->verificaciones()->create([
+                'tipo' => $finaliza ? 'final' : 'intermedia', 'fecha' => $data['fecha'], 'eficacia' => $data['eficacia'], 'conclusion' => $data['conclusion'],
+                'impacto' => $data['impacto_final'], 'probabilidad' => $data['probabilidad_final'], 'indice' => $indiceFinal,
+                'estado_resultante' => $finaliza ? 'finalizado' : 'en_proceso', 'justificacion_excepcion' => $data['justificacion_excepcion'] ?? null,
+                'documento_id' => $data['documento_id'] ?? null, 'enlace_externo' => $data['enlace_externo'] ?? null,
+                'verificado_por' => $request->user()->id,
+            ]);
+            $riesgo->update([
+                'criterio_eficacia' => $data['criterio_eficacia'], 'eficacia' => $data['eficacia'], 'conclusion_eficacia' => $data['conclusion'],
+                'impacto_final' => $data['impacto_final'], 'probabilidad_final' => $data['probabilidad_final'], 'indice_final' => $indiceFinal,
+                'fecha_verificacion_prevista' => $finaliza ? null : $data['proxima_evaluacion'],
+                'estado' => $finaliza ? 'finalizado' : 'en_proceso', 'actualizado_por' => $request->user()->id,
+                'finalizado_en' => $finaliza ? now() : null,
+            ]);
+        });
+        return back()->with('success', $finaliza ? 'Evaluación registrada y riesgo finalizado.' : 'Evaluación registrada. El tratamiento continúa con una próxima fecha programada.');
+    }
+
+    public function actualizarFechaVerificacion(Request $request, Riesgo $riesgo)
+    {
+        abort_if($riesgo->estado === 'finalizado', 422, 'No se puede reprogramar una evaluación sobre un registro finalizado.');
+        $data = $request->validate([
+            'fecha_verificacion_prevista' => 'nullable|date',
+        ]);
+        $riesgo->update([
+            'fecha_verificacion_prevista' => $data['fecha_verificacion_prevista'] ?? null,
+            'actualizado_por' => $request->user()->id,
+        ]);
+
+        return back()->with('success', 'Fecha prevista para evaluar la eficacia actualizada.');
     }
 }

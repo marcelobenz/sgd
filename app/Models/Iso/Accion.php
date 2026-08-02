@@ -17,4 +17,5 @@ class Accion extends Model
     public function riesgo() { return $this->belongsTo(Riesgo::class); }
     public function responsable() { return $this->belongsTo(User::class, 'responsable_id'); }
     public function seguimientos() { return $this->hasMany(Seguimiento::class); }
+    public function transiciones() { return $this->hasMany(AccionTransicion::class); }
 }

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class Seguimiento extends Model
 {
     protected $table = 'iso_seguimientos';
-    protected $fillable = ['accion_id', 'fecha', 'detalle', 'resultado', 'documento_id', 'enlace_externo', 'registrado_por'];
+    protected $fillable = ['accion_id', 'tipo', 'fecha', 'detalle', 'resultado', 'documento_id', 'enlace_externo', 'registrado_por'];
     protected $casts = ['fecha' => 'date'];
 
     public function accion() { return $this->belongsTo(Accion::class); }

@@ -17,6 +17,7 @@ Route::prefix('planificacion')->name('planificacion.')->middleware(['auth', 'usu
     Route::get('/riesgos', [RiesgoController::class, 'index'])->name('riesgos.index');
     Route::get('/riesgos/nuevo', [RiesgoController::class, 'create'])->name('riesgos.create');
     Route::get('/riesgos/{riesgo}', [RiesgoController::class, 'show'])->name('riesgos.show');
+    Route::get('/acciones', [AccionController::class, 'index'])->name('acciones.index');
     Route::get('/partes-interesadas', [ParteInteresadaController::class, 'index'])->name('partes.index');
     Route::get('/partes-interesadas/{parte}', [ParteInteresadaController::class, 'show'])->name('partes.show');
     Route::get('/informes', [InformeController::class, 'index'])->name('informes.index');
@@ -27,9 +28,11 @@ Route::prefix('planificacion')->name('planificacion.')->middleware(['auth', 'usu
         Route::post('/foda', [ContextoController::class, 'store'])->name('foda.store');
         Route::patch('/foda/{contexto}/evaluar', [ContextoController::class, 'evaluar'])->name('foda.evaluar');
         Route::post('/riesgos', [RiesgoController::class, 'store'])->name('riesgos.store');
+        Route::patch('/riesgos/{riesgo}/fecha-verificacion', [RiesgoController::class, 'actualizarFechaVerificacion'])->name('riesgos.fecha-verificacion.update');
         Route::patch('/riesgos/{riesgo}/verificar', [RiesgoController::class, 'verificar'])->name('riesgos.verificar');
         Route::post('/riesgos/{riesgo}/acciones', [AccionController::class, 'store'])->name('acciones.store');
         Route::patch('/acciones/{accion}', [AccionController::class, 'actualizar'])->name('acciones.actualizar');
+        Route::patch('/acciones/{accion}/reabrir', [AccionController::class, 'reabrir'])->name('acciones.reabrir');
         Route::post('/acciones/{accion}/seguimientos', [AccionController::class, 'seguimiento'])->name('acciones.seguimientos.store');
         Route::post('/partes-interesadas', [ParteInteresadaController::class, 'store'])->name('partes.store');
         Route::patch('/partes-interesadas/{parte}', [ParteInteresadaController::class, 'update'])->name('partes.update');
