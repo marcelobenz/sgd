@@ -7,6 +7,7 @@ use App\Http\Controllers\Iso\ParteInteresadaController;
 use App\Http\Controllers\Iso\PermisoController;
 use App\Http\Controllers\Iso\PeriodoController;
 use App\Http\Controllers\Iso\PlanificacionController;
+use App\Http\Controllers\Iso\ProveedorController;
 use App\Http\Controllers\Iso\RiesgoController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,8 @@ Route::prefix('planificacion')->name('planificacion.')->middleware(['auth', 'usu
     Route::get('/acciones', [AccionController::class, 'index'])->name('acciones.index');
     Route::get('/partes-interesadas', [ParteInteresadaController::class, 'index'])->name('partes.index');
     Route::get('/partes-interesadas/{parte}', [ParteInteresadaController::class, 'show'])->name('partes.show');
+    Route::get('/proveedores', [ProveedorController::class, 'index'])->name('proveedores.index');
+    Route::get('/proveedores/{proveedor}', [ProveedorController::class, 'show'])->name('proveedores.show');
     Route::get('/informes', [InformeController::class, 'index'])->name('informes.index');
     Route::get('/periodos', [PeriodoController::class, 'index'])->middleware('iso:admin')->name('periodos.index');
     Route::get('/permisos', [PermisoController::class, 'index'])->middleware('iso:admin')->name('permisos.index');
@@ -37,6 +40,15 @@ Route::prefix('planificacion')->name('planificacion.')->middleware(['auth', 'usu
         Route::post('/partes-interesadas', [ParteInteresadaController::class, 'store'])->name('partes.store');
         Route::patch('/partes-interesadas/{parte}', [ParteInteresadaController::class, 'update'])->name('partes.update');
         Route::post('/partes-interesadas/{parte}/evaluaciones', [ParteInteresadaController::class, 'evaluar'])->name('partes.evaluaciones.store');
+        Route::post('/proveedores', [ProveedorController::class, 'store'])->name('proveedores.store');
+        Route::patch('/proveedores/{proveedor}', [ProveedorController::class, 'update'])->name('proveedores.update');
+        Route::patch('/proveedores/{proveedor}/baja', [ProveedorController::class, 'darDeBaja'])->name('proveedores.baja');
+        Route::patch('/proveedores/{proveedor}/reactivar', [ProveedorController::class, 'reactivar'])->name('proveedores.reactivar');
+        Route::delete('/proveedores/{proveedor}', [ProveedorController::class, 'destroy'])->name('proveedores.destroy');
+        Route::post('/proveedores/{proveedor}/selecciones', [ProveedorController::class, 'seleccionar'])->name('proveedores.selecciones.store');
+        Route::post('/proveedores/{proveedor}/evaluaciones', [ProveedorController::class, 'evaluar'])->name('proveedores.evaluaciones.store');
+        Route::post('/proveedor-evaluaciones/{evaluacion}/acciones', [ProveedorController::class, 'storeAccion'])->name('proveedores.acciones.store');
+        Route::patch('/proveedor-acciones/{accion}', [ProveedorController::class, 'updateAccion'])->name('proveedores.acciones.update');
     });
 
     Route::middleware('iso:admin')->group(function () {

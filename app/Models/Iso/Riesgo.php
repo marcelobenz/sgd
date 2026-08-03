@@ -20,4 +20,5 @@ class Riesgo extends Model
     public function acciones() { return $this->hasMany(Accion::class); }
     public function verificaciones() { return $this->hasMany(RiesgoVerificacion::class); }
     public function transiciones() { return $this->hasMany(RiesgoTransicion::class); }
+    public function evaluacionesProveedor() { return $this->belongsToMany(ProveedorEvaluacion::class, 'iso_proveedor_evaluacion_riesgo', 'riesgo_id', 'evaluacion_id'); }
 }

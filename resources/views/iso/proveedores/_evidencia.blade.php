@@ -1,0 +1,2 @@
+<div class="col-md-6"><label class="form-label">Documento del SGD</label><select name="documento_id" class="form-select"><option value="">Sin documento</option>@foreach($documentos as $documento)<option value="{{ $documento->id }}">{{ $documento->titulo }}</option>@endforeach</select></div>
+<div class="col-md-6"><label class="form-label">Evidencia externa</label><input type="url" name="enlace_externo" class="form-control" placeholder="https://..."></div>
