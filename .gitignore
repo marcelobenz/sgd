@@ -3,3 +3,5 @@ dist/
 .env 
 *.log
 storage/recovery/
+.phpunit.result.cache
+.runtime/
