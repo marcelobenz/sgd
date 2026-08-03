@@ -100,6 +100,10 @@ class PlanificacionFlowTest extends TestCase
 
         $this->actingAs($admin)->get(route('planificacion.riesgos.create'))
             ->assertOk()
+            ->assertSee('riesgoWizard')
+            ->assertSee('Identificación')
+            ->assertSee('Evaluación')
+            ->assertSee('Tratamiento opcional')
             ->assertSee('Desarrollo de productos y servicios')
             ->assertSee('Partes afectadas')
             ->assertSee('Escribí el nombre del proceso');
@@ -244,8 +248,13 @@ class PlanificacionFlowTest extends TestCase
         $this->assertSame(2, RiesgoVerificacion::count());
         $this->assertSame('pendiente', $accion1->fresh()->estado);
         $this->assertSame('en_proceso', $accion2->fresh()->estado);
+        $riesgo->verificaciones()->where('estado_resultante', 'finalizado')->update([
+            'justificacion_excepcion' => 'La evidencia operativa demuestra el resultado aunque la valoración requiera contexto.',
+        ]);
         $this->actingAs($admin)->get(route('planificacion.riesgos.show', $riesgo))
             ->assertOk()->assertSee('Evaluación de cierre')->assertSee('30/09/2026')->assertSee('Eficaz')
+            ->assertSee('Justificación de la decisión')
+            ->assertSee('La evidencia operativa demuestra el resultado aunque la valoración requiera contexto.')
             ->assertDontSee('Evaluación de cierre programada');
 
         $nuevaAccion = ['descripcion' => 'Monitorear el nuevo esquema.', 'responsable_id' => $admin->id, 'fecha_objetivo' => '2026-11-01'];
@@ -292,7 +301,10 @@ class PlanificacionFlowTest extends TestCase
         $cambio = HistorialCambio::where('entidad_tipo', Riesgo::class)->where('entidad_id', $riesgoA->id)->latest('id')->firstOrFail();
         $this->assertSame('2026-11-20 00:00:00', $cambio->valores_nuevos['fecha_verificacion_prevista']);
 
-        $this->actingAs($admin)->get(route('planificacion.riesgos.show', $riesgoA))->assertOk()->assertSee('20/11/2026');
+        $this->actingAs($admin)->get(route('planificacion.riesgos.show', $riesgoA))->assertOk()->assertSee('20/11/2026')
+            ->assertSee('id="acciones-tab"', false)->assertSee('id="historial-tab"', false)
+            ->assertSee('Programación de la próxima evaluación')->assertSee('Evaluar eficacia')
+            ->assertSee('id="formularioEvaluacionEficacia"', false)->assertSee('iso-action-card');
         $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id]))->assertOk()->assertSee('Próxima evaluación')->assertSee('20/11/2026');
         $this->actingAs($admin)->get(route('planificacion.riesgos.index', ['periodo' => $periodo->id, 'orden' => 'identificacion', 'direccion' => 'desc']))
             ->assertOk()->assertSeeInOrder(['Zeta expansión', 'Alfa interrupción'])->assertSee('Parcialmente eficaz')->assertSee('Pendiente de evaluación');
