@@ -11,7 +11,7 @@ class Proveedor extends Model
     use RegistraCambiosIso;
 
     protected $table = 'iso_proveedores';
-    protected $fillable = ['codigo', 'nombre', 'producto_servicio', 'area_responsable', 'fecha_alta', 'criticidad', 'periodicidad_meses', 'estado', 'fecha_baja', 'motivo_baja', 'fecha_reactivacion', 'motivo_reactivacion', 'observaciones', 'documento_id', 'enlace_externo', 'creado_por', 'actualizado_por'];
+    protected $fillable = ['codigo', 'nombre', 'producto_servicio', 'area_responsable', 'fecha_alta', 'criticidad', 'periodicidad_meses', 'estado', 'fecha_baja', 'motivo_baja', 'fecha_reactivacion', 'motivo_reactivacion', 'observaciones', 'documento_id', 'enlace_externo', 'creado_por', 'actualizado_por', 'importacion_lote'];
     protected $casts = ['fecha_alta' => 'date', 'fecha_baja' => 'datetime', 'fecha_reactivacion' => 'datetime'];
 
     public function documento() { return $this->belongsTo(Documento::class); }

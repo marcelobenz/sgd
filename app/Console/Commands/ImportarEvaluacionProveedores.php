@@ -8,13 +8,14 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 use SimpleXMLElement;
 use ZipArchive;
 
 class ImportarEvaluacionProveedores extends Command
 {
-    protected $signature = 'iso:importar-proveedores {archivo : Ruta al archivo .xlsx} {--usuario= : ID del usuario que quedará como autor} {--dry-run : Analiza sin guardar cambios}';
+    protected $signature = 'iso:importar-proveedores {archivo : Ruta al archivo .xlsx} {--usuario= : ID del usuario que quedará como autor} {--lote= : UUID opcional del lote} {--dry-run : Analiza sin guardar cambios}';
     protected $description = 'Importa el historial de selección y evaluación de proveedores desde la planilla histórica';
 
     public function handle(): int
@@ -33,6 +34,17 @@ class ImportarEvaluacionProveedores extends Command
             $this->error('No existe un usuario administrador para atribuir la importación.');
             return self::FAILURE;
         }
+        $lote = $this->option('lote') ?: (string) Str::uuid();
+        if (!Str::isUuid($lote)) {
+            $this->error('El identificador de lote debe ser un UUID válido.');
+            return self::FAILURE;
+        }
+        $checksum = hash_file('sha256', $archivo);
+        $importacionAnterior = DB::table('iso_proveedor_importaciones')->where('checksum', $checksum)->where('estado', 'importado')->first();
+        if ($importacionAnterior) {
+            $this->error("Este archivo ya fue importado en el lote {$importacionAnterior->lote}.");
+            return self::FAILURE;
+        }
 
         try {
             $hojas = $this->leerLibro($archivo);
@@ -41,7 +53,7 @@ class ImportarEvaluacionProveedores extends Command
             return self::FAILURE;
         }
 
-        $totales = ['proveedores' => 0, 'selecciones' => 0, 'evaluaciones' => 0, 'fechas_ajustadas' => 0, 'omitidos' => 0];
+        $totales = ['proveedores' => 0, 'selecciones' => 0, 'evaluaciones' => 0, 'omitidos' => 0];
         DB::beginTransaction();
         try {
             foreach ($hojas as $hoja) {
@@ -59,7 +71,7 @@ class ImportarEvaluacionProveedores extends Command
                             'area_responsable' => 'Compras y proveedores', 'fecha_alta' => $this->fecha($fila['A']),
                             'criticidad' => 'no_critico', 'periodicidad_meses' => 12, 'estado' => 'activo',
                             'observaciones' => 'Registro migrado desde Evaluacion Proveedores.xlsx. Criticidad y área responsable pendientes de revisión.',
-                            'creado_por' => $usuario->id, 'actualizado_por' => $usuario->id,
+                            'creado_por' => $usuario->id, 'actualizado_por' => $usuario->id, 'importacion_lote' => $lote,
                         ]);
                         $totales['proveedores']++;
                     }
@@ -70,7 +82,7 @@ class ImportarEvaluacionProveedores extends Command
                             'fecha' => $this->fecha($fila['A']),
                             'calificaciones' => ['caracteristicas' => $this->numero($fila['G'] ?? null), 'recomendaciones' => $this->numero($fila['I'] ?? null), 'precio_condiciones' => $this->numero($fila['K'] ?? null)],
                             'puntaje' => $puntaje, 'resultado' => $this->clasificacion($puntaje),
-                            'conclusion' => 'Selección histórica migrada desde la planilla de proveedores.', 'evaluado_por' => $usuario->id,
+                            'conclusion' => 'Selección histórica migrada desde la planilla de proveedores.', 'evaluado_por' => $usuario->id, 'importacion_lote' => $lote,
                         ]);
                         $totales['selecciones']++;
                     }
@@ -79,16 +91,7 @@ class ImportarEvaluacionProveedores extends Command
                         $totales['omitidos']++;
                         continue;
                     }
-                    $fechaOrigen = $this->fecha($fila['N']);
                     $fecha = $this->fechaEvaluacion($fila['N'], $anio);
-                    if ($fecha !== $fechaOrigen) {
-                        $historica = $proveedor->evaluaciones()->whereDate('fecha_evaluacion', $fechaOrigen)
-                            ->where('conclusion', 'like', 'Evaluación histórica migrada%')->first();
-                        if ($historica) {
-                            $historica->update(['fecha_evaluacion' => $fecha]);
-                            $totales['fechas_ajustadas']++;
-                        }
-                    }
                     if ($proveedor->evaluaciones()->whereDate('fecha_evaluacion', $fecha)->exists()) {
                         $totales['omitidos']++;
                         continue;
@@ -104,18 +107,29 @@ class ImportarEvaluacionProveedores extends Command
                         'conclusion' => 'Evaluación histórica migrada desde la planilla correspondiente a ' . $anio . '.',
                         'justificacion' => $seguimiento ?: null,
                         'proxima_evaluacion' => $this->esFechaExcel($fila['Z'] ?? null) ? $this->fecha($fila['Z']) : null,
-                        'requiere_analisis_riesgo' => false, 'evaluado_por' => $usuario->id,
+                        'requiere_analisis_riesgo' => false, 'evaluado_por' => $usuario->id, 'importacion_lote' => $lote,
                     ]);
                     $totales['evaluaciones']++;
                 }
             }
-            if ($this->option('dry-run')) DB::rollBack(); else DB::commit();
+            if ($this->option('dry-run')) {
+                DB::rollBack();
+            } else {
+                DB::table('iso_proveedor_importaciones')->insert([
+                    'lote' => $lote, 'archivo' => basename($archivo), 'checksum' => $checksum,
+                    'estado' => 'importado', 'resumen' => json_encode($totales), 'ejecutado_por' => $usuario->id,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                DB::commit();
+            }
         } catch (\Throwable $e) {
             DB::rollBack();
             throw $e;
         }
 
         $this->table(['Resultado', 'Cantidad'], collect($totales)->map(fn ($cantidad, $nombre) => [$nombre, $cantidad]));
+        $this->line("Lote: {$lote}");
+        $this->line("SHA-256: {$checksum}");
         $this->info($this->option('dry-run') ? 'Simulación finalizada: no se guardaron cambios.' : 'Importación finalizada. La planilla de origen no fue modificada.');
         return self::SUCCESS;
     }

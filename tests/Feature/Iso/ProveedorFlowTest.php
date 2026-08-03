@@ -8,6 +8,8 @@ use App\Models\Iso\ProveedorEvaluacion;
 use App\Models\Iso\Riesgo;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ProveedorFlowTest extends TestCase
@@ -136,5 +138,18 @@ class ProveedorFlowTest extends TestCase
         $this->assertDatabaseHas('iso_historial_cambios', ['entidad_tipo' => Proveedor::class, 'entidad_id' => $proveedor->id, 'evento' => 'actualizado']);
         $this->actingAs($admin)->get(route('planificacion.proveedores.show', $proveedor))->assertOk()->assertSee('Historial de bajas y reactivaciones')->assertSee('Ya no presta el servicio.')->assertSee('Se retomó la contratación.');
         $this->actingAs($admin)->get(route('planificacion.proveedores.index'))->assertOk()->assertSee('Historial de bajas, reactivaciones y eliminaciones')->assertSee('Ya no presta el servicio.');
+    }
+
+    public function test_supplier_import_batch_can_be_simulated_and_reverted(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'habilitado' => true]);
+        $lote = (string) Str::uuid();
+        DB::table('iso_proveedor_importaciones')->insert(['lote' => $lote, 'archivo' => 'proveedores.xlsx', 'checksum' => str_repeat('a', 64), 'estado' => 'importado', 'resumen' => '{}', 'ejecutado_por' => $admin->id, 'created_at' => now(), 'updated_at' => now()]);
+        $proveedor = Proveedor::create(['codigo' => 'PR-0900', 'nombre' => 'Importado', 'producto_servicio' => 'Servicio', 'area_responsable' => 'Administración', 'criticidad' => 'no_critico', 'periodicidad_meses' => 12, 'estado' => 'activo', 'creado_por' => $admin->id, 'actualizado_por' => $admin->id, 'importacion_lote' => $lote]);
+        $this->artisan('iso:revertir-proveedores', ['lote' => $lote, '--usuario' => $admin->id, '--dry-run' => true])->assertSuccessful();
+        $this->assertDatabaseHas('iso_proveedores', ['id' => $proveedor->id]);
+        $this->artisan('iso:revertir-proveedores', ['lote' => $lote, '--usuario' => $admin->id, '--confirmar' => 'REVERTIR'])->assertSuccessful();
+        $this->assertDatabaseMissing('iso_proveedores', ['id' => $proveedor->id]);
+        $this->assertDatabaseHas('iso_proveedor_importaciones', ['lote' => $lote, 'estado' => 'revertido']);
     }
 }
