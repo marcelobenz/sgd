@@ -7,6 +7,7 @@ use App\Models\Iso\ObjetivoAccion;
 use App\Models\Iso\ObjetivoEvaluacion;
 use App\Models\Iso\ObjetivoMedicion;
 use App\Models\Iso\Periodo;
+use App\Models\Iso\UsuarioPermiso;
 use App\Services\Iso\ResultadoObjetivoService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -193,6 +194,93 @@ class ObjetivoFlowTest extends TestCase
             'confirmacion_eliminacion' => 'ELIMINAR OBJETIVO',
         ])->assertSessionHasErrors('eliminar_objetivo');
         $this->assertDatabaseHas('iso_objetivos', ['id' => $objetivo->id]);
+    }
+
+    public function test_consultation_user_can_view_objectives_but_cannot_manage_them(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'habilitado' => true]);
+        $consulta = User::factory()->create(['role' => 'user', 'habilitado' => true]);
+        UsuarioPermiso::create([
+            'user_id' => $consulta->id,
+            'puede_ver' => true,
+            'puede_gestionar' => false,
+            'puede_administrar' => false,
+        ]);
+        $periodo = Periodo::create(['anio' => 2026, 'nombre' => 'Planificación 2026', 'estado' => 'vigente', 'creado_por' => $admin->id]);
+        $this->actingAs($admin)->post(route('planificacion.objetivos.store'), $this->datosObjetivo($periodo, $admin))->assertSessionHasNoErrors();
+        $objetivo = Objetivo::with('indicadorPrincipal', 'acciones')->firstOrFail();
+        $indicador = $objetivo->indicadorPrincipal;
+        $accion = $objetivo->acciones->firstOrFail();
+        ObjetivoMedicion::create([
+            'indicador_id' => $indicador->id,
+            'fecha_medicion' => '2026-06-30',
+            'periodo_referencia' => 'Primer semestre',
+            'valor' => 72,
+            'registrado_por' => $admin->id,
+        ]);
+
+        $this->actingAs($consulta)->get(route('planificacion.objetivos.index', ['periodo' => $periodo->id]))
+            ->assertOk()
+            ->assertSee($objetivo->titulo)
+            ->assertDontSee('Nuevo objetivo');
+        $this->actingAs($consulta)->get(route('planificacion.objetivos.show', $objetivo))
+            ->assertOk()
+            ->assertSee('Historial de mediciones')
+            ->assertDontSee('Registrar medición')
+            ->assertDontSee('Agregar acción')
+            ->assertDontSee('Evaluar objetivo')
+            ->assertDontSee('id="gestionarObjetivo"', false)
+            ->assertDontSee('Editar definición e indicador')
+            ->assertDontSee('Eliminar objetivo creado por error');
+
+        $this->actingAs($consulta)->get(route('planificacion.objetivos.create', ['periodo' => $periodo->id]))->assertForbidden();
+        $this->actingAs($consulta)->post(route('planificacion.objetivos.store'), [])->assertForbidden();
+        $this->actingAs($consulta)->patch(route('planificacion.objetivos.update', $objetivo), [])->assertForbidden();
+        $this->actingAs($consulta)->patch(route('planificacion.objetivos.revisar', $objetivo), [])->assertForbidden();
+        $this->actingAs($consulta)->delete(route('planificacion.objetivos.destroy', $objetivo), [])->assertForbidden();
+        $this->actingAs($consulta)->post(route('planificacion.objetivos.mediciones.store', [$objetivo, $indicador]), [])->assertForbidden();
+        $this->actingAs($consulta)->post(route('planificacion.objetivos.acciones.store', $objetivo), [])->assertForbidden();
+        $this->actingAs($consulta)->patch(route('planificacion.objetivos.acciones.update', $accion), [])->assertForbidden();
+        $this->actingAs($consulta)->patch(route('planificacion.objetivos.acciones.reabrir', $accion), [])->assertForbidden();
+        $this->actingAs($consulta)->post(route('planificacion.objetivos.acciones.seguimientos.store', $accion), [])->assertForbidden();
+        $this->actingAs($consulta)->post(route('planificacion.objetivos.evaluaciones.store', $objetivo), [])->assertForbidden();
+
+        $this->assertSame(1, ObjetivoMedicion::count());
+        $this->assertSame(0, ObjetivoEvaluacion::count());
+    }
+
+    public function test_management_user_keeps_objective_controls_and_can_record_measurements(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'habilitado' => true]);
+        $gestor = User::factory()->create(['role' => 'user', 'habilitado' => true]);
+        UsuarioPermiso::create([
+            'user_id' => $gestor->id,
+            'puede_ver' => false,
+            'puede_gestionar' => true,
+            'puede_administrar' => false,
+        ]);
+        $periodo = Periodo::create(['anio' => 2026, 'nombre' => 'Planificación 2026', 'estado' => 'vigente', 'creado_por' => $admin->id]);
+        $this->actingAs($admin)->post(route('planificacion.objetivos.store'), $this->datosObjetivo($periodo, $admin))->assertSessionHasNoErrors();
+        $objetivo = Objetivo::with('indicadorPrincipal')->firstOrFail();
+
+        $this->actingAs($gestor)->get(route('planificacion.objetivos.create', ['periodo' => $periodo->id]))
+            ->assertOk()
+            ->assertSee('Nuevo objetivo de calidad');
+        $this->actingAs($gestor)->get(route('planificacion.objetivos.show', $objetivo))
+            ->assertOk()
+            ->assertSee('Registrar medición')
+            ->assertSee('Agregar acción');
+        $this->actingAs($gestor)->post(route('planificacion.objetivos.mediciones.store', [$objetivo, $objetivo->indicadorPrincipal]), [
+            'fecha_medicion' => '2026-06-30',
+            'periodo_referencia' => 'Primer semestre',
+            'valor' => 78,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('iso_objetivo_mediciones', [
+            'indicador_id' => $objetivo->indicadorPrincipal->id,
+            'valor' => 78,
+            'registrado_por' => $gestor->id,
+        ]);
     }
 
     private function datosObjetivo(Periodo $periodo, User $admin): array

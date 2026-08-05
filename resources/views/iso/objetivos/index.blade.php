@@ -23,7 +23,7 @@
             </select>
             @if(request()->hasAny(['estado','proceso']))<a href="{{ route('planificacion.objetivos.index',['periodo'=>$periodo?->id]) }}" class="btn btn-link">Limpiar</a>@endif
         </form>
-        @if($periodo && $periodo->estado !== 'cerrado')<a href="{{ route('planificacion.objetivos.create',['periodo'=>$periodo->id]) }}" class="btn btn-primary"><i class="fa-solid fa-plus me-1"></i> Nuevo objetivo</a>@endif
+        @if($periodo && $periodo->estado !== 'cerrado' && auth()->user()->puedeGestionarPlanificacion())<a href="{{ route('planificacion.objetivos.create',['periodo'=>$periodo->id]) }}" class="btn btn-primary"><i class="fa-solid fa-plus me-1"></i> Nuevo objetivo</a>@endif
     </div>
 
     <div class="iso-panel overflow-hidden">

@@ -21,7 +21,12 @@ use Illuminate\Validation\ValidationException;
 
 class ObjetivoController extends Controller
 {
-    public function __construct(private readonly ResultadoObjetivoService $resultados) {}
+    public function __construct(private readonly ResultadoObjetivoService $resultados)
+    {
+        // Defensa adicional a las rutas: toda operación distinta de consultar
+        // requiere permiso de gestión, aunque una ruta se configure mal en el futuro.
+        $this->middleware('iso:manage')->except(['index', 'show']);
+    }
 
     public function index(Request $request)
     {

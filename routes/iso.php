@@ -21,7 +21,7 @@ Route::prefix('planificacion')->name('planificacion.')->middleware(['auth', 'usu
     Route::get('/riesgos/{riesgo}', [RiesgoController::class, 'show'])->name('riesgos.show');
     Route::get('/acciones', [AccionController::class, 'index'])->name('acciones.index');
     Route::get('/objetivos', [ObjetivoController::class, 'index'])->name('objetivos.index');
-    Route::get('/objetivos/nuevo', [ObjetivoController::class, 'create'])->name('objetivos.create');
+    Route::get('/objetivos/nuevo', [ObjetivoController::class, 'create'])->middleware('iso:manage')->name('objetivos.create');
     Route::get('/objetivos/{objetivo}', [ObjetivoController::class, 'show'])->name('objetivos.show');
     Route::get('/partes-interesadas', [ParteInteresadaController::class, 'index'])->name('partes.index');
     Route::get('/partes-interesadas/{parte}', [ParteInteresadaController::class, 'show'])->name('partes.show');
