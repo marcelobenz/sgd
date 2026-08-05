@@ -1,6 +1,16 @@
 <?php
 
 return [
+    'compromisos_politica' => [
+        'Cumplimiento de requisitos de clientes y partes interesadas',
+        'Satisfacción del cliente',
+        'Compromiso con las personas',
+        'Disposición al cambio e innovación',
+        'Mejora continua',
+        'Calidad de productos y servicios',
+    ],
+    'frecuencias' => ['Mensual', 'Bimestral', 'Trimestral', 'Cuatrimestral', 'Semestral', 'Anual', 'Por proyecto', 'Única vez'],
+    'unidades_indicador' => ['Porcentaje', 'Cantidad', 'Días', 'Horas', 'Importe', 'Índice', 'Puntos', 'Otra'],
     'procesos' => [
         'Dirección y planificación estratégica',
         'Gestión comercial',

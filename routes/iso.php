@@ -3,6 +3,7 @@
 use App\Http\Controllers\Iso\AccionController;
 use App\Http\Controllers\Iso\ContextoController;
 use App\Http\Controllers\Iso\InformeController;
+use App\Http\Controllers\Iso\ObjetivoController;
 use App\Http\Controllers\Iso\ParteInteresadaController;
 use App\Http\Controllers\Iso\PermisoController;
 use App\Http\Controllers\Iso\PeriodoController;
@@ -19,6 +20,9 @@ Route::prefix('planificacion')->name('planificacion.')->middleware(['auth', 'usu
     Route::get('/riesgos/nuevo', [RiesgoController::class, 'create'])->name('riesgos.create');
     Route::get('/riesgos/{riesgo}', [RiesgoController::class, 'show'])->name('riesgos.show');
     Route::get('/acciones', [AccionController::class, 'index'])->name('acciones.index');
+    Route::get('/objetivos', [ObjetivoController::class, 'index'])->name('objetivos.index');
+    Route::get('/objetivos/nuevo', [ObjetivoController::class, 'create'])->name('objetivos.create');
+    Route::get('/objetivos/{objetivo}', [ObjetivoController::class, 'show'])->name('objetivos.show');
     Route::get('/partes-interesadas', [ParteInteresadaController::class, 'index'])->name('partes.index');
     Route::get('/partes-interesadas/{parte}', [ParteInteresadaController::class, 'show'])->name('partes.show');
     Route::get('/proveedores', [ProveedorController::class, 'index'])->name('proveedores.index');
@@ -34,6 +38,16 @@ Route::prefix('planificacion')->name('planificacion.')->middleware(['auth', 'usu
         Route::patch('/riesgos/{riesgo}/fecha-verificacion', [RiesgoController::class, 'actualizarFechaVerificacion'])->name('riesgos.fecha-verificacion.update');
         Route::patch('/riesgos/{riesgo}/verificar', [RiesgoController::class, 'verificar'])->name('riesgos.verificar');
         Route::post('/riesgos/{riesgo}/acciones', [AccionController::class, 'store'])->name('acciones.store');
+        Route::post('/objetivos', [ObjetivoController::class, 'store'])->name('objetivos.store');
+        Route::patch('/objetivos/{objetivo}', [ObjetivoController::class, 'update'])->name('objetivos.update');
+        Route::patch('/objetivos/{objetivo}/revisar', [ObjetivoController::class, 'revisar'])->name('objetivos.revisar');
+        Route::delete('/objetivos/{objetivo}', [ObjetivoController::class, 'destroy'])->name('objetivos.destroy');
+        Route::post('/objetivos/{objetivo}/indicadores/{indicador}/mediciones', [ObjetivoController::class, 'medir'])->name('objetivos.mediciones.store');
+        Route::post('/objetivos/{objetivo}/acciones', [ObjetivoController::class, 'storeAccion'])->name('objetivos.acciones.store');
+        Route::patch('/objetivo-acciones/{accion}', [ObjetivoController::class, 'updateAccion'])->name('objetivos.acciones.update');
+        Route::patch('/objetivo-acciones/{accion}/reabrir', [ObjetivoController::class, 'reabrirAccion'])->name('objetivos.acciones.reabrir');
+        Route::post('/objetivo-acciones/{accion}/seguimientos', [ObjetivoController::class, 'seguimientoAccion'])->name('objetivos.acciones.seguimientos.store');
+        Route::post('/objetivos/{objetivo}/evaluaciones', [ObjetivoController::class, 'evaluar'])->name('objetivos.evaluaciones.store');
         Route::patch('/acciones/{accion}', [AccionController::class, 'actualizar'])->name('acciones.actualizar');
         Route::patch('/acciones/{accion}/reabrir', [AccionController::class, 'reabrir'])->name('acciones.reabrir');
         Route::post('/acciones/{accion}/seguimientos', [AccionController::class, 'seguimiento'])->name('acciones.seguimientos.store');
