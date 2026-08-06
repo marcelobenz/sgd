@@ -252,7 +252,7 @@ Las variables sensibles y específicas del entorno se configuran en `.env`. No d
 - Parte de la autorización se implementa directamente en controladores y modelos; no hay políticas de Laravel registradas para documentos.
 - Algunas rutas administrativas dependen de validaciones dentro del controlador, mientras que otras utilizan middleware o capacidades. Conviene unificar este criterio.
 - El dashboard contiene el indicador `tramitesPendientes` como valor fijo en cero; actualmente no existe un módulo real de trámites.
-- La cobertura de pruebas automatizadas visible se concentra en autenticación y perfil; los flujos críticos de documentos, permisos, aprobación, versionado y recordatorios necesitan pruebas específicas.
+- Hay pruebas funcionales para autenticación, perfil y varios flujos ISO; los flujos críticos de documentos, permisos documentales, aprobación, versionado y recordatorios todavía necesitan pruebas específicas.
 - El funcionamiento de los recordatorios depende de que el scheduler esté activo en el entorno.
 - La exportación de archivos Office depende de LibreOffice y de su correcta configuración.
 - Deben definirse fuera del código políticas organizacionales de respaldo, restauración, retención y disposición de documentos.
@@ -266,7 +266,77 @@ Las variables sensibles y específicas del entorno se configuran en `.env`. No d
 - **Revisión:** comprobación periódica de que un documento continúa siendo adecuado y aplicable.
 - **Evidencia:** información que permite demostrar que una revisión o actividad fue realizada.
 
-## 11. Fuentes internas utilizadas
+## 11. Módulo de planificación ISO
+
+Además del control documental, la aplicación incluye un módulo bajo `/planificacion` para mantener evidencia operativa de la planificación del SGC. El acceso se divide en tres niveles acumulativos: consulta (`view`), gestión (`manage`) y administración (`admin`). El rol global `admin` tiene acceso completo.
+
+### Períodos de planificación
+
+Los registros de contexto, riesgos, evaluaciones de partes interesadas y objetivos se organizan por período anual. Un período puede estar en `borrador`, `vigente` o `cerrado`; sólo `borrador` y `vigente` se consideran abiertos para nuevas mutaciones. La activación, cierre y reapertura dejan transiciones auditables. El período también documenta si el cambio climático es relevante para el SGC y su fundamento.
+
+### Contexto FODA y riesgos
+
+El análisis de contexto registra fortalezas, debilidades, oportunidades y amenazas con código correlativo por período, fuente, proceso, responsable, relevancia y decisión de tratamiento. Los elementos pertinentes pueden originar riesgos u oportunidades.
+
+Cada riesgo u oportunidad conserva valoración inicial de impacto y probabilidad, acciones de tratamiento, seguimientos, fecha de verificación, criterio y conclusión de eficacia, valoración final y transiciones de estado. La continuidad entre períodos se representa mediante una referencia al registro de origen, sin sobrescribir el historial anterior.
+
+### Partes interesadas
+
+Las partes interesadas son un catálogo permanente. Sus necesidades, requisitos, responsable, método de medición y consideraciones climáticas se evalúan por período. Una evaluación puede adjuntar evidencia documental o externa y vincular riesgos derivados.
+
+### Proveedores
+
+El catálogo de proveedores incluye criticidad, estado y periodicidad. Se registran selección inicial, ciclos de evaluación o reevaluación, calificaciones, decisiones, acciones correctivas y vínculos con riesgos. Existen comandos para importar evaluaciones históricas y revertir una importación por lote; estas operaciones deben conservar la trazabilidad del lote.
+
+### Objetivos de calidad
+
+Los objetivos se definen por período y pueden relacionarse con contexto, riesgos y partes interesadas. Incluyen responsables, plazos, indicadores, metas, tolerancias, mediciones, acciones y evaluaciones. Los resultados admiten agregación por último valor, promedio, suma, variación o variación porcentual; el cumplimiento se determina de forma centralizada en `ResultadoObjetivoService`.
+
+Las revisiones y continuidades de objetivos preservan los valores anteriores y su vigencia. Los informes del módulo reúnen vistas ejecutivas, resumidas y detalladas de la planificación.
+
+### Trazabilidad transversal
+
+Las entidades ISO relevantes registran cambios en `iso_historial_cambios` mediante el concern `RegistraCambiosIso`. Los flujos sensibles agregan registros específicos de transición, revisión o verificación. Esta evidencia forma parte del comportamiento funcional y no debe omitirse al implementar nuevas operaciones.
+
+## 12. Mapa del repositorio
+
+```text
+app/
+  Console/Commands/       tareas programadas e importaciones
+  Http/Controllers/       gestión documental, usuarios y recordatorios
+  Http/Controllers/Iso/   casos de uso de planificación ISO
+  Models/                 dominio documental
+  Models/Iso/             dominio de planificación ISO
+  Services/Iso/           reglas compartidas del módulo ISO
+database/migrations/      esquema evolutivo completo
+resources/views/          vistas Blade por módulo
+routes/                   rutas web, autenticación e ISO
+tests/Feature/Iso/        pruebas funcionales de planificación
+```
+
+Las migraciones son la fuente de verdad del esquema. Para comprender una tabla creada en una migración inicial deben revisarse también las migraciones posteriores que agregan campos, estados o restricciones.
+
+## 13. Desarrollo y verificación
+
+La suite PHPUnit usa MySQL con la base `sgd_testing`, cola síncrona, sesión y caché en memoria. La base de pruebas debe ser independiente de cualquier base con datos reales.
+
+Comprobaciones habituales:
+
+```bash
+php artisan test --filter=NombreDelTest
+php artisan test tests/Feature/Iso
+php artisan test
+vendor/bin/pint --test
+npm run build
+```
+
+Las pruebas ISO existentes cubren planificación, proveedores, objetivos e informes. Todavía se necesitan pruebas específicas más amplias para documentos, permisos documentales, aprobación, versionado y recordatorios.
+
+## 14. Estado del contexto
+
+Este documento refleja la estructura observada en el repositorio al 6 de agosto de 2026. Puede incluir trabajo aún no confirmado presente en el árbol local; antes de desarrollar debe revisarse `git status` y preservarse cualquier cambio ajeno.
+
+## 15. Fuentes internas utilizadas
 
 Este contexto fue elaborado a partir de:
 
@@ -276,4 +346,12 @@ Este contexto fue elaborado a partir de:
 - migraciones de base de datos;
 - comando programado de recordatorios;
 - configuración de dependencias PHP y JavaScript;
+- rutas, modelos, servicios, migraciones y pruebas del módulo ISO;
 - vistas y estructura general del repositorio.
+
+## 16. Documentación complementaria
+
+- `docs/architecture.md`: componentes, capas, integraciones y decisiones técnicas.
+- `docs/development.md`: preparación del entorno, pruebas y flujo de desarrollo.
+- `docs/business-rules.md`: invariantes funcionales transversales.
+- `docs/modules/proveedores.md`: ciclo completo de selección y evaluación de proveedores.

@@ -11,10 +11,12 @@ class Objetivo extends Model
     use RegistraCambiosIso;
 
     protected $table = 'iso_objetivos';
-    protected $fillable = ['periodo_id', 'numero', 'codigo', 'compromiso_politica', 'proceso', 'titulo', 'descripcion', 'area_responsable', 'responsable_id', 'fecha_inicio', 'fecha_objetivo', 'periodicidad_seguimiento', 'estado', 'observaciones', 'creado_por', 'actualizado_por'];
+    protected $fillable = ['periodo_id', 'objetivo_origen_id', 'numero', 'codigo', 'compromiso_politica', 'proceso', 'titulo', 'descripcion', 'area_responsable', 'responsable_id', 'fecha_inicio', 'fecha_objetivo', 'periodicidad_seguimiento', 'estado', 'observaciones', 'creado_por', 'actualizado_por'];
     protected $casts = ['fecha_inicio' => 'date', 'fecha_objetivo' => 'date'];
 
     public function periodo() { return $this->belongsTo(Periodo::class); }
+    public function origenContinuidad() { return $this->belongsTo(Objetivo::class, 'objetivo_origen_id'); }
+    public function continuidades() { return $this->hasMany(Objetivo::class, 'objetivo_origen_id'); }
     public function responsable() { return $this->belongsTo(User::class, 'responsable_id'); }
     public function indicadores() { return $this->hasMany(ObjetivoIndicador::class); }
     public function indicadorPrincipal() { return $this->hasOne(ObjetivoIndicador::class)->where('principal', true); }

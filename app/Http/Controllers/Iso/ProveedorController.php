@@ -15,9 +15,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\Iso\PeriodoAbiertoService;
 
 class ProveedorController extends Controller
 {
+    public function __construct(private readonly PeriodoAbiertoService $periodosAbiertos) {}
+
     public function index(Request $request)
     {
         $query = Proveedor::with(['ultimaEvaluacion', 'evaluaciones.acciones']);
@@ -49,8 +52,8 @@ class ProveedorController extends Controller
             'evaluaciones' => fn ($q) => $q->with(['evaluador', 'periodo', 'documento', 'riesgos', 'acciones.responsable', 'acciones.documento', 'evaluacionAnterior'])->orderByDesc('fecha_evaluacion')->orderByDesc('id'),
             'cicloActivo.acciones',
         ]);
-        $periodos = Periodo::orderByDesc('anio')->get();
-        $riesgos = Riesgo::orderByDesc('periodo_id')->orderBy('codigo')->get();
+        $periodos = Periodo::whereIn('estado', ['borrador', 'vigente'])->orderByDesc('anio')->get();
+        $riesgos = Riesgo::whereHas('periodo', fn ($query) => $query->whereIn('estado', ['borrador', 'vigente']))->orderByDesc('periodo_id')->orderBy('codigo')->get();
         $usuarios = User::habilitados()->orderBy('name')->get();
         $areas = config('iso.areas_responsables');
         $documentos = $this->documentosAccesibles($request);
@@ -133,7 +136,7 @@ class ProveedorController extends Controller
     {
         abort_if($proveedor->estado === 'inactivo', 422, 'No se puede evaluar un proveedor inactivo.');
         $data = $request->validate([
-            'periodo_id' => 'nullable|exists:iso_periodos,id', 'fecha_evaluacion' => 'required|date',
+            'periodo_id' => 'required|exists:iso_periodos,id', 'fecha_evaluacion' => 'required|date',
             'evaluacion_anterior_id' => 'nullable|exists:iso_proveedor_evaluaciones,id',
             'precio_calidad' => 'required|integer|min:2|max:10', 'resolucion_imprevistos' => 'required|integer|min:2|max:10',
             'calidad_producto' => 'required|integer|min:2|max:10', 'calidad_atencion' => 'required|integer|min:2|max:10',
@@ -146,6 +149,10 @@ class ProveedorController extends Controller
             'accion_descripcion' => 'nullable|string|max:5000', 'accion_area_responsable' => 'nullable|string|max:255',
             'accion_responsable_id' => 'nullable|exists:users,id', 'accion_fecha_objetivo' => 'nullable|date|after_or_equal:fecha_evaluacion',
         ]);
+        $this->periodosAbiertos->validar(Periodo::findOrFail($data['periodo_id']), 'registrar evaluaciones de proveedores');
+        if (Riesgo::whereIn('id', $data['riesgos'] ?? [])->where('periodo_id', '!=', $data['periodo_id'])->exists()) {
+            throw ValidationException::withMessages(['riesgos' => 'Los riesgos vinculados deben pertenecer al mismo período que la evaluación.']);
+        }
         $this->validarDocumento($request, $data['documento_id'] ?? null);
         $calificaciones = collect(['precio_calidad' => $data['precio_calidad'], 'resolucion_imprevistos' => $data['resolucion_imprevistos'], 'calidad_producto' => $data['calidad_producto'], 'calidad_atencion' => $data['calidad_atencion']]);
         $puntaje = round($calificaciones->avg(), 2);
@@ -177,6 +184,7 @@ class ProveedorController extends Controller
 
     public function storeAccion(Request $request, ProveedorEvaluacion $evaluacion)
     {
+        if ($evaluacion->periodo_id) $this->periodosAbiertos->validar($evaluacion->periodo()->firstOrFail(), 'agregar acciones de proveedores');
         abort_if($evaluacion->proveedor->estado === 'inactivo', 422, 'No se pueden agregar acciones nuevas a un proveedor inactivo.');
         $data = $request->validate(['obligatoria' => 'required|boolean', 'descripcion' => 'required|string|max:5000', 'area_responsable' => 'required|string|max:255', 'responsable_id' => 'nullable|exists:users,id', 'fecha_objetivo' => 'required|date', 'documento_id' => 'nullable|exists:documentos,id', 'enlace_externo' => 'nullable|url|max:2000']);
         $this->validarDocumento($request, $data['documento_id'] ?? null);
@@ -188,6 +196,7 @@ class ProveedorController extends Controller
 
     public function updateAccion(Request $request, ProveedorAccion $accion)
     {
+        if ($accion->evaluacion->periodo_id) $this->periodosAbiertos->validar($accion->evaluacion->periodo()->firstOrFail(), 'modificar acciones de proveedores');
         abort_if(in_array($accion->estado, ['completada', 'cancelada']), 422, 'La acción está cerrada y no puede modificarse.');
         $data = $request->validate(['estado' => ['required', Rule::in(['pendiente', 'en_proceso', 'completada', 'cancelada'])], 'resultado' => 'nullable|string|max:5000']);
         if (in_array($data['estado'], ['completada', 'cancelada']) && blank($data['resultado'])) throw ValidationException::withMessages(['resultado' => 'Indicá el resultado o motivo antes de cerrar la acción.']);

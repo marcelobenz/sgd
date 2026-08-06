@@ -30,7 +30,11 @@ class PlanificacionFlowTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $periodo = Periodo::firstOrFail();
-        $this->actingAs($admin)->patch(route('planificacion.periodos.activar', $periodo))->assertSessionHasNoErrors();
+        $this->actingAs($admin)->patch(route('planificacion.periodos.activar', $periodo), [
+            'motivo' => 'Comienza la planificación operativa del ejercicio.',
+            'comprende_impacto' => 1,
+            'confirmacion' => 'ACTIVAR 2026',
+        ])->assertSessionHasNoErrors();
 
         $this->actingAs($admin)->post(route('planificacion.foda.store'), [
             'periodo_id' => $periodo->id,
@@ -161,6 +165,108 @@ class PlanificacionFlowTest extends TestCase
 
         $this->assertSame('borrador', $periodo->fresh()->estado);
         $this->assertSame(['cierre', 'reapertura'], PeriodoTransicion::orderBy('id')->pluck('accion')->all());
+
+        $siguiente = Periodo::create(['anio' => 2027, 'nombre' => 'Planificación 2027', 'estado' => 'vigente', 'creado_por' => $admin->id]);
+        $this->actingAs($admin)->patch(route('planificacion.periodos.activar', $periodo), [
+            'motivo' => 'El ejercicio debe volver a ser el período operativo principal.',
+            'comprende_impacto' => 1,
+            'confirmacion' => 'ACTIVAR 2026',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('vigente', $periodo->fresh()->estado);
+        $this->assertSame('borrador', $siguiente->fresh()->estado);
+        $this->assertSame(['cierre', 'reapertura', 'activacion'], PeriodoTransicion::orderBy('id')->pluck('accion')->all());
+
+        $this->actingAs($admin)->patch(route('planificacion.periodos.cerrar', $periodo), [
+            'motivo' => 'La corrección excepcional fue completada y revisada.',
+            'comprende_impacto' => 1,
+            'confirmacion' => 'CERRAR 2026',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('cerrado', $periodo->fresh()->estado);
+        $this->assertSame(['cierre', 'reapertura', 'activacion', 'cierre'], PeriodoTransicion::orderBy('id')->pluck('accion')->all());
+    }
+
+    public function test_period_cannot_close_with_open_risks_or_actions_and_closed_period_rejects_follow_up(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'habilitado' => true]);
+        $periodo = Periodo::create([
+            'anio' => 2026, 'nombre' => 'Planificación 2026', 'estado' => 'vigente',
+            'cambio_climatico_relevante' => false, 'fundamento_cambio_climatico' => 'Evaluación completada.',
+            'creado_por' => $admin->id,
+        ]);
+        $riesgo = Riesgo::create([
+            'periodo_id' => $periodo->id, 'numero' => 1, 'codigo' => 'RO-2026-001', 'tipo' => 'riesgo',
+            'proceso' => 'Operaciones', 'identificacion' => 'Riesgo abierto.', 'efecto_potencial' => 'Interrupción.',
+            'impacto_inicial' => 2, 'probabilidad_inicial' => 2, 'indice_inicial' => 4,
+            'estado' => 'en_proceso', 'creado_por' => $admin->id, 'actualizado_por' => $admin->id,
+        ]);
+        $cierre = ['motivo' => 'La planificación anual fue revisada completamente.', 'comprende_impacto' => 1, 'confirmacion' => 'CERRAR 2026'];
+        $this->actingAs($admin)->patch(route('planificacion.periodos.cerrar', $periodo), $cierre)->assertStatus(422);
+
+        $riesgo->update(['estado' => 'finalizado', 'eficacia' => 'si']);
+        $accion = $riesgo->acciones()->create([
+            'descripcion' => 'Acción pendiente.', 'responsable_id' => $admin->id, 'fecha_objetivo' => '2026-12-01',
+            'estado' => 'pendiente', 'creado_por' => $admin->id, 'actualizado_por' => $admin->id,
+        ]);
+        $this->actingAs($admin)->patch(route('planificacion.periodos.cerrar', $periodo), $cierre)->assertStatus(422);
+
+        $accion->update(['estado' => 'completada', 'resultado' => 'Completada.', 'completada_en' => now()]);
+        $this->actingAs($admin)->patch(route('planificacion.periodos.cerrar', $periodo), $cierre)->assertSessionHasNoErrors();
+        $this->assertSame('cerrado', $periodo->fresh()->estado);
+
+        $this->actingAs($admin)->post(route('planificacion.acciones.store', $riesgo), [])->assertStatus(422);
+        $this->actingAs($admin)->post(route('planificacion.acciones.seguimientos.store', $accion), [])->assertStatus(422);
+        $this->actingAs($admin)->patch(route('planificacion.acciones.reabrir', $accion), [])->assertStatus(422);
+        $this->actingAs($admin)->patch(route('planificacion.riesgos.fecha-verificacion.update', $riesgo), [])->assertStatus(422);
+        $this->actingAs($admin)->patch(route('planificacion.riesgos.verificar', $riesgo), [])->assertStatus(422);
+    }
+
+    public function test_controlled_permanent_risk_allows_closure_and_can_continue_in_next_period(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'habilitado' => true]);
+        $periodo = Periodo::create([
+            'anio' => 2026, 'nombre' => 'Planificación 2026', 'estado' => 'vigente',
+            'cambio_climatico_relevante' => false, 'fundamento_cambio_climatico' => 'Evaluación completada.',
+            'creado_por' => $admin->id,
+        ]);
+        $riesgo = Riesgo::create([
+            'periodo_id' => $periodo->id, 'numero' => 1, 'codigo' => 'RO-2026-001', 'tipo' => 'riesgo',
+            'proceso' => 'Seguridad', 'identificacion' => 'Riesgo de seguimiento permanente.',
+            'efecto_potencial' => 'Afectación continua.', 'criterio_eficacia' => 'Mantener controles operativos.',
+            'impacto_inicial' => 2, 'probabilidad_inicial' => 2, 'indice_inicial' => 4,
+            'estado' => 'permanente', 'creado_por' => $admin->id, 'actualizado_por' => $admin->id,
+        ]);
+        $cierre = ['motivo' => 'La planificación anual fue revisada completamente.', 'comprende_impacto' => 1, 'confirmacion' => 'CERRAR 2026'];
+
+        $this->actingAs($admin)->patch(route('planificacion.periodos.cerrar', $periodo), $cierre)->assertStatus(422);
+
+        $riesgo->update(['fecha_verificacion_prevista' => today()->addMonths(6), 'eficacia' => 'si']);
+        RiesgoVerificacion::create([
+            'riesgo_id' => $riesgo->id, 'tipo' => 'intermedia', 'fecha' => today(), 'eficacia' => 'si',
+            'conclusion' => 'Los controles permanecen eficaces.', 'impacto' => 1, 'probabilidad' => 1, 'indice' => 1,
+            'estado_resultante' => 'permanente', 'verificado_por' => $admin->id,
+        ]);
+        $riesgo->acciones()->create([
+            'descripcion' => 'Control anual completado.', 'responsable_id' => $admin->id,
+            'fecha_objetivo' => today(), 'estado' => 'completada', 'resultado' => 'Control realizado.',
+            'creado_por' => $admin->id, 'actualizado_por' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get(route('planificacion.periodos.index'))
+            ->assertOk()->assertDontSee('1 permanentes sin evaluación vigente o próxima revisión');
+        $this->actingAs($admin)->patch(route('planificacion.periodos.cerrar', $periodo), $cierre)->assertSessionHasNoErrors();
+
+        $siguiente = Periodo::create(['anio' => 2027, 'nombre' => 'Planificación 2027', 'estado' => 'borrador', 'creado_por' => $admin->id]);
+        $this->actingAs($admin)->patch(route('planificacion.periodos.activar', $siguiente), [
+            'motivo' => 'Comienza la planificación operativa del nuevo ejercicio.',
+            'comprende_impacto' => 1, 'confirmacion' => 'ACTIVAR 2027', 'trasladar_permanentes' => 1,
+        ])->assertSessionHasNoErrors();
+
+        $continuidad = Riesgo::where('periodo_id', $siguiente->id)->sole();
+        $this->assertSame($riesgo->id, $continuidad->riesgo_origen_id);
+        $this->assertSame('permanente', $continuidad->estado);
+        $this->assertSame(0, $continuidad->acciones()->count());
+        $this->actingAs($admin)->get(route('planificacion.riesgos.show', $continuidad))
+            ->assertOk()->assertSee('Continuidad del período anterior')->assertSee('RO-2026-001');
     }
 
     public function test_interested_party_is_permanent_and_keeps_periodic_evaluations(): void
@@ -196,7 +302,7 @@ class PlanificacionFlowTest extends TestCase
         $this->assertSame($periodo->id, $evaluacion->periodo_id);
         $this->assertTrue($evaluacion->riesgos->contains($riesgo));
         $this->actingAs($admin)->get(route('planificacion.partes.show', $parte))->assertOk()->assertSee('Historial de evaluaciones')->assertSee('Encuestas con resultado satisfactorio.');
-        $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id]))->assertOk()->assertSee('Partes interesadas y evaluación periódica')->assertSee('Clientes')->assertSee('Doc. SGD: Encuesta de satisfacción 2026')->assertSee(route('documentos.validaPermiso',['id'=>$documento->id,'ruta'=>'documentos.show','permiso'=>'puedeLeer']));
+        $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id, 'tipo' => 'detallado']))->assertOk()->assertSee('Partes interesadas y evaluaci&oacute;n peri&oacute;dica', false)->assertSee('Clientes')->assertSee('Doc. SGD: Encuesta de satisfacción 2026')->assertSee(route('documentos.validaPermiso',['id'=>$documento->id,'ruta'=>'documentos.show','permiso'=>'puedeLeer']));
     }
 
     public function test_efficacy_evaluation_separates_continuation_from_closure(): void
@@ -305,7 +411,7 @@ class PlanificacionFlowTest extends TestCase
             ->assertSee('id="acciones-tab"', false)->assertSee('id="historial-tab"', false)
             ->assertSee('Programación de la próxima evaluación')->assertSee('Evaluar eficacia')
             ->assertSee('id="formularioEvaluacionEficacia"', false)->assertSee('iso-action-card');
-        $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id]))->assertOk()->assertSee('Próxima evaluación')->assertSee('20/11/2026');
+        $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id, 'tipo' => 'detallado']))->assertOk()->assertSee('pr&oacute;xima revisi&oacute;n', false)->assertSee('20/11/2026');
         $this->actingAs($admin)->get(route('planificacion.riesgos.index', ['periodo' => $periodo->id, 'orden' => 'identificacion', 'direccion' => 'desc']))
             ->assertOk()->assertSeeInOrder(['Zeta expansión', 'Alfa interrupción'])->assertSee('Parcialmente eficaz')->assertSee('Pendiente de evaluación');
         $this->actingAs($admin)->get(route('planificacion.acciones.index', ['periodo' => $periodo->id, 'orden' => 'accion', 'direccion' => 'desc']))

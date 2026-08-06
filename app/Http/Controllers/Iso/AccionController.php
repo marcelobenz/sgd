@@ -11,9 +11,12 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use App\Services\Iso\PeriodoAbiertoService;
 
 class AccionController extends Controller
 {
+    public function __construct(private readonly PeriodoAbiertoService $periodos) {}
+
     public function index(Request $request)
     {
         $periodos = Periodo::orderByDesc('anio')->get();
@@ -52,6 +55,7 @@ class AccionController extends Controller
 
     public function store(Request $request, Riesgo $riesgo)
     {
+        $this->periodos->validar($riesgo->periodo()->firstOrFail(), 'agregar acciones');
         $data = $request->validate(['descripcion' => 'required|string|max:5000', 'responsable_id' => 'required|exists:users,id', 'fecha_objetivo' => 'required|date']);
         $reapertura = [];
         if ($riesgo->estado === 'finalizado') {
@@ -79,6 +83,7 @@ class AccionController extends Controller
 
     public function actualizar(Request $request, Accion $accion)
     {
+        $this->periodos->validar($accion->riesgo->periodo, 'modificar acciones');
         if (in_array($accion->estado, ['completada', 'cancelada'])) {
             return back()->withErrors(['estado' => 'La acción está cerrada. Para modificarla, utilizá Reabrir acción e indicá el motivo.']);
         }
@@ -92,6 +97,7 @@ class AccionController extends Controller
 
     public function reabrir(Request $request, Accion $accion)
     {
+        $this->periodos->validar($accion->riesgo->periodo, 'reabrir acciones');
         abort_unless(in_array($accion->estado, ['completada', 'cancelada']), 422, 'Sólo pueden reabrirse acciones completadas o canceladas.');
         $data = $request->validate([
             'motivo' => 'required|string|min:10|max:3000',
@@ -124,6 +130,7 @@ class AccionController extends Controller
 
     public function seguimiento(Request $request, Accion $accion)
     {
+        $this->periodos->validar($accion->riesgo->periodo, 'registrar seguimientos o evidencias');
         $data = $request->validate([
             'fecha' => 'required|date', 'detalle' => 'required|string|max:5000', 'resultado' => 'nullable|string|max:1000',
             'documento_id' => 'nullable|exists:documentos,id', 'enlace_externo' => 'nullable|url|max:2000',

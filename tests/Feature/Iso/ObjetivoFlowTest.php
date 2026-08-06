@@ -43,7 +43,7 @@ class ObjetivoFlowTest extends TestCase
             ->assertOk()->assertSee('72')->assertSee('Aceptable')->assertSee('Resultado parcial de la encuesta.');
 
         $evaluacion = [
-            'fecha_evaluacion' => '2026-07-01', 'cumplimiento' => 'aceptable',
+            'fecha_evaluacion' => '2026-07-01', 'tipo' => 'seguimiento', 'cumplimiento' => 'aceptable',
             'conclusion' => 'El resultado se encuentra dentro de la tolerancia definida.',
             'decision' => 'continuar', 'proxima_evaluacion' => '2026-12-15',
         ];
@@ -56,10 +56,15 @@ class ObjetivoFlowTest extends TestCase
         $this->assertSame(1, ObjetivoEvaluacion::count());
         $this->assertSame('activo', $objetivo->fresh()->estado);
         $this->actingAs($admin)->get(route('planificacion.objetivos.index', ['periodo' => $periodo->id]))
-            ->assertOk()->assertSee('Incrementar la satisfacción del cliente')->assertSee('Aceptable');
+            ->assertOk()->assertSee('Incrementar la satisfacción del cliente')->assertSee('Aceptable')
+            ->assertSee('Pendiente de evaluación de cierre');
+        $this->actingAs($admin)->get(route('planificacion.objetivos.index', ['periodo' => $periodo->id, 'cumplimiento' => 'aceptable', 'situacion' => 'activo']))
+            ->assertOk()->assertSee('Incrementar la satisfacción del cliente')->assertSee('Cumplimiento / situación');
+        $this->actingAs($admin)->get(route('planificacion.objetivos.index', ['periodo' => $periodo->id, 'cumplimiento' => 'incumplido']))
+            ->assertOk()->assertDontSee('Incrementar la satisfacción del cliente');
         $this->actingAs($admin)->get(route('planificacion.index'))->assertOk()->assertSee('Objetivos de calidad');
-        $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id]))
-            ->assertOk()->assertSee('Objetivos de calidad, mediciones y seguimiento')
+        $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id, 'tipo' => 'detallado']))
+            ->assertOk()->assertSee('Objetivos de calidad, mediciones y evaluaci&oacute;n de cierre', false)
             ->assertSee('OBJ-2026-001')->assertSee('Porcentaje de respuestas positivas')
             ->assertSee('Primer semestre')->assertSee('Resultado parcial de la encuesta.')
             ->assertSee('Realizar y analizar la encuesta de satisfacción.')
@@ -94,6 +99,55 @@ class ObjetivoFlowTest extends TestCase
             'accion_id' => $accion->id, 'estado_anterior' => 'completada', 'estado_nuevo' => 'en_proceso',
             'motivo' => 'Se requiere ampliar la muestra de la encuesta.',
         ]);
+    }
+
+    public function test_active_objective_with_period_closure_evaluation_allows_closure_and_continuity(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'habilitado' => true]);
+        $periodo = Periodo::create([
+            'anio' => 2026, 'nombre' => 'Planificación 2026', 'estado' => 'vigente', 'creado_por' => $admin->id,
+            'cambio_climatico_relevante' => false, 'fundamento_cambio_climatico' => 'Evaluación completada.',
+        ]);
+        $this->actingAs($admin)->post(route('planificacion.objetivos.store'), $this->datosObjetivo($periodo, $admin))->assertSessionHasNoErrors();
+        $objetivo = Objetivo::with(['indicadorPrincipal', 'acciones'])->firstOrFail();
+        $accion = $objetivo->acciones->firstOrFail();
+        $this->actingAs($admin)->patch(route('planificacion.objetivos.acciones.update', $accion), [
+            'estado' => 'completada', 'resultado' => 'Encuesta realizada.',
+        ])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post(route('planificacion.objetivos.mediciones.store', [$objetivo, $objetivo->indicadorPrincipal]), [
+            'fecha_medicion' => '2026-12-20', 'periodo_referencia' => 'Cierre anual', 'valor' => 80,
+        ])->assertSessionHasNoErrors();
+        $cierre = ['motivo' => 'La planificación anual fue revisada completamente.', 'comprende_impacto' => 1, 'confirmacion' => 'CERRAR 2026'];
+
+        $this->actingAs($admin)->post(route('planificacion.objetivos.evaluaciones.store', $objetivo), [
+            'fecha_evaluacion' => '2026-12-21', 'tipo' => 'seguimiento', 'cumplimiento' => 'cumplido',
+            'conclusion' => 'La meta fue alcanzada.', 'decision' => 'continuar', 'proxima_evaluacion' => '2027-06-30',
+        ])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->patch(route('planificacion.periodos.cerrar', $periodo), $cierre)->assertStatus(422);
+
+        $this->actingAs($admin)->post(route('planificacion.objetivos.evaluaciones.store', $objetivo), [
+            'fecha_evaluacion' => '2026-12-31', 'tipo' => 'cierre_periodo', 'cumplimiento' => 'cumplido',
+            'conclusion' => 'Se cierra el seguimiento 2026 y se mantiene el objetivo para 2027.',
+            'decision' => 'continuar', 'proxima_evaluacion' => '2027-06-30',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('activo', $objetivo->fresh()->estado);
+        $this->actingAs($admin)->get(route('planificacion.objetivos.index', ['periodo' => $periodo->id]))
+            ->assertOk()->assertSee('Cierre del período evaluado')->assertSee('31/12/2026');
+        $this->actingAs($admin)->patch(route('planificacion.periodos.cerrar', $periodo), $cierre)->assertSessionHasNoErrors();
+
+        $siguiente = Periodo::create(['anio' => 2027, 'nombre' => 'Planificación 2027', 'estado' => 'borrador', 'creado_por' => $admin->id]);
+        $this->actingAs($admin)->patch(route('planificacion.periodos.activar', $siguiente), [
+            'motivo' => 'Comienza la planificación de objetivos del nuevo ejercicio.',
+            'comprende_impacto' => 1, 'confirmacion' => 'ACTIVAR 2027', 'trasladar_objetivos' => 1,
+        ])->assertSessionHasNoErrors();
+
+        $continuidad = Objetivo::where('periodo_id', $siguiente->id)->sole();
+        $this->assertSame($objetivo->id, $continuidad->objetivo_origen_id);
+        $this->assertSame('activo', $continuidad->estado);
+        $this->assertSame('2027-01-01', $continuidad->fecha_inicio->toDateString());
+        $this->assertSame(0, $continuidad->acciones()->count());
+        $this->assertSame(0, $continuidad->evaluaciones()->count());
+        $this->assertSame(0, $continuidad->indicadorPrincipal->mediciones()->count());
     }
 
     public function test_closed_period_rejects_new_quality_objectives(): void

@@ -5,6 +5,7 @@
 <div class="iso-shell">
     @include('iso._alerts')
     @php
+        $periodoAbierto = $riesgo->periodo->estaAbierto();
         $evaluacionCierre = $riesgo->estado === 'finalizado'
             ? $riesgo->verificaciones->where('estado_resultante', 'finalizado')->sortByDesc('id')->first()
             : null;
@@ -24,6 +25,8 @@
     <div class="iso-toolbar"><div><div class="iso-code">{{ $riesgo->codigo }}</div><h1 class="iso-title">{{ ucfirst($riesgo->tipo) }}</h1><p class="iso-subtitle">{{ $riesgo->identificacion }}</p></div><div class="text-right"><span class="iso-status {{ $riesgo->indice_inicial>6?'danger':($riesgo->indice_inicial>=3?'warn':'ok') }}">Índice inicial {{ $riesgo->indice_inicial }}</span><div class="mt-2">{{ ucfirst(str_replace('_',' ',$riesgo->estado)) }} · Eficacia {{ ucfirst($riesgo->eficacia) }}</div></div></div>
     <div class="iso-panel mb-4"><div class="iso-panel-body iso-detail-grid">
         <div class="iso-field"><label>Origen</label><div>@if($riesgo->contexto)<a href="{{ route('planificacion.foda.show',$riesgo->contexto) }}">{{ $riesgo->contexto->codigo }} — {{ $riesgo->contexto->titulo }}</a>@else Registro independiente @endif</div></div>
+        @if($riesgo->origenContinuidad)<div class="iso-field"><label>Continuidad del período anterior</label><div><a href="{{ route('planificacion.riesgos.show',$riesgo->origenContinuidad) }}">{{ $riesgo->origenContinuidad->codigo }} — {{ $riesgo->origenContinuidad->periodo?->anio }}</a></div><small>Registro vinculado automáticamente; las acciones anteriores permanecen en su período de origen.</small></div>@endif
+        @if($riesgo->continuidades->isNotEmpty())<div class="iso-field"><label>Continuado en períodos posteriores</label><div>@foreach($riesgo->continuidades as $continuidad)<a href="{{ route('planificacion.riesgos.show',$continuidad) }}">{{ $continuidad->codigo }} — {{ $continuidad->periodo?->anio }}</a>@unless($loop->last)<br>@endunless @endforeach</div><small>Estos registros conservan el seguimiento futuro sin modificar el historial de este período.</small></div>@endif
         <div class="iso-field"><label>Proceso</label><div>{{ $riesgo->proceso }}</div></div>
         <div class="iso-field"><label>Efecto potencial</label><div>{{ $riesgo->efecto_potencial }}</div></div>
         <div class="iso-field"><label>Resultado esperado / criterio de eficacia</label><div>{{ $riesgo->criterio_eficacia ?: 'Pendiente de definir' }}</div></div>
@@ -50,7 +53,7 @@
                     @if($accion->resultado)<div class="alert alert-light mt-2 mb-0"><strong>{{ $accion->estado==='cancelada'?'Motivo de cancelación':'Resultado' }}:</strong> {{ $accion->resultado }}</div>@endif
                     @foreach($accion->seguimientos as $s)<div class="mt-3 pl-3 border-left">@if($s->tipo==='evidencia_complementaria')<span class="iso-status warn">Evidencia complementaria posterior al cierre</span><br>@endif<strong>{{ $s->fecha->format('d/m/Y') }}</strong> — {{ $s->detalle }}@if($s->resultado)<div><em>Resultado: {{ $s->resultado }}</em></div>@endif @if($s->documento)<div><a href="{{ route('documentos.validaPermiso',['id'=>$s->documento->id,'ruta'=>'documentos.show','permiso'=>'puedeLeer']) }}">Documento SGD: {{ $s->documento->titulo }}</a></div>@endif @if($s->enlace_externo)<div><a href="{{ $s->enlace_externo }}" target="_blank" rel="noopener">Evidencia externa</a></div>@endif</div>@endforeach
                     @foreach($accion->transiciones as $transicion)<div class="alert alert-warning mt-3 mb-0"><strong>Acción reabierta el {{ $transicion->created_at->format('d/m/Y H:i') }}</strong><div>{{ $transicion->motivo }}</div><small>{{ $transicion->realizadoPor?->name }} · {{ ucfirst($transicion->estado_anterior) }} → En proceso</small></div>@endforeach
-                    @if(auth()->user()->puedeGestionarPlanificacion())
+                    @if($periodoAbierto && auth()->user()->puedeGestionarPlanificacion())
                         @if(in_array($accion->estado,['completada','cancelada']))
                             <hr><h4 class="h6 font-weight-bold">Agregar evidencia complementaria</h4><p class="text-muted">La evidencia respaldará el cierre existente y no reabrirá la acción. Para registrar nueva actividad, reabrila primero.</p><form method="POST" action="{{ route('planificacion.acciones.seguimientos.store',$accion) }}">@csrf<div class="form-row"><div class="form-group col-md-4"><label>Fecha de incorporación</label><input type="date" name="fecha" value="{{ now()->toDateString() }}" class="form-control" required></div><div class="form-group col-md-8"><label>Descripción de la evidencia</label><input name="detalle" class="form-control" placeholder="Qué evidencia se incorpora y qué respalda" required></div></div><div class="form-row"><div class="form-group col-md-5"><select name="documento_id" class="form-control"><option value="">Documento del SGD</option>@foreach($documentos as $d)<option value="{{ $d->id }}">{{ $d->titulo }}</option>@endforeach</select></div><div class="form-group col-md-5"><input type="url" name="enlace_externo" class="form-control" placeholder="https://... evidencia externa"></div><div class="col-md-2"><button class="btn btn-outline-primary btn-block">Agregar evidencia</button></div></div><small class="form-text text-muted mb-3">Debe vincularse un documento del SGD o un enlace externo.</small></form>
                             <div class="d-flex justify-content-between align-items-center"><small class="text-muted">El estado y el resultado permanecen bloqueados mientras la acción esté cerrada.</small><button type="button" class="btn btn-sm btn-outline-warning" data-toggle="modal" data-target="#reabrirAccion{{ $accion->id }}">Reabrir acción</button></div>
@@ -67,7 +70,7 @@
                 </div></div>
                 </div>
             @empty<p class="text-muted">No hay acciones registradas.</p>@endforelse
-            @if(auth()->user()->puedeGestionarPlanificacion())
+            @if($periodoAbierto && auth()->user()->puedeGestionarPlanificacion())
                 <hr><h3 class="h6 font-weight-bold">Agregar acción</h3>
                 @if($riesgo->estado==='finalizado')
                     <p class="text-muted">El registro está finalizado. Para agregar una acción es necesario reabrirlo explícitamente.</p><button type="button" class="btn btn-outline-warning" data-toggle="modal" data-target="#reabrirRiesgoConAccion">Reabrir para agregar una acción</button>
@@ -88,11 +91,11 @@
                 @foreach($riesgo->transiciones as $transicion)<div class="alert alert-warning mb-3"><strong>Registro reabierto el {{ $transicion->created_at->format('d/m/Y H:i') }}</strong><div>{{ $transicion->motivo }}</div><small>{{ $transicion->realizadoPor?->name }} · Finalizado → En proceso</small></div>@endforeach
             </div></div>
 
-            @if(auth()->user()->puedeGestionarPlanificacion() && $riesgo->estado!=='finalizado')
+            @if($periodoAbierto && auth()->user()->puedeGestionarPlanificacion() && $riesgo->estado!=='finalizado')
             <div class="iso-panel iso-section-card mb-4"><div class="iso-panel-header"><h2 class="iso-section-title mb-0">Programación de la próxima evaluación</h2></div><form method="POST" action="{{ route('planificacion.riesgos.fecha-verificacion.update',$riesgo) }}" class="iso-panel-body">@csrf @method('PATCH')<div class="form-row align-items-end"><div class="form-group col-md-4 mb-md-0"><label>Reprogramar evaluación de eficacia</label><input type="date" name="fecha_verificacion_prevista" value="{{ old('fecha_verificacion_prevista',$riesgo->fecha_verificacion_prevista?->toDateString()) }}" class="form-control"><small class="form-text text-muted">El cambio queda registrado en el historial de auditoría.</small></div><div class="col-md-3"><button class="btn btn-outline-primary">Guardar fecha</button></div></div></form></div>
             @endif
 
-            @if(auth()->user()->puedeGestionarPlanificacion() && $riesgo->estado!=='finalizado')
+            @if($periodoAbierto && auth()->user()->puedeGestionarPlanificacion() && $riesgo->estado!=='finalizado')
             <div class="text-right mb-3"><button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#formularioEvaluacionEficacia" aria-expanded="{{ $evaluacionConErrores?'true':'false' }}" aria-controls="formularioEvaluacionEficacia"><i class="fa-solid fa-clipboard-check mr-1"></i> Evaluar eficacia</button></div>
             <div class="collapse {{ $evaluacionConErrores?'show':'' }}" id="formularioEvaluacionEficacia"><div class="iso-panel iso-section-card"><div class="iso-panel-header"><div><h2 class="iso-section-title mb-0">Nueva evaluación de eficacia</h2><small class="text-muted">Completá este formulario cuando corresponda realizar la evaluación programada.</small></div></div><form method="POST" action="{{ route('planificacion.riesgos.verificar',$riesgo) }}" class="iso-panel-body iso-evaluation-form">@csrf @method('PATCH')
                 <div class="alert alert-info">Evaluar la eficacia no implica cerrar el riesgo. Primero registrá el resultado y después indicá si el tratamiento continúa o si corresponde finalizarlo.</div>

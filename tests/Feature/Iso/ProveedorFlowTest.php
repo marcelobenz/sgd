@@ -56,15 +56,16 @@ class ProveedorFlowTest extends TestCase
         $this->assertTrue($evaluacion->riesgos->contains($riesgo));
         $this->assertDatabaseHas('iso_proveedor_acciones', ['evaluacion_id' => $evaluacion->id, 'estado' => 'pendiente']);
         $this->actingAs($admin)->get(route('planificacion.proveedores.show', $proveedor))->assertOk()->assertSee('Evaluaciones')->assertSee('Negociar condiciones comerciales.')->assertSee('RO-2026-001');
-        $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id]))->assertOk()->assertSee('Proveedores externos y evaluación periódica')->assertSee('Telecom');
+        $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo->id, 'tipo' => 'detallado']))->assertOk()->assertSee('Proveedores externos y ciclos de evaluaci&oacute;n', false)->assertSee('Telecom');
     }
 
     public function test_conditional_supplier_cannot_continue_without_action_and_justification(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'habilitado' => true]);
+        $periodo = Periodo::create(['anio' => 2026, 'nombre' => 'Planificación 2026', 'estado' => 'vigente', 'creado_por' => $admin->id]);
         $proveedor = Proveedor::create(['codigo' => 'PR-0001', 'nombre' => 'Proveedor', 'producto_servicio' => 'Servicio', 'area_responsable' => 'Administración', 'criticidad' => 'no_critico', 'periodicidad_meses' => 12, 'estado' => 'activo', 'creado_por' => $admin->id, 'actualizado_por' => $admin->id]);
         $this->actingAs($admin)->post(route('planificacion.proveedores.evaluaciones.store', $proveedor), [
-            'fecha_evaluacion' => '2026-08-03', 'precio_calidad' => 5, 'resolucion_imprevistos' => 5,
+            'periodo_id' => $periodo->id, 'fecha_evaluacion' => '2026-08-03', 'precio_calidad' => 5, 'resolucion_imprevistos' => 5,
             'calidad_producto' => 5, 'calidad_atencion' => 5, 'decision' => 'continuar', 'requiere_accion' => 0,
             'conclusion' => 'Resultado condicional.', 'proxima_evaluacion' => '2027-08-03', 'requiere_analisis_riesgo' => 0,
         ])->assertSessionHasErrors('requiere_accion');
@@ -84,8 +85,9 @@ class ProveedorFlowTest extends TestCase
     public function test_required_actions_move_cycle_to_reevaluation_and_only_one_cycle_can_be_active(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'habilitado' => true]);
+        $periodo = Periodo::create(['anio' => 2026, 'nombre' => 'Planificación 2026', 'estado' => 'vigente', 'creado_por' => $admin->id]);
         $proveedor = Proveedor::create(['codigo' => 'PR-0044', 'nombre' => 'Proveedor crítico', 'producto_servicio' => 'Servicio', 'area_responsable' => 'Desarrollo', 'criticidad' => 'critico', 'periodicidad_meses' => 12, 'estado' => 'activo', 'creado_por' => $admin->id, 'actualizado_por' => $admin->id]);
-        $base = ['fecha_evaluacion' => '2026-08-03', 'precio_calidad' => 5, 'resolucion_imprevistos' => 4, 'calidad_producto' => 6, 'calidad_atencion' => 3, 'decision' => 'continuar', 'requiere_accion' => 1, 'conclusion' => 'Se continúa condicionalmente.', 'justificacion' => 'Se realizará tratamiento.', 'proxima_evaluacion' => '2027-08-03', 'requiere_analisis_riesgo' => 0, 'accion_descripcion' => 'Corregir el desempeño.', 'accion_area_responsable' => 'Desarrollo', 'accion_responsable_id' => $admin->id, 'accion_fecha_objetivo' => '2026-08-10'];
+        $base = ['periodo_id' => $periodo->id, 'fecha_evaluacion' => '2026-08-03', 'precio_calidad' => 5, 'resolucion_imprevistos' => 4, 'calidad_producto' => 6, 'calidad_atencion' => 3, 'decision' => 'continuar', 'requiere_accion' => 1, 'conclusion' => 'Se continúa condicionalmente.', 'justificacion' => 'Se realizará tratamiento.', 'proxima_evaluacion' => '2027-08-03', 'requiere_analisis_riesgo' => 0, 'accion_descripcion' => 'Corregir el desempeño.', 'accion_area_responsable' => 'Desarrollo', 'accion_responsable_id' => $admin->id, 'accion_fecha_objetivo' => '2026-08-10'];
         $this->actingAs($admin)->post(route('planificacion.proveedores.evaluaciones.store', $proveedor), $base)->assertSessionHasNoErrors();
         $inicial = ProveedorEvaluacion::firstOrFail();
         $this->assertSame('no_aprobado', $inicial->resultado);

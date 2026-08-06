@@ -11,9 +11,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\Iso\PeriodoAbiertoService;
 
 class ParteInteresadaController extends Controller
 {
+    public function __construct(private readonly PeriodoAbiertoService $periodosAbiertos) {}
+
     public function index(Request $request)
     {
         $query = ParteInteresada::with(['ultimaEvaluacion.evaluador'])->orderBy('nombre');
@@ -42,8 +45,8 @@ class ParteInteresadaController extends Controller
     public function show(Request $request, ParteInteresada $parte)
     {
         $parte->load(['evaluaciones' => fn ($query) => $query->with(['evaluador', 'periodo', 'documento', 'riesgos'])->orderByDesc('fecha_evaluacion')]);
-        $periodos = Periodo::orderByDesc('anio')->get();
-        $riesgos = Riesgo::orderByDesc('periodo_id')->orderBy('codigo')->get();
+        $periodos = Periodo::whereIn('estado', ['borrador', 'vigente'])->orderByDesc('anio')->get();
+        $riesgos = Riesgo::whereHas('periodo', fn ($query) => $query->whereIn('estado', ['borrador', 'vigente']))->orderByDesc('periodo_id')->orderBy('codigo')->get();
         $areas = collect(config('iso.areas_responsables'));
         $documentosQuery = Documento::whereRaw("LOWER(estado) IN ('aprobado','registro')")
             ->when(!$request->user()->isAdmin(), function ($query) use ($request) {
@@ -83,7 +86,7 @@ class ParteInteresadaController extends Controller
     {
         abort_if($parte->estado === 'archivada', 422, 'No se pueden agregar evaluaciones a una parte interesada archivada.');
         $data = $request->validate([
-            'periodo_id' => 'nullable|exists:iso_periodos,id',
+            'periodo_id' => 'required|exists:iso_periodos,id',
             'fecha_evaluacion' => 'required|date',
             'resultado' => ['required', Rule::in(['cumplido', 'parcial', 'no_cumplido', 'no_evaluado'])],
             'observaciones' => 'required|string|max:5000',
@@ -92,6 +95,10 @@ class ParteInteresadaController extends Controller
             'enlace_externo' => 'nullable|url|max:2000',
             'riesgos' => 'nullable|array', 'riesgos.*' => 'exists:iso_riesgos,id',
         ]);
+        $this->periodosAbiertos->validar(Periodo::findOrFail($data['periodo_id']), 'registrar evaluaciones de partes interesadas');
+        if (Riesgo::whereIn('id', $data['riesgos'] ?? [])->where('periodo_id', '!=', $data['periodo_id'])->exists()) {
+            throw ValidationException::withMessages(['riesgos' => 'Los riesgos vinculados deben pertenecer al mismo período que la evaluación.']);
+        }
         if (!empty($data['documento_id'])) {
             $documento = Documento::findOrFail($data['documento_id']);
             abort_unless($request->user()->isAdmin() || $documento->puedeLeer($request->user()), 403, 'No tenés permiso para vincular este documento.');

@@ -37,7 +37,7 @@ class ObjetivoController extends Controller
 
         $query = Objetivo::with(['responsable', 'indicadorPrincipal.mediciones', 'acciones', 'evaluaciones' => fn ($q) => $q->latest('fecha_evaluacion')]);
         if ($periodo) $query->where('periodo_id', $periodo->id); else $query->whereRaw('1=0');
-        if ($request->filled('estado')) $query->where('estado', $request->string('estado'));
+        if ($request->filled('situacion')) $query->where('estado', $request->string('situacion'));
         if ($request->filled('proceso')) $query->where('proceso', $request->string('proceso'));
 
         $objetivos = $query->orderBy('numero')->get();
@@ -47,6 +47,9 @@ class ObjetivoController extends Controller
             $objetivo->setAttribute('resultado_actual', $resultado);
             $objetivo->setAttribute('cumplimiento_actual', $indicador ? $this->resultados->cumplimiento($indicador, $resultado) : 'pendiente');
         });
+        if ($request->filled('cumplimiento')) {
+            $objetivos = $objetivos->where('cumplimiento_actual', $request->string('cumplimiento')->toString())->values();
+        }
 
         $procesos = Objetivo::select('proceso')->distinct()->orderBy('proceso')->pluck('proceso');
         return view('iso.objetivos.index', compact('objetivos', 'periodos', 'periodo', 'procesos'));
@@ -99,7 +102,7 @@ class ObjetivoController extends Controller
     public function show(Request $request, Objetivo $objetivo)
     {
         $objetivo->load([
-            'periodo', 'responsable', 'indicadores.mediciones.documento',
+            'periodo', 'origenContinuidad.periodo', 'continuidades.periodo', 'responsable', 'indicadores.mediciones.documento',
             'acciones' => fn ($q) => $q->with(['responsable', 'documento', 'seguimientos.documento', 'transiciones.usuario'])->orderBy('fecha_objetivo'),
             'evaluaciones' => fn ($q) => $q->with(['evaluadoPor', 'documento'])->latest('fecha_evaluacion')->latest('id'),
             'contextos', 'riesgos', 'partes',
@@ -281,7 +284,8 @@ class ObjetivoController extends Controller
         if ($resultado === null) throw ValidationException::withMessages(['cumplimiento' => 'Registrá al menos una medición antes de evaluar el objetivo.']);
         $calculado = $this->resultados->cumplimiento($indicador, $resultado);
         $data = $request->validate([
-            'fecha_evaluacion' => 'required|date', 'cumplimiento' => ['required', Rule::in(['cumplido', 'aceptable', 'incumplido'])],
+            'fecha_evaluacion' => 'required|date', 'tipo' => ['required', Rule::in(['seguimiento', 'cierre_periodo'])],
+            'cumplimiento' => ['required', Rule::in(['cumplido', 'aceptable', 'incumplido'])],
             'conclusion' => 'required|string|max:5000', 'justificacion' => 'nullable|string|max:5000',
             'decision' => ['required', Rule::in(['continuar', 'reformular', 'cerrar', 'suspender'])],
             'proxima_evaluacion' => 'nullable|date|after:fecha_evaluacion',

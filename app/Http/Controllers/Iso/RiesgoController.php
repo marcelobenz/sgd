@@ -10,12 +10,15 @@ use App\Models\Iso\ParteInteresada;
 use App\Models\Iso\Riesgo;
 use App\Models\User;
 use App\Services\Iso\CodigoIsoService;
+use App\Services\Iso\PeriodoAbiertoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class RiesgoController extends Controller
 {
+    public function __construct(private readonly PeriodoAbiertoService $periodos) {}
+
     public function index(Request $request)
     {
         $periodos = Periodo::orderByDesc('anio')->get();
@@ -47,7 +50,9 @@ class RiesgoController extends Controller
     public function create(Request $request)
     {
         $contexto = $request->filled('contexto') ? Contexto::with('periodo')->findOrFail($request->integer('contexto')) : null;
-        $periodo = $contexto?->periodo ?? Periodo::where('estado', 'vigente')->firstOrFail();
+        $periodo = $contexto?->periodo
+            ?? ($request->filled('periodo') ? Periodo::findOrFail($request->integer('periodo')) : Periodo::where('estado', 'vigente')->firstOrFail());
+        $this->periodos->validar($periodo, 'crear riesgos u oportunidades');
         $usuarios = User::habilitados()->orderBy('name')->get();
         $procesos = collect(config('iso.procesos'));
         $partesCatalogo = collect(config('iso.partes_interesadas'))
@@ -71,7 +76,7 @@ class RiesgoController extends Controller
             'accion_descripcion' => 'nullable|string|max:5000', 'accion_responsable_id' => 'nullable|exists:users,id', 'accion_fecha_objetivo' => 'nullable|date',
         ]);
         $periodo = Periodo::findOrFail($data['periodo_id']);
-        abort_if($periodo->estado === 'cerrado', 422, 'El período está cerrado.');
+        $this->periodos->validar($periodo, 'crear riesgos u oportunidades');
         if (!empty($data['contexto_id'])) {
             $contexto = Contexto::findOrFail($data['contexto_id']);
             abort_unless($contexto->periodo_id === $periodo->id, 422, 'El contexto no pertenece al período.');
@@ -98,7 +103,7 @@ class RiesgoController extends Controller
 
     public function show(Request $request, Riesgo $riesgo)
     {
-        $riesgo->load(['periodo', 'contexto', 'responsable', 'acciones.responsable', 'acciones.seguimientos.documento', 'acciones.transiciones.realizadoPor', 'verificaciones.verificador', 'verificaciones.documento', 'transiciones.realizadoPor']);
+        $riesgo->load(['periodo', 'contexto', 'origenContinuidad.periodo', 'continuidades.periodo', 'responsable', 'acciones.responsable', 'acciones.seguimientos.documento', 'acciones.transiciones.realizadoPor', 'verificaciones.verificador', 'verificaciones.documento', 'transiciones.realizadoPor']);
         $usuarios = User::habilitados()->orderBy('name')->get();
         $documentos = Documento::whereRaw("LOWER(estado) IN ('aprobado','registro')")
             ->when(!$request->user()->isAdmin(), function ($query) use ($request) {
@@ -118,6 +123,7 @@ class RiesgoController extends Controller
 
     public function verificar(Request $request, Riesgo $riesgo)
     {
+        $this->periodos->validar($riesgo->periodo()->firstOrFail(), 'evaluar la eficacia');
         abort_if($riesgo->estado === 'finalizado', 422, 'El registro está finalizado. Agregá una nueva acción para reabrirlo antes de evaluarlo nuevamente.');
         $data = $request->validate([
             'decision' => ['required', Rule::in(['continuar', 'finalizar'])],
@@ -173,6 +179,7 @@ class RiesgoController extends Controller
 
     public function actualizarFechaVerificacion(Request $request, Riesgo $riesgo)
     {
+        $this->periodos->validar($riesgo->periodo()->firstOrFail(), 'reprogramar la evaluación de eficacia');
         abort_if($riesgo->estado === 'finalizado', 422, 'No se puede reprogramar una evaluación sobre un registro finalizado.');
         $data = $request->validate([
             'fecha_verificacion_prevista' => 'nullable|date',
