@@ -35,7 +35,7 @@
         @else
             <div class="iso-field"><label>Próxima evaluación de eficacia</label><div>@if($riesgo->fecha_verificacion_prevista){{ $riesgo->fecha_verificacion_prevista->format('d/m/Y') }} @if($riesgo->fecha_verificacion_prevista->lte(today()))<span class="iso-status danger">Vencida</span>@elseif($riesgo->fecha_verificacion_prevista->lte(today()->addDays(30)))<span class="iso-status warn">Próxima</span>@else<span class="iso-status">Programada</span>@endif @else Sin programar @endif</div></div>
         @endif
-        <div class="iso-field"><label>Responsable</label><div>{{ $riesgo->responsable?->name ?: 'Sin asignar' }}</div></div>
+        <div class="iso-field"><label>Responsable</label><div><x-user-identity :user="$riesgo->responsable" /></div></div>
         <div class="iso-field"><label>Valoración</label><div>Inicial: {{ $riesgo->impacto_inicial }} × {{ $riesgo->probabilidad_inicial }} = {{ $riesgo->indice_inicial }}@if($riesgo->indice_final)<br>{{ $riesgo->estado==='finalizado'?'Final':'Actual' }}: {{ $riesgo->impacto_final }} × {{ $riesgo->probabilidad_final }} = {{ $riesgo->indice_final }}@endif</div></div>
         @if(filled($evaluacionResumen?->justificacion_excepcion))
             <div class="iso-field iso-field-wide iso-decision-reason"><label>Justificación de la decisión</label><div>{{ $evaluacionResumen->justificacion_excepcion }}</div><small>Registrada en la evaluación del {{ $evaluacionResumen->fecha->format('d/m/Y') }}.</small></div>

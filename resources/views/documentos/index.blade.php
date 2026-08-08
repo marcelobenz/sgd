@@ -575,7 +575,7 @@
                         </div>
                     </div>
 
-                    <a href="{{ route('documentos.create') }}" class="btn btn-docs-primary">
+                    <a href="{{ route('documentos.create', ['categoria' => $categoria->id]) }}" class="btn btn-docs-primary">
                         <i class="fa-solid fa-plus mr-1"></i>
                         Nuevo documento
                     </a>
@@ -658,7 +658,7 @@
                             </div>
                         </div>
 
-                        <a href="{{ route('documentos.create') }}" class="btn btn-docs-primary">
+                        <a href="{{ route('documentos.create', ['categoria' => $subgrupo['categoria']->id]) }}" class="btn btn-docs-primary">
                             <i class="fa-solid fa-plus mr-1"></i>
                             Nuevo documento
                         </a>

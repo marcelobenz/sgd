@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
-use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +22,7 @@ class AuthenticatedSessionController extends Controller
     {
         $user = User::where('email', $request->email)->first();
 
-        if ($user && !$user->habilitado) {
+        if ($user && ! $user->habilitado) {
             throw ValidationException::withMessages([
                 'email' => 'Tu usuario está deshabilitado.',
             ]);
@@ -32,8 +31,9 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        $request->session()->forget('url.intended');
 
-        return redirect()->intended(RouteServiceProvider::HOME);
+        return redirect()->to($request->user()->rutaInicioPreferida());
     }
 
     public function destroy(Request $request): RedirectResponse

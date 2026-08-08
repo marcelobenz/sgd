@@ -31,10 +31,12 @@
                                 <div class="form-group">
                                     <label for="id_categoria">Categoría</label>
                                     <select name="id_categoria" id="id_categoria" class="form-control" required>
-                                        @foreach ($categorias as $categoria)
-                                            <option value="{{ $categoria->id }}">{{ $categoria->nombre_categoria }}</option>
-                                        @endforeach
+                                        <option value="">Seleccioná una categoría</option>
+                                        @include('documentos._categoria-options', [
+                                            'categoriaSeleccionada' => old('id_categoria', $categoriaPreseleccionada),
+                                        ])
                                     </select>
+                                    <small class="form-text text-muted">Las subcategorías aparecen debajo de su categoría principal.</small>
                                 </div>
                             </div>
                         </div>

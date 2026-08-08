@@ -9,7 +9,7 @@
     <div class="iso-panel mb-4"><div class="iso-panel-body iso-detail-grid">
         <div class="iso-field"><label>Tipo</label><div>{{ $contexto->tipo_etiqueta }}</div></div><div class="iso-field"><label>Período</label><div>{{ $contexto->periodo->anio }}</div></div>
         <div class="iso-field"><label>Descripción</label><div>{{ $contexto->descripcion }}</div></div><div class="iso-field"><label>Proceso</label><div>{{ $contexto->proceso ?: '—' }}</div></div>
-        <div class="iso-field"><label>Fuente</label><div>@if($contexto->fuente_tipo)<strong>{{ $contexto->fuente_tipo }}:</strong> @endif{{ $contexto->fuente ?: '—' }}</div></div><div class="iso-field"><label>Responsable</label><div>{{ $contexto->responsable?->name ?: 'Sin asignar' }}</div></div>
+        <div class="iso-field"><label>Fuente</label><div>@if($contexto->fuente_tipo)<strong>{{ $contexto->fuente_tipo }}:</strong> @endif{{ $contexto->fuente ?: '—' }}</div></div><div class="iso-field"><label>Responsable</label><div><x-user-identity :user="$contexto->responsable" /></div></div>
     </div></div>
     <div class="row">
         <div class="col-lg-6 mb-4"><div class="iso-panel h-100"><div class="iso-panel-header"><h2 class="iso-section-title mb-0">Evaluación</h2></div><div class="iso-panel-body">

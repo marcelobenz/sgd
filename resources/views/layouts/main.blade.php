@@ -102,6 +102,38 @@
                 margin-top: 95px;
             }
         }
+
+        .user-avatar {
+            --avatar-size: 40px;
+            width: var(--avatar-size);
+            height: var(--avatar-size);
+            flex: 0 0 var(--avatar-size);
+            display: inline-grid;
+            place-items: center;
+            overflow: hidden;
+            border-radius: 50%;
+            color: #fff;
+            font-size: calc(var(--avatar-size) * .36);
+            font-weight: 800;
+            line-height: 1;
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .35), 0 2px 7px rgba(15, 23, 42, .18);
+            vertical-align: middle;
+        }
+
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-initials { background: linear-gradient(135deg, #315d87, #2f7d62); }
+        .avatar-blue { background: linear-gradient(135deg, #2563a6, #193c68); }
+        .avatar-green { background: linear-gradient(135deg, #3f9b73, #1f6249); }
+        .avatar-violet { background: linear-gradient(135deg, #805ad5, #49358e); }
+        .avatar-amber { background: linear-gradient(135deg, #e4a62e, #b65d12); }
+        .avatar-rose { background: linear-gradient(135deg, #df6680, #a52e55); }
+        .avatar-cyan { background: linear-gradient(135deg, #27a3b8, #176477); }
+        .avatar-slate { background: linear-gradient(135deg, #718096, #364152); }
+        .avatar-indigo { background: linear-gradient(135deg, #5965d8, #303b93); }
+
+        .user-identity-link { display: flex; align-items: center; gap: 9px; }
+        .user-inline-identity { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+        .user-inline-identity > span:last-child { overflow: hidden; text-overflow: ellipsis; }
     </style>
 
     {{-- Estilos específicos de cada vista --}}
@@ -167,6 +199,16 @@
 
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
+                <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                    href="{{ route('dashboard') }}">
+                    Inicio
+                </a>
+
+                <a class="nav-link {{ request()->routeIs('pendientes.*') ? 'active' : '' }}"
+                    href="{{ route('pendientes.index') }}">
+                    Mis pendientes
+                </a>
+
                 <a class="nav-link {{ request()->routeIs('documentos.*') ? 'active' : '' }}"
                     href="{{ route('documentos.index') }}" role="button" aria-haspopup="true" aria-expanded="false">
                     Documentos
@@ -296,8 +338,9 @@
 
                 {{-- Usuario --}}
                 <li class="nav-item dropdown">
-                    <a class="nav-link sesion" href="#" id="userDropdown" role="button" data-toggle="dropdown"
+                    <a class="nav-link user-identity-link" href="#" id="userDropdown" role="button" data-toggle="dropdown"
                         aria-haspopup="true" aria-expanded="false">
+                        <x-user-avatar :user="auth()->user()" :size="34" :label="false" />
                         <strong>{{ auth()->user()->name }}</strong>
                     </a>
                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">

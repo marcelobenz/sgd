@@ -2,22 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DocumentoPermiso;
-use App\Models\User;
-use App\Models\HistorialDocumento; // Importa el modelo HistorialDocumento
-use App\Models\Documento;
 use App\Models\Categoria;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage; 
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use App\Notifications\DocumentoPendienteAprobacion;
-use setasign\Fpdi\Fpdi as Fpdi;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use App\Notifications\DocumentoRechazado;
+use App\Models\Documento;
+use App\Models\DocumentoPermiso; // Importa el modelo HistorialDocumento
+use App\Models\HistorialDocumento;
+use App\Models\User;
 use App\Notifications\DocumentoAprobado;
+use App\Notifications\DocumentoPendienteAprobacion;
+use App\Notifications\DocumentoRechazado;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use setasign\Fpdi\Fpdi as Fpdi;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentoController extends Controller
 {
@@ -87,10 +86,12 @@ class DocumentoController extends Controller
         ];
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        //$categorias = Categoria::all();
-        $categorias = Categoria::orderBy('nombre_categoria', 'asc')->get();
+        $categorias = $this->categoriasParaSelector();
+        $categoriaPreseleccionada = Categoria::query()
+            ->whereKey($request->integer('categoria'))
+            ->value('id');
 
         //$usuarios = User::all(); // Obtener todos los usuarios
         $usuarios = User::habilitados()
@@ -98,7 +99,7 @@ class DocumentoController extends Controller
             ->orderBy('email', 'asc')
             ->get();
 
-        return view('documentos.create', compact('categorias', 'usuarios'));
+        return view('documentos.create', compact('categorias', 'usuarios', 'categoriaPreseleccionada'));
     }
 
     public function store(Request $request)
@@ -108,13 +109,13 @@ class DocumentoController extends Controller
             'titulo' => 'required|string|max:255',
             'archivo' => $this->reglasArchivoDocumento(),
             'id_categoria' => 'required|exists:categorias,id',
-            'permisos' => 'array'
+            'permisos' => 'array',
         ]);
 
         $file = $request->file('archivo');
         $path = $this->guardarArchivoDocumento($file);
         $estado = $request->has('sin_aprobacion') ? 'registro' : 'pendiente de aprobación';
-    
+
         $documento = Documento::create([
             'titulo' => $validated['titulo'],
             'path' => $path,
@@ -145,7 +146,7 @@ class DocumentoController extends Controller
                 // Evitar permisos a usuarios deshabilitados
                 $user = User::habilitados()->find($userId);
 
-                if (!$user) {
+                if (! $user) {
                     continue;
                 }
 
@@ -166,10 +167,10 @@ class DocumentoController extends Controller
         }
 
         // Envia correo a el/los aprobador/es para avisar que tienen un doc pendiente de aprobar
-            
+
         return redirect()->route('documentos.index')->with('success', 'Documento creado exitosamente.');
     }
-        
+
     public function show($id)
     {
         // 👉 Eager loading para evitar N+1 al usar relaciones en la vista
@@ -186,20 +187,20 @@ class DocumentoController extends Controller
             'ejecucionesRecordatorio.resueltoPor',
         ])->findOrFail($id);
 
-        if (!$documento->puedeLeer(auth()->user())) {
+        if (! $documento->puedeLeer(auth()->user())) {
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
-                    'icon'  => 'error',
+                    'icon' => 'error',
                     'title' => 'Acceso denegado',
-                    'text'  => 'No tienes permiso para leer este documento.'
+                    'text' => 'No tienes permiso para leer este documento.',
                 ]);
         }
 
         $bucket = config('filesystems.disks.s3.bucket');
         $region = config('filesystems.disks.s3.region');
         $baseUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/";
-        $fileUrl = $baseUrl . $documento->path;
+        $fileUrl = $baseUrl.$documento->path;
         $fileExtension = pathinfo($documento->path, PATHINFO_EXTENSION);
         $revisionesCumplidas = $documento->ejecucionesRecordatorio
             ->where('estado', 'resuelto')
@@ -226,7 +227,7 @@ class DocumentoController extends Controller
     {
         $documento = Documento::with('ultimaModificacion')->findOrFail($id);
 
-        if (!$documento->puedeAprobar(auth()->user())) {
+        if (! $documento->puedeAprobar(auth()->user())) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'No tienes permiso para aprobar este documento.',
@@ -236,9 +237,9 @@ class DocumentoController extends Controller
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
-                    'icon'  => 'error',
+                    'icon' => 'error',
                     'title' => 'Acceso denegado',
-                    'text'  => 'No tienes permiso para aprobar este documento.'
+                    'text' => 'No tienes permiso para aprobar este documento.',
                 ]);
         }
 
@@ -250,9 +251,9 @@ class DocumentoController extends Controller
         $documento->save();
 
         Log::info('Documento aprobado', [
-            'doc_id'         => $documento->id,
-            'aprobador_id'   => auth()->id(),
-            'ultimo_editor'  => $documento->ultimaModificacion?->id, // asumimos presente
+            'doc_id' => $documento->id,
+            'aprobador_id' => auth()->id(),
+            'ultimo_editor' => $documento->ultimaModificacion?->id, // asumimos presente
             'notificar_flag' => $request->boolean('notificar_autor'),
         ]);
 
@@ -264,12 +265,12 @@ class DocumentoController extends Controller
                 $ultimoEditor->notify(new DocumentoAprobado($documento, auth()->user()));
                 Log::info('Notificación enviada al último editor', [
                     'doc_id' => $documento->id,
-                    'user_id'=> $ultimoEditor->id,
+                    'user_id' => $ultimoEditor->id,
                 ]);
             } else {
                 Log::info('No se envía notificación (aprobador == último editor)', [
                     'doc_id' => $documento->id,
-                    'user_id'=> $ultimoEditor->id,
+                    'user_id' => $ultimoEditor->id,
                 ]);
             }
         } else {
@@ -289,23 +290,21 @@ class DocumentoController extends Controller
 
         return back()->with('success', 'El documento ha sido aprobado.');
     }
-    
 
     public function download($id)
     {
         // Obtén el documento desde la base de datos
         $documento = Documento::findOrFail($id);
 
-        if (!$documento->puedeEscribir(auth()->user())) {
+        if (! $documento->puedeEscribir(auth()->user())) {
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
-                    'icon'  => 'error',
+                    'icon' => 'error',
                     'title' => 'Acceso denegado',
-                    'text'  => 'No tienes permiso para descargar/modificar este documento.'
+                    'text' => 'No tienes permiso para descargar/modificar este documento.',
                 ]);
         }
-
 
         // Ruta del archivo en S3
         $filePath = $documento->path;
@@ -314,33 +313,33 @@ class DocumentoController extends Controller
         // Nombre de archivo para la descarga
         $fileName = basename($filePath);
         $disk = Storage::disk('s3');
-    
-        if (!$disk->exists($filePath)) {
+
+        if (! $disk->exists($filePath)) {
             abort(404, 'File not found');
         }
-    
+
         $file = $disk->get($filePath);
-        
-        $response = new StreamedResponse(function() use ($file) {
+
+        $response = new StreamedResponse(function () use ($file) {
             echo $file;
         });
-    
+
         $response->headers->set('Content-Type', $mimeType);
         $response->headers->set('Content-Disposition', 'attachment; filename="'.$fileName.'"');
-        
+
         return $response;
     }
 
     private function getMimeType($extension)
     {
         $mimeTypes = [
-            'pdf'  => 'application/pdf',
-            'doc'  => 'application/msword',
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
             'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'xls'  => 'application/vnd.ms-excel',
+            'xls' => 'application/vnd.ms-excel',
             'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'jpg'  => 'image/jpeg',
-            'png'  => 'image/png',
+            'jpg' => 'image/jpeg',
+            'png' => 'image/png',
             // Agrega más tipos MIME según sea necesario
         ];
 
@@ -352,20 +351,20 @@ class DocumentoController extends Controller
     {
         $documento = Documento::findOrFail($id);
 
-        if (!$documento->puedeEscribir(auth()->user())) {
+        if (! $documento->puedeEscribir(auth()->user())) {
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
-                    'icon'  => 'error',
+                    'icon' => 'error',
                     'title' => 'Acceso denegado',
-                    'text'  => 'No tienes permiso para modificar o revertir este documento.'
+                    'text' => 'No tienes permiso para modificar o revertir este documento.',
                 ]);
         }
 
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
             'id_categoria' => 'required|exists:categorias,id',
-            'permisos' => 'array'
+            'permisos' => 'array',
         ]);
 
         // === Manejo de "No requiere aprobación" ===
@@ -422,10 +421,10 @@ class DocumentoController extends Controller
 
             $user = User::habilitados()->find($userId);
 
-            if (!$user) {
+            if (! $user) {
                 continue;
             }
-            
+
             DocumentoPermiso::updateOrCreate(
                 ['documento_id' => $documento->id, 'user_id' => $userId],
                 [
@@ -453,19 +452,18 @@ class DocumentoController extends Controller
 
     }
 
-    
     //Versionado
     public function AddVersion(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
-        
-        if (!$documento->puedeEscribir(auth()->user())) {
+
+        if (! $documento->puedeEscribir(auth()->user())) {
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
-                    'icon'  => 'error',
+                    'icon' => 'error',
                     'title' => 'Acceso denegado',
-                    'text'  => 'No tienes permiso para modificar este documento.'
+                    'text' => 'No tienes permiso para modificar este documento.',
                 ]);
         }
 
@@ -493,26 +491,26 @@ class DocumentoController extends Controller
         //dd($request->file('nuevoArchivo'));
 
         // Asignar todos los campos excepto el archivo y el contenido
-        $documento->fill($request->except('nuevoArchivo','contenidoActualizado'));
+        $documento->fill($request->except('nuevoArchivo', 'contenidoActualizado'));
 
         // Actualizar el contenido del documento con el valor de 'contenidoActualizado'
         $documento->contenido = $request->input('contenidoActualizado');
 
         $maxVersion = HistorialDocumento::where('id_documento', $documento->id)
-                       ->max('version');
+            ->max('version');
         $documento->version = $maxVersion + 1;
-        $documento->estado = "pendiente de aprobación";
+        $documento->estado = 'pendiente de aprobación';
         $documento->id_usr_ultima_modif = auth()->id();
         $documento->save();
-    
+
         return redirect()->route('documentos.show', $documento->id)
-                         ->with('success', 'Documento actualizado y nueva versión creada');
+            ->with('success', 'Documento actualizado y nueva versión creada');
     }
-    
+
     protected function archiveCurrentVersion($documento)
     {
         // Guardar la versión actual del documento en el historial
-        $historial = new HistorialDocumento();
+        $historial = new HistorialDocumento;
         $historial->path = $documento->path;
         $historial->titulo = $documento->titulo;
         $historial->contenido = $documento->contenido;
@@ -527,7 +525,7 @@ class DocumentoController extends Controller
         //$historial->created_at = now();
         $historial->save();
     }
-    
+
     public function revertToVersion($documentoId, $versionId)
     {
         try {
@@ -536,16 +534,15 @@ class DocumentoController extends Controller
 
                 $documento = Documento::findOrFail($documentoId);
 
-                if (!$documento->puedeEscribir(auth()->user())) {
+                if (! $documento->puedeEscribir(auth()->user())) {
                     return redirect()
                         ->to(url()->previous() ?: route('documentos.index'))
                         ->with('swal', [
-                            'icon'  => 'error',
+                            'icon' => 'error',
                             'title' => 'Acceso denegado',
-                            'text'  => 'No tienes permiso para modificar o revertir este documento.'
+                            'text' => 'No tienes permiso para modificar o revertir este documento.',
                         ]);
                 }
-
 
                 $historialDocumento = HistorialDocumento::where('id', $versionId)
                     ->where('id_documento', $documento->id)
@@ -555,7 +552,7 @@ class DocumentoController extends Controller
                 $existeEnHistorial = HistorialDocumento::where('id_documento', $documento->id)
                     ->where('version', $documento->version)
                     ->exists();
-                if (!$existeEnHistorial) {
+                if (! $existeEnHistorial) {
                     $this->archiveCurrentVersion($documento);
                 }
 
@@ -563,19 +560,19 @@ class DocumentoController extends Controller
                 $sinAprobacionActual = ($documento->estado === 'registro');
 
                 // Restaurar campos principales desde el historial
-                $documento->path                = $historialDocumento->path;
-                $documento->titulo              = $historialDocumento->titulo;
-                $documento->contenido           = $historialDocumento->contenido;
-                $documento->id_categoria        = $historialDocumento->id_categoria ?? $documento->id_categoria;
+                $documento->path = $historialDocumento->path;
+                $documento->titulo = $historialDocumento->titulo;
+                $documento->contenido = $historialDocumento->contenido;
+                $documento->id_categoria = $historialDocumento->id_categoria ?? $documento->id_categoria;
 
                 // Mantener el creador original del documento
                 // (no lo sobreescribas con el del historial)
                 // $documento->id_usr_creador   = $documento->id_usr_creador;
 
                 $documento->id_usr_ultima_modif = auth()->id();
-                $documento->id_usr_aprobador    = null;
-                $documento->fecha_aprobacion    = null;
-                $documento->version             = $historialDocumento->version;
+                $documento->id_usr_aprobador = null;
+                $documento->fecha_aprobacion = null;
+                $documento->version = $historialDocumento->version;
 
                 // Estado según “requiere/no requiere aprobación”
                 $documento->estado = $sinAprobacionActual
@@ -596,16 +593,16 @@ class DocumentoController extends Controller
                 'msg' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return back()->with('error', 'No se pudo revertir: ' . $e->getMessage());
+
+            return back()->with('error', 'No se pudo revertir: '.$e->getMessage());
         }
     }
-
 
     // Editar
     public function edit(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
-        $categorias = Categoria::all();
+        $categorias = $this->categoriasParaSelector();
         //$usuarios = User::orderBy('email', 'asc')->get();
         $usuarios = User::habilitados()
             ->where('id', '!=', $documento->id_usr_creador)
@@ -632,21 +629,30 @@ class DocumentoController extends Controller
         ));
     }
 
+    private function categoriasParaSelector()
+    {
+        return Categoria::query()
+            ->whereNull('parent_id')
+            ->with('subcategorias')
+            ->orderBy('nombre_categoria')
+            ->get();
+    }
+
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
     {
         // Encuentra el documento por su ID
-        $documento = Documento::findOrFail($id); 
+        $documento = Documento::findOrFail($id);
 
-        if (!$documento->puedeEliminar(auth()->user())) {
+        if (! $documento->puedeEliminar(auth()->user())) {
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
-                    'icon'  => 'error',
+                    'icon' => 'error',
                     'title' => 'Acceso denegado',
-                    'text'  => 'No tienes permiso para eliminar este documento.'
+                    'text' => 'No tienes permiso para eliminar este documento.',
                 ]);
         }
 
@@ -665,10 +671,11 @@ class DocumentoController extends Controller
             Storage::disk('s3')->delete($documento->path);
         }
 
-        // Elimina el documento 
+        // Elimina el documento
         $documento->delete();
+
         // Redirige con un mensaje de éxito
-        return redirect()->route('documentos.index')->with('success', 'Documento eliminado exitosamente.');        
+        return redirect()->route('documentos.index')->with('success', 'Documento eliminado exitosamente.');
     }
 
     public function validaPermiso($id, Request $request)
@@ -680,27 +687,28 @@ class DocumentoController extends Controller
         $usuario = auth()->user();
 
         // Verifica si el usuario tiene el permiso específico
-        if (!$documento->{$permiso}($usuario)) {
+        if (! $documento->{$permiso}($usuario)) {
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
-                    'icon'  => 'error',
+                    'icon' => 'error',
                     'title' => 'Acceso denegado',
-                    'text'  => 'No tienes permiso para realizar esta acción.'
+                    'text' => 'No tienes permiso para realizar esta acción.',
                 ]);
         } else {
             return redirect()->route($ruta, ['documento' => $id]);
         }
     }
-       
-    public function exportarPdf($documentId){
-        
+
+    public function exportarPdf($documentId)
+    {
+
         $documento = Documento::findOrFail($documentId);
 
         // Valida que el doc esté aprobado, si no lo está, busca la última versión aprobada en el historial
-        if ($documento->estado != "aprobado") {
+        if ($documento->estado != 'aprobado') {
             $documentoAprobado = $documento->ultimaVersionAprobada();
-            if (!$documentoAprobado) {
+            if (! $documentoAprobado) {
                 // No hay versiones aprobadas
                 return redirect()
                     ->route('documentos.show', $documentId)
@@ -712,7 +720,7 @@ class DocumentoController extends Controller
             }
             $documento = $documentoAprobado; // Cambiamos al historial del documento aprobado
         }
-        //dd($documento); 
+        //dd($documento);
 
         $extension = pathinfo($documento->path, PATHINFO_EXTENSION);
 
@@ -723,7 +731,7 @@ class DocumentoController extends Controller
         }
 
         // Preparar el archivo para FPDI
-        $pdf = new Fpdi();
+        $pdf = new Fpdi;
         $pageCount = $pdf->setSourceFile($convertedPdfPath);
 
         // iterate through all pages
@@ -746,13 +754,13 @@ class DocumentoController extends Controller
         $pdf->Cell(80, 10, 'Documento:', 1);
         $pdf->Cell(0, 10, $documento->titulo, 1, 1); // Nuevo línea después del título
 
-        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Versión:'), 1);
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252', 'Versión:'), 1);
         $pdf->Cell(0, 10, $documento->version, 1, 1); // Versión
 
-        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Detalles de la versión:'), 1);
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252', 'Detalles de la versión:'), 1);
         $pdf->MultiCell(0, 10, iconv('UTF-8', 'windows-1252', $documento->contenido), 1);
 
-        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Categoría:'), 1);
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252', 'Categoría:'), 1);
         $pdf->Cell(0, 10, $documento->categoria->nombre_categoria, 1, 1); // Categoría
 
         $pdf->Cell(80, 10, 'Estado:', 1);
@@ -761,31 +769,31 @@ class DocumentoController extends Controller
         $pdf->Cell(80, 10, 'Aprobador:', 1);
         $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $documento->aprobador->name), 1, 1); // Aprobador
 
-        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Fecha aprobación:'), 1);
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252', 'Fecha aprobación:'), 1);
         $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $documento->fecha_aprobacion), 1, 1); // Fecha aprobacion
 
         $pdf->Cell(80, 10, 'Creador:', 1);
         $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $documento->creador->name), 1, 1); // Creador
 
-        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Fecha de Creación:'), 1);
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252', 'Fecha de Creación:'), 1);
         $pdf->Cell(0, 10, $documento->created_at, 1, 1); // Fecha de creación
 
-        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Último Editor:'), 1);
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252', 'Último Editor:'), 1);
         $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $documento->ultimaModificacion->name), 1, 1); // Último editor
 
-        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252','Fecha de Última Modificación:'), 1);
+        $pdf->Cell(80, 10, iconv('UTF-8', 'windows-1252', 'Fecha de Última Modificación:'), 1);
         $pdf->Cell(0, 10, $documento->updated_at, 1, 1); // Fecha de última modificación
 
         // Eliminar el archivo PDF temporal después de procesarlo
         unlink($convertedPdfPath);
 
-        return $pdf->Output($documento->titulo . '-version_' . $documento->version . '-' . $documento->updated_at . '.pdf', 'D');
+        return $pdf->Output($documento->titulo.'-version_'.$documento->version.'-'.$documento->updated_at.'.pdf', 'D');
     }
 
     /**
      * Convertir un archivo de S3 a PDF y manejarlo localmente.
      *
-     * @param string $path Ruta del archivo en S3.
+     * @param  string  $path  Ruta del archivo en S3.
      * @return string Ruta del archivo PDF local.
      */
     private function convertToPdf($path)
@@ -797,7 +805,7 @@ class DocumentoController extends Controller
         // Detectar si estamos en Windows o en Linux
         $isWindows = (PHP_OS_FAMILY === 'Windows');
         // Definir la ruta local del PDF
-        $localPdfPath = sys_get_temp_dir() . '/' . basename($path, '.' . pathinfo($path, PATHINFO_EXTENSION)) . '.pdf';
+        $localPdfPath = sys_get_temp_dir().'/'.basename($path, '.'.pathinfo($path, PATHINFO_EXTENSION)).'.pdf';
         // Reemplazar las barras invertidas en la ruta local del PDF para Windows
         $localPdfPath = str_replace('/', '\\', $localPdfPath);
         // Obtener la ruta de soffice desde las variables de entorno
@@ -808,7 +816,7 @@ class DocumentoController extends Controller
         $dirPath = escapeshellarg(sys_get_temp_dir());
         $filePath = escapeshellarg($localPath);
 
-        if (!$isWindows) {
+        if (! $isWindows) {
             $command = "{$sofficePath} --headless --convert-to pdf --outdir {$dirPath} {$filePath} -env:UserInstallation=file:///tmp/LibreOfficeConfig 2>&1";
         } else {
             // Para Windows no es necesario el parámetro -env
@@ -816,19 +824,20 @@ class DocumentoController extends Controller
         }
 
         //$command = "{$sofficePath} --headless --convert-to pdf --outdir {$dirPath} {$filePath} 2>&1";
-        Log::info("Comando antes de ejecutar: " . $command);
+        Log::info('Comando antes de ejecutar: '.$command);
         exec($command, $output, $return_var);
-        Log::info("Comando ejecutado: " . $command);
+        Log::info('Comando ejecutado: '.$command);
         if ($return_var !== 0) {
-            Log::error("Error al convertir archivo: " . implode("\n", $output));
+            Log::error('Error al convertir archivo: '.implode("\n", $output));
         } else {
-            Log::info("Success: PDF generado");
+            Log::info('Success: PDF generado');
         }
 
         // Limpiar el archivo original descargado
         unlink($localPath);
         //Obtengo el path del archivo resultante de la exportación
-        $resultPath = sys_get_temp_dir() . '/' . basename($localPath, '.' . pathinfo($localPath, PATHINFO_EXTENSION)) . '.pdf';
+        $resultPath = sys_get_temp_dir().'/'.basename($localPath, '.'.pathinfo($localPath, PATHINFO_EXTENSION)).'.pdf';
+
         //dd($resultPath);
         // Devolver la ruta local del archivo PDF
         return $resultPath;
@@ -839,6 +848,7 @@ class DocumentoController extends Controller
         $localPath = tempnam(sys_get_temp_dir(), 'doc');
         $content = Storage::disk('s3')->get($path);
         file_put_contents($localPath, $content);
+
         return $localPath;
     }
 
@@ -854,13 +864,13 @@ class DocumentoController extends Controller
             'file',
             'max:10240',
             function (string $attribute, $archivo, \Closure $fail): void {
-                if (!$archivo instanceof UploadedFile) {
+                if (! $archivo instanceof UploadedFile) {
                     return;
                 }
 
                 $extension = strtolower($archivo->getClientOriginalExtension());
 
-                if (!in_array($extension, self::EXTENSIONES_PERMITIDAS, true)) {
+                if (! in_array($extension, self::EXTENSIONES_PERMITIDAS, true)) {
                     $fail('Solo se permiten archivos PDF, Word, Excel o PowerPoint.');
                 }
             },
@@ -877,23 +887,22 @@ class DocumentoController extends Controller
 
         return $archivo->storeAs(
             'documentos',
-            $nombreBase . '.' . $extension,
+            $nombreBase.'.'.$extension,
             's3'
         );
     }
-
 
     public function rechazar(Request $request, $id)
     {
         $documento = Documento::findOrFail($id);
 
-        if (!$documento->puedeAprobar(auth()->user())) {
+        if (! $documento->puedeAprobar(auth()->user())) {
             return redirect()
                 ->to(url()->previous() ?: route('documentos.index'))
                 ->with('swal', [
-                    'icon'  => 'error',
+                    'icon' => 'error',
                     'title' => 'Acceso denegado',
-                    'text'  => 'No tienes permiso para rechazar este documento.'
+                    'text' => 'No tienes permiso para rechazar este documento.',
                 ]);
         }
 
@@ -910,7 +919,7 @@ class DocumentoController extends Controller
         $destinatario = $documento->ultimaModificacion ?? User::find($documento->id_usr_ultima_modif);
 
         // Fallback: si por alguna razón no existe, notificamos al creador
-        if (!$destinatario) {
+        if (! $destinatario) {
             $destinatario = $documento->creador ?? User::find($documento->id_usr_creador);
         }
 
@@ -920,5 +929,4 @@ class DocumentoController extends Controller
 
         return redirect()->back()->with('success', 'Documento rechazado y notificación enviada al último editor.');
     }
-
 }

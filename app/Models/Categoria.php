@@ -37,6 +37,20 @@ class Categoria extends Model
                 throw new \Exception('No se puede eliminar esta categoría porque tiene subcategorías asociadas.');
             }
         });
+
+        static::saving(function ($categoria) {
+            if ($categoria->exists && (int) $categoria->parent_id === (int) $categoria->id) {
+                throw new \DomainException('Una categoría no puede depender de sí misma.');
+            }
+
+            if ($categoria->parent_id && Categoria::whereKey($categoria->parent_id)->whereNotNull('parent_id')->exists()) {
+                throw new \DomainException('Una subcategoría no puede contener otras categorías.');
+            }
+
+            if ($categoria->exists && $categoria->parent_id && $categoria->subcategorias()->exists()) {
+                throw new \DomainException('Una categoría con subcategorías no puede convertirse en subcategoría.');
+            }
+        });
     }
 
     public function documentos()
@@ -46,8 +60,6 @@ class Categoria extends Model
 
     public function historialDocumentos()
     {
-        return $this->hasManyThrough(HistorialDocumento::class, Documento::class, 'id_categoria', 'id_documento');
+        return $this->hasMany(HistorialDocumento::class, 'id_categoria');
     }
-
-
 }

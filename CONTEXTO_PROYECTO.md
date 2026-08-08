@@ -40,7 +40,11 @@ Los formatos admitidos al crear nuevas versiones son PDF, Word, Excel y PowerPoi
 
 ### Clasificación
 
-Los documentos se organizan en categorías jerárquicas. Una categoría puede tener una categoría padre y subcategorías. El sistema impide eliminar categorías que todavía tengan documentos, historial o subcategorías asociados.
+Los documentos se organizan en una jerarquía de dos niveles: categoría principal y subcategoría. Una subcategoría no puede contener otras categorías. El sistema impide eliminar categorías que todavía tengan documentos, historial o subcategorías asociados.
+
+El ABM de categorías presenta la jerarquía completa mediante una tabla expandible, con búsqueda, filtros, conteos documentales directos y acumulados, y accesos contextuales para crear subcategorías. El alta y la edición permiten previsualizar la ubicación elegida y sólo ofrecen categorías principales como posibles padres.
+
+Los formularios de alta y edición documental muestran las subcategorías agrupadas visualmente debajo de su categoría principal. Cuando el alta se inicia desde el panel de una categoría o subcategoría en Documentos, esa clasificación se propone automáticamente y puede ser modificada antes de guardar.
 
 ### Versionado e historial
 
@@ -119,16 +123,13 @@ Las notificaciones pueden consultarse dentro del sistema y marcarse como leídas
 
 ### Panel de control
 
-El dashboard presenta métricas y actividad básica:
+El dashboard principal prioriza la planificación ISO del período vigente y adapta su contenido a los permisos del usuario. Presenta indicadores visuales de riesgos, objetivos y acciones para quienes pueden consultar ISO, un resumen de acciones personales para quienes pueden gestionarlas y un bloque documental compacto con aprobaciones y revisiones.
 
-- total de documentos;
-- documentos aprobados;
-- documentos pendientes;
-- registros;
-- pendientes que el usuario actual puede aprobar;
-- recordatorios vencidos;
-- próximos recordatorios;
-- últimos documentos modificados.
+La ruta `/mis-pendientes` funciona como bandeja personal unificada. Reúne, sin duplicar persistencia, aprobaciones y revisiones documentales junto con acciones de riesgos, verificaciones de eficacia, acciones de objetivos y acciones de proveedores asignadas al usuario. La bandeja sólo muestra acciones ISO ejecutables a usuarios con capacidad de gestión; cada elemento se resuelve en la ficha de su módulo de origen para preservar permisos y trazabilidad.
+
+Desde `Mi perfil` cada usuario puede elegir su página de inicio, el filtro inicial y la densidad de `Mis pendientes`, y el horizonte utilizado para identificar próximos vencimientos. Los destinos se validan contra sus permisos y Planificación ISO no puede configurarse como inicio sin acceso al módulo.
+
+El perfil también admite iniciales automáticas, un avatar predefinido o una foto personal. Las fotos se validan y almacenan en S3; se sirven mediante una ruta autenticada. La única foto cargada se conserva aunque el usuario seleccione temporalmente iniciales o un avatar predefinido, y una nueva carga reemplaza y elimina la foto anterior. El avatar se utiliza de forma acotada en el menú, la página de perfil, la cabecera de la bandeja y fichas ISO donde reconocer al responsable aporta contexto, sin incorporarlo indiscriminadamente a las tablas.
 
 ## 4. Usuarios y responsabilidades
 

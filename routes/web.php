@@ -10,6 +10,7 @@ use App\Http\Controllers\GoController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DocumentoRecordatorioController;
+use App\Http\Controllers\PendienteController;
 
 Route::get('/go', GoController::class)->name('go');
 
@@ -57,6 +58,7 @@ Route::middleware(['auth', 'usuario.habilitado'])->group(function () {
     Route::view('/','layouts/main')->name('main');
     Route::get('/documentos', [DocumentoController::class, 'index'])->name('documentos.index');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/mis-pendientes', [PendienteController::class, 'index'])->name('pendientes.index');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     #Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -64,6 +66,7 @@ Route::middleware(['auth', 'usuario.habilitado'])->group(function () {
     Route::get('/perfil', [UserProfileController::class, 'show'])->name('profile.show');
     // Ruta para actualizar el perfil del usuario
     Route::post('/perfil/update', [UserProfileController::class, 'update'])->name('profile.update');
+    Route::get('/perfil/avatar/{user}', [UserProfileController::class, 'avatar'])->name('profile.avatar');
     Route::resource('documentos', DocumentoController::class);
     Route::resource('categorias', CategoriaController::class);
     

@@ -1,462 +1,152 @@
 @extends('layouts.main')
 
-@section('heading')
-    Dashboard
-@endsection
+@section('heading', 'Dashboard')
 
 @section('contenidoPrincipal')
-    <div class="container-fluid dashboard-wrapper">
-
-        <div class="dashboard-header d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h4 class="mb-0">Panel de control</h4>
-                <small class="text-muted">Bienvenido, {{ auth()->user()->name }}</small>
-            </div>
-
-            <div>
-                <a href="{{ route('documentos.index') }}" class="btn btn-outline-primary btn-sm mr-2">
-                    <i class="fas fa-folder-open mr-1"></i> Documentos
-                </a>
-                <a href="{{ route('recordatorios.mis') }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-bell mr-1"></i> Recordatorios
-                </a>
-            </div>
+<div class="sgc-dashboard">
+    <section class="dashboard-hero">
+        <div>
+            <span class="hero-eyebrow">Sistema de Gestión de la Calidad</span>
+            <h1>{{ $periodo?->nombre ?? 'Planificación ISO' }}</h1>
+            <p>
+                @if($periodo)
+                    Período {{ $periodo->estado }} · Tu vista reúne planificación, documentos y acciones asignadas.
+                @else
+                    Todavía no existe un período de planificación. Tus pendientes documentales siguen disponibles.
+                @endif
+            </p>
         </div>
-
-        <div class="row no-gutters dashboard-main-row">
-
-            {{-- LATERAL IZQUIERDO --}}
-            <div class="col-lg-2 col-md-3 mb-3 mb-md-0 d-flex justify-content-start">
-                <div class="stats-sidebar">
-                    <div class="stat-card">
-                        <div class="stat-label">Total</div>
-                        <div class="stat-value">{{ $totalDocumentos }}</div>
-                        <div class="stat-icon">
-                            <i class="fas fa-file-alt"></i>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-label">Aprobados</div>
-                        <div class="stat-value">{{ $documentosAprobados }}</div>
-                        <div class="stat-icon">
-                            <i class="fas fa-check"></i>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-label">Pendientes</div>
-                        <div class="stat-value">{{ $documentosPendientes }}</div>
-                        <div class="stat-icon">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-label">Vencidos</div>
-                        <div class="stat-value">{{ $recordatoriosVencidos }}</div>
-                        <div class="stat-icon">
-                            <i class="fas fa-exclamation"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- CONTENIDO DERECHO --}}
-            <div class="col-lg-10 col-md-9 dashboard-right-content">
-                <div class="row align-items-stretch">
-
-                    {{-- ACCIONES --}}
-                    <div class="col-lg-3 col-md-6 mb-3 d-flex">
-                        <div class="card dashboard-card top-card flex-fill">
-                            <div class="card-header dashboard-card-header">
-                                <i class="fas fa-bolt text-warning mr-2"></i> Acciones
-                            </div>
-                            <div class="card-body top-card-body">
-                                @if ($documentosPendientesUsuario > 0)
-                                    <a href="{{ route('documentos.index') }}" class="action-link">
-                                        <span>Documentos a aprobar</span>
-                                        <span class="badge badge-danger">{{ $documentosPendientesUsuario }}</span>
-                                    </a>
-                                @endif
-
-                                @if ($recordatoriosVencidos > 0)
-                                    <a href="{{ route('recordatorios.mis') }}" class="action-link">
-                                        <span>Recordatorios vencidos</span>
-                                        <span class="badge badge-warning">{{ $recordatoriosVencidos }}</span>
-                                    </a>
-                                @endif
-
-                                @if ($documentosPendientesUsuario == 0 && $recordatoriosVencidos == 0)
-                                    <div class="empty-card-message">
-                                        Sin pendientes
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- GRAFICO --}}
-                    <div class="col-lg-3 col-md-6 mb-3 d-flex">
-                        <div class="card dashboard-card top-card flex-fill">
-                            <div class="card-header dashboard-card-header">
-                                <i class="fas fa-chart-pie text-info mr-2"></i> Documentos
-                            </div>
-                            <div class="card-body top-card-body chart-card-body">
-                                <div class="chart-box">
-                                    <canvas id="grafico"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- ACTIVIDAD --}}
-                    <div class="col-lg-3 col-md-6 mb-3 d-flex">
-                        <div class="card dashboard-card top-card flex-fill">
-                            <div class="card-header dashboard-card-header">
-                                <i class="fas fa-clock text-secondary mr-2"></i> Actividad
-                            </div>
-                            <div class="card-body p-0 top-card-body list-card-body">
-                                @forelse ($actividadReciente as $item)
-                                    <div class="mini-list-item">
-                                        <div class="mini-list-title">{{ $item['titulo'] }}</div>
-                                        <div class="mini-list-subtitle">{{ $item['descripcion'] }}</div>
-                                    </div>
-                                @empty
-                                    <div class="empty-card-message">
-                                        Sin actividad
-                                    </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- RECORDATORIOS --}}
-                    <div class="col-lg-3 col-md-6 mb-3 d-flex">
-                        <div class="card dashboard-card top-card flex-fill">
-                            <div class="card-header dashboard-card-header">
-                                <i class="fas fa-calendar-alt text-primary mr-2"></i> Recordatorios
-                            </div>
-                            <div class="card-body p-0 top-card-body list-card-body">
-                                @forelse ($proximosRecordatorios as $r)
-                                    <div class="mini-list-item">
-                                        <div class="mini-list-title">{{ $r->nombre }}</div>
-                                        <div class="mini-list-subtitle">{{ $r->documento->titulo ?? '' }}</div>
-                                    </div>
-                                @empty
-                                    <div class="empty-card-message">
-                                        Sin recordatorios
-                                    </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- TABLA --}}
-                    <div class="col-12">
-                        <div class="card dashboard-card">
-                            <div class="card-header dashboard-card-header">
-                                <i class="fas fa-file-alt text-muted mr-2"></i> Últimos documentos
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-0 dashboard-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Título</th>
-                                                <th>Estado</th>
-                                                <th class="text-center"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @forelse ($ultimosDocumentos as $doc)
-                                                <tr>
-                                                    <td>{{ $doc->titulo }}</td>
-                                                    <td>
-                                                        @php
-                                                            $estado = strtolower($doc->estado);
-                                                            $estadoClass = 'secondary';
-
-                                                            if ($estado === 'aprobado') {
-                                                                $estadoClass = 'success';
-                                                            } elseif ($estado === 'pendiente de aprobación') {
-                                                                $estadoClass = 'warning';
-                                                            }
-                                                        @endphp
-
-                                                        <span class="badge badge-{{ $estadoClass }}">
-                                                            {{ $doc->estado }}
-                                                        </span>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <a href="{{ route('documentos.validaPermiso', [
-                                                            'id' => $doc->id,
-                                                            'ruta' => 'documentos.show',
-                                                            'permiso' => 'puedeLeer',
-                                                        ]) }}"
-                                                            class="btn btn-sm btn-outline-primary" title="Ver">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="3" class="text-center text-muted py-3">
-                                                        No hay documentos recientes
-                                                    </td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
+        <div class="hero-actions">
+            <a class="btn btn-light" href="{{ route('pendientes.index') }}"><i class="fa-solid fa-list-check"></i> Ver mis pendientes</a>
+            @if($puedeVerIso)
+                <a class="btn btn-outline-light" href="{{ route('planificacion.index') }}">Ir a planificación <i class="fa-solid fa-arrow-right"></i></a>
+            @endif
         </div>
+    </section>
+
+    <section class="kpi-grid" aria-label="Resumen personal">
+        <a class="kpi-card danger" href="{{ route('pendientes.index', ['prioridad' => 'vencida']) }}">
+            <span class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            <span class="kpi-value">{{ $resumenPendientes['vencidas'] }}</span>
+            <span class="kpi-label">Acciones vencidas</span>
+            <small>Requieren atención inmediata</small>
+        </a>
+        <a class="kpi-card warning" href="{{ route('pendientes.index', ['prioridad' => 'proxima']) }}">
+            <span class="kpi-icon"><i class="fa-solid fa-calendar-week"></i></span>
+            <span class="kpi-value">{{ $resumenPendientes['proximas'] }}</span>
+            <span class="kpi-label">Próximos {{ $preferencias['horizonte_dias'] }} días</span>
+            <small>{{ $resumenPendientes['hoy'] }} para hoy · horizonte {{ $preferencias['horizonte_dias'] }} días</small>
+        </a>
+        @if($iso)
+            <a class="kpi-card critical" href="{{ route('planificacion.riesgos.index', ['periodo' => $periodo->id]) }}">
+                <span class="kpi-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                <span class="kpi-value">{{ $iso['riesgos_altos'] }}</span>
+                <span class="kpi-label">Riesgos altos</span>
+                <small>Abiertos en el período</small>
+            </a>
+            <a class="kpi-card info" href="{{ route('planificacion.objetivos.index', ['periodo' => $periodo->id]) }}">
+                <span class="kpi-icon"><i class="fa-solid fa-bullseye"></i></span>
+                <span class="kpi-value">{{ $iso['objetivos_activos'] }}</span>
+                <span class="kpi-label">Objetivos activos</span>
+                <small>{{ $iso['acciones_abiertas'] }} acciones ISO abiertas</small>
+            </a>
+        @else
+            <a class="kpi-card info" href="{{ route('pendientes.index', ['grupo' => 'documentos']) }}">
+                <span class="kpi-icon"><i class="fa-solid fa-file-circle-check"></i></span>
+                <span class="kpi-value">{{ $documentosResumen['por_aprobar'] }}</span>
+                <span class="kpi-label">Por aprobar</span>
+                <small>Documentos que requieren tu decisión</small>
+            </a>
+            <a class="kpi-card neutral" href="{{ route('recordatorios.mis') }}">
+                <span class="kpi-icon"><i class="fa-solid fa-clipboard-check"></i></span>
+                <span class="kpi-value">{{ $documentosResumen['revisiones'] }}</span>
+                <span class="kpi-label">Revisiones</span>
+                <small>{{ $documentosResumen['revisiones_vencidas'] }} vencidas</small>
+            </a>
+        @endif
+    </section>
+
+    <div class="dashboard-grid">
+        <section class="dashboard-panel attention-panel">
+            <header>
+                <div><span class="section-kicker">Tu trabajo</span><h2>Requiere tu atención</h2></div>
+                <a href="{{ route('pendientes.index') }}">Ver todo <i class="fa-solid fa-arrow-right"></i></a>
+            </header>
+            <div class="attention-list">
+                @forelse($pendientes as $pendiente)
+                    <a class="attention-item" href="{{ $pendiente['url'] }}">
+                        <span class="attention-icon {{ $pendiente['prioridad'] }}"><i class="fa-solid {{ $pendiente['icono'] }}"></i></span>
+                        <span class="attention-copy">
+                            <strong>{{ $pendiente['titulo'] }}</strong>
+                            <small>{{ $pendiente['origen'] }} · {{ str($pendiente['descripcion'])->limit(75) }}</small>
+                        </span>
+                        <span class="attention-date {{ $pendiente['prioridad'] }}">
+                            @if($pendiente['fecha']) {{ $pendiente['fecha']->format('d/m') }} @else Sin fecha @endif
+                        </span>
+                    </a>
+                @empty
+                    <div class="empty-state"><i class="fa-solid fa-circle-check"></i><strong>Estás al día</strong><span>No tenés acciones pendientes asignadas.</span></div>
+                @endforelse
+            </div>
+        </section>
+
+        @if($iso)
+            <section class="dashboard-panel chart-panel">
+                <header><div><span class="section-kicker">Período {{ $periodo->anio }}</span><h2>Mapa de riesgos</h2></div></header>
+                <div class="chart-container"><canvas id="riskChart" aria-label="Distribución de riesgos por nivel"></canvas></div>
+                <div class="chart-legend">
+                    @foreach($iso['riesgos_distribucion'] as $label => $cantidad)
+                        <span><i class="legend-dot {{ strtolower($label) }}"></i>{{ $label }} <strong>{{ $cantidad }}</strong></span>
+                    @endforeach
+                </div>
+            </section>
+
+            <section class="dashboard-panel chart-panel">
+                <header><div><span class="section-kicker">Ejecución</span><h2>Estado de las acciones</h2></div></header>
+                <div class="chart-container"><canvas id="actionsChart" aria-label="Estado de acciones ISO"></canvas></div>
+            </section>
+
+            <section class="dashboard-panel iso-summary-panel">
+                <header><div><span class="section-kicker">Control del SGC</span><h2>Señales del período</h2></div></header>
+                <a href="{{ route('planificacion.riesgos.index', ['periodo' => $periodo->id]) }}"><span><i class="fa-solid fa-magnifying-glass-chart"></i> Verificaciones vencidas</span><strong>{{ $iso['verificaciones_pendientes'] }}</strong></a>
+                <a href="{{ route('planificacion.acciones.index', ['periodo' => $periodo->id]) }}"><span><i class="fa-solid fa-bars-progress"></i> Acciones abiertas</span><strong>{{ $iso['acciones_abiertas'] }}</strong></a>
+                <a href="{{ route('planificacion.objetivos.index', ['periodo' => $periodo->id]) }}"><span><i class="fa-solid fa-bullseye"></i> Objetivos activos</span><strong>{{ $iso['objetivos_activos'] }}</strong></a>
+            </section>
+        @endif
+
+        <section class="dashboard-panel documents-panel {{ $iso ? 'wide' : '' }}">
+            <header>
+                <div><span class="section-kicker">Información documentada</span><h2>Documentos y revisiones</h2></div>
+                <a href="{{ route('documentos.index') }}">Abrir documentos <i class="fa-solid fa-arrow-right"></i></a>
+            </header>
+            <div class="document-stats">
+                <div><i class="fa-regular fa-folder-open"></i><strong>{{ $documentosResumen['accesibles'] }}</strong><span>Documentos accesibles</span></div>
+                <div><i class="fa-solid fa-file-signature"></i><strong>{{ $documentosResumen['por_aprobar'] }}</strong><span>Esperan tu aprobación</span></div>
+                <div><i class="fa-solid fa-clipboard-check"></i><strong>{{ $documentosResumen['revisiones'] }}</strong><span>Revisiones pendientes</span></div>
+                <div class="{{ $documentosResumen['revisiones_vencidas'] ? 'has-alert' : '' }}"><i class="fa-solid fa-clock"></i><strong>{{ $documentosResumen['revisiones_vencidas'] }}</strong><span>Revisiones vencidas</span></div>
+            </div>
+        </section>
     </div>
+</div>
 @endsection
 
 @push('styles')
-    <style>
-        .dashboard-wrapper {
-            padding: 12px 14px 20px 14px;
-        }
-
-        .dashboard-header {
-            margin-top: 8px;
-        }
-
-        .dashboard-main-row {
-            align-items: flex-start;
-        }
-
-        .dashboard-right-content {
-            padding-left: 8px;
-        }
-
-        .stats-sidebar {
-            width: 100%;
-            max-width: 170px;
-            border: 3px solid #4cae32;
-            background: #fff;
-        }
-
-        .stat-card {
-            min-height: 138px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 14px 10px;
-            border-bottom: 3px solid #4cae32;
-            text-align: center;
-            position: relative;
-            background: #fff;
-        }
-
-        .stat-card:last-child {
-            border-bottom: none;
-        }
-
-        .stat-label {
-            font-size: 0.95rem;
-            color: #1f2d3d;
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-
-        .stat-value {
-            font-size: 3rem;
-            font-weight: 700;
-            line-height: 1;
-            color: #0b2545;
-            margin-bottom: 12px;
-        }
-
-        .stat-icon {
-            font-size: 1.9rem;
-            color: #0b2545;
-            line-height: 1;
-        }
-
-        .dashboard-card {
-            border: 1px solid #dfe3e8;
-            border-radius: 3px;
-            box-shadow: none;
-            background: #fff;
-        }
-
-        .dashboard-card-header {
-            background: #f7f7f7;
-            border-bottom: 1px solid #dfe3e8;
-            font-weight: 500;
-            font-size: 0.95rem;
-            padding: 9px 12px;
-        }
-
-        .top-card {
-            min-height: 295px;
-        }
-
-        .top-card-body {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .chart-card-body {
-            justify-content: center;
-            align-items: center;
-        }
-
-        .list-card-body {
-            overflow: hidden;
-        }
-
-        .empty-card-message {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6c757d;
-            text-align: center;
-            min-height: 120px;
-        }
-
-        .action-link {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            color: #007bff;
-            text-decoration: none;
-        }
-
-        .action-link:hover {
-            text-decoration: none;
-            color: #0056b3;
-        }
-
-        .mini-list-item {
-            padding: 8px 10px;
-            border-bottom: 1px solid #eceff1;
-        }
-
-        .mini-list-item:last-child {
-            border-bottom: none;
-        }
-
-        .mini-list-title {
-            font-weight: 700;
-            font-size: 0.95rem;
-            color: #111;
-            line-height: 1.2;
-        }
-
-        .mini-list-subtitle {
-            font-size: 0.84rem;
-            color: #6c757d;
-            margin-top: 3px;
-            line-height: 1.2;
-        }
-
-        .chart-box {
-            position: relative;
-            width: 100%;
-            height: 180px;
-        }
-
-        .dashboard-table th,
-        .dashboard-table td {
-            vertical-align: middle;
-            font-size: 0.9rem;
-        }
-
-        .dashboard-table thead th {
-            background: #f8f9fa;
-            border-top: none;
-        }
-
-        @media (max-width: 991.98px) {
-            .stats-sidebar {
-                max-width: 100%;
-            }
-
-            .stat-card {
-                min-height: 105px;
-            }
-
-            .stat-value {
-                font-size: 2.3rem;
-            }
-
-            .stat-icon {
-                font-size: 1.5rem;
-            }
-
-            .dashboard-right-content {
-                padding-left: 0;
-            }
-
-            .top-card {
-                min-height: 260px;
-            }
-
-            .chart-box {
-                height: 200px;
-            }
-        }
-    </style>
+<style>
+    :root{--sgc-navy:#142b4a;--sgc-blue:#2563a6;--sgc-green:#2f7d62;--sgc-red:#c53b45;--sgc-amber:#c67a13;--sgc-ink:#172033;--sgc-muted:#657286;--sgc-border:#e2e8f0;--sgc-bg:#f3f6fa}
+    body{background:var(--sgc-bg)}.sgc-dashboard{max-width:1500px;margin:0 auto;padding:8px 4px 30px}.dashboard-hero{background:linear-gradient(120deg,#122a49 0%,#1d4f78 62%,#2f7d62 130%);color:#fff;border-radius:18px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;box-shadow:0 14px 35px rgba(20,43,74,.18);position:relative;overflow:hidden}.dashboard-hero:after{content:"";position:absolute;width:300px;height:300px;border:50px solid rgba(255,255,255,.055);border-radius:50%;right:-90px;top:-135px}.hero-eyebrow,.section-kicker{text-transform:uppercase;letter-spacing:.11em;font-size:.7rem;font-weight:800}.dashboard-hero h1{font-size:2rem;margin:5px 0}.dashboard-hero p{margin:0;opacity:.78}.hero-actions{display:flex;gap:10px;z-index:1;flex-wrap:wrap}.hero-actions .btn{border-radius:9px;font-weight:700;padding:9px 14px}.hero-actions i{margin:0 4px}.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:18px 0}.kpi-card{position:relative;background:#fff;border:1px solid var(--sgc-border);border-radius:14px;padding:20px;color:var(--sgc-ink);text-decoration:none!important;overflow:hidden;transition:.2s ease;box-shadow:0 5px 17px rgba(28,46,70,.05)}.kpi-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent)}.kpi-card:hover{transform:translateY(-3px);box-shadow:0 10px 25px rgba(28,46,70,.1);color:var(--sgc-ink)}.kpi-card.danger,.kpi-card.critical{--accent:var(--sgc-red)}.kpi-card.warning{--accent:var(--sgc-amber)}.kpi-card.info{--accent:var(--sgc-blue)}.kpi-card.neutral{--accent:#738197}.kpi-icon{position:absolute;right:17px;top:17px;width:42px;height:42px;border-radius:11px;display:grid;place-items:center;color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,white);font-size:1.1rem}.kpi-value{display:block;font-size:2.35rem;line-height:1;font-weight:800;color:var(--accent);margin-bottom:7px}.kpi-label{display:block;font-weight:800}.kpi-card small{color:var(--sgc-muted)}.dashboard-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}.dashboard-panel{background:#fff;border:1px solid var(--sgc-border);border-radius:15px;box-shadow:0 5px 17px rgba(28,46,70,.045);overflow:hidden}.dashboard-panel>header{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 14px;gap:16px}.dashboard-panel h2{font-size:1.08rem;margin:2px 0 0;color:var(--sgc-ink);font-weight:800}.section-kicker{color:var(--sgc-blue)}.dashboard-panel header>a{color:var(--sgc-blue);font-size:.82rem;font-weight:700}.attention-list{padding:0 10px 12px}.attention-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;text-decoration:none!important;color:var(--sgc-ink);border-top:1px solid #edf1f5}.attention-item:hover{background:#f6f9fc;color:var(--sgc-ink)}.attention-icon{flex:0 0 38px;height:38px;border-radius:10px;display:grid;place-items:center;background:#edf3f9;color:var(--sgc-blue)}.attention-icon.vencida{background:#fcebed;color:var(--sgc-red)}.attention-icon.hoy,.attention-icon.proxima{background:#fff4df;color:var(--sgc-amber)}.attention-copy{display:flex;flex-direction:column;min-width:0;flex:1}.attention-copy strong{font-size:.9rem;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.attention-copy small{color:var(--sgc-muted);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.attention-date{font-size:.76rem;font-weight:800;color:var(--sgc-muted)}.attention-date.vencida{color:var(--sgc-red)}.attention-date.hoy,.attention-date.proxima{color:var(--sgc-amber)}.empty-state{padding:40px;display:flex;flex-direction:column;text-align:center;color:var(--sgc-muted);gap:5px}.empty-state i{font-size:2rem;color:var(--sgc-green);margin-bottom:5px}.chart-container{height:205px;padding:4px 20px 12px}.chart-legend{display:flex;justify-content:center;gap:18px;padding:0 15px 17px;font-size:.78rem;color:var(--sgc-muted)}.legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.legend-dot.bajo{background:#3c9975}.legend-dot.medio{background:#e5a02d}.legend-dot.alto{background:#d24b55}.iso-summary-panel>a{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-top:1px solid #edf1f5;color:var(--sgc-ink);text-decoration:none}.iso-summary-panel>a:hover{background:#f7f9fc}.iso-summary-panel a i{width:24px;color:var(--sgc-blue)}.iso-summary-panel a strong{font-size:1.25rem;color:var(--sgc-navy)}.documents-panel.wide{grid-column:1/-1}.document-stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #edf1f5}.document-stats>div{display:grid;grid-template-columns:36px auto;grid-template-rows:auto auto;column-gap:10px;padding:20px;border-right:1px solid #edf1f5}.document-stats>div:last-child{border:0}.document-stats i{grid-row:1/3;font-size:1.25rem;color:var(--sgc-blue);align-self:center}.document-stats strong{font-size:1.45rem;line-height:1;color:var(--sgc-ink)}.document-stats span{font-size:.76rem;color:var(--sgc-muted)}.document-stats .has-alert i,.document-stats .has-alert strong{color:var(--sgc-red)}
+    @media(max-width:991px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.dashboard-grid{grid-template-columns:1fr}.documents-panel.wide{grid-column:auto}.dashboard-hero{align-items:flex-start;flex-direction:column}.document-stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:575px){.kpi-grid{grid-template-columns:1fr 1fr;gap:10px}.kpi-card{padding:17px 13px}.kpi-icon{display:none}.kpi-value{font-size:1.9rem}.dashboard-hero{padding:23px 20px}.dashboard-hero h1{font-size:1.55rem}.document-stats{grid-template-columns:1fr}.hero-actions{width:100%}.hero-actions .btn{flex:1}.attention-date{display:none}}
+</style>
 @endpush
 
+@if($iso)
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const canvas = document.getElementById('grafico');
-
-            if (!canvas) {
-                return;
-            }
-
-            const ctx = canvas.getContext('2d');
-
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Aprobados', 'Pendientes', 'Registro'],
-                    datasets: [{
-                        data: [
-                            {{ $documentosAprobados }},
-                            {{ $documentosPendientes }},
-                            {{ $documentosRegistro }}
-                        ],
-                        backgroundColor: ['#28a745', '#f0b400', '#6c757d'],
-                        borderColor: '#ffffff',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '58%',
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                boxWidth: 12,
-                                font: {
-                                    size: 9
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        });
-    </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+    const defaults={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#657286'}},y:{grid:{color:'#edf1f5'},ticks:{precision:0,color:'#657286'}}}};
+    new Chart(document.getElementById('riskChart'),{type:'bar',data:{labels:@json(array_keys($iso['riesgos_distribucion'])),datasets:[{data:@json(array_values($iso['riesgos_distribucion'])),backgroundColor:['#3c9975','#e5a02d','#d24b55'],borderRadius:7,barThickness:34}]},options:defaults});
+    new Chart(document.getElementById('actionsChart'),{type:'doughnut',data:{labels:@json(array_keys($iso['acciones_distribucion'])),datasets:[{data:@json(array_values($iso['acciones_distribucion'])),backgroundColor:['#d24b55','#e5a02d','#3c9975'],borderWidth:4,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8,color:'#657286'}}}}});
+});
+</script>
 @endpush
+@endif

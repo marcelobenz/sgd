@@ -22,7 +22,7 @@
             <div class="iso-detail-grid">
                 <div class="iso-field"><label>Compromiso de la política</label><div>{{ $objetivo->compromiso_politica }}</div></div>
                 <div class="iso-field"><label>Proceso</label><div>{{ $objetivo->proceso }}</div></div>
-                <div class="iso-field"><label>Responsabilidad</label><div>{{ $objetivo->area_responsable }} · {{ $objetivo->responsable?->name ?? 'Sin asignar' }}</div></div>
+                <div class="iso-field"><label>Responsabilidad</label><div>{{ $objetivo->area_responsable }} <span class="mx-1">·</span> <x-user-identity :user="$objetivo->responsable" /></div></div>
                 <div class="iso-field"><label>Planificación</label><div>{{ $objetivo->fecha_inicio->format('d/m/Y') }} al {{ $objetivo->fecha_objetivo->format('d/m/Y') }} · Seguimiento {{ strtolower($objetivo->periodicidad_seguimiento) }}</div></div>
                 <div class="iso-field"><label>Indicador</label><div>{{ $indicador?->nombre }}<small class="d-block text-muted mt-1">{{ $indicador?->metodo_calculo }}</small></div></div>
                 <div class="iso-field"><label>Fuente y frecuencia</label><div>{{ $indicador?->fuente }} · {{ $indicador?->frecuencia }}</div></div>
