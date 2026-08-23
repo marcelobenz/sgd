@@ -18,7 +18,7 @@
         <button class="btn btn-primary" onclick="window.print()"><i class="fa-solid fa-print mr-1"></i> Imprimir / guardar PDF</button>
     </div>
 
-    <div class="iso-eyebrow">Informe para auditor&iacute;a &middot; {{ ucfirst($tipo) }}</div>
+    <div class="iso-eyebrow">Informe de gesti&oacute;n de calidad &middot; {{ ucfirst($tipo) }}</div>
     <h1 class="iso-title">Planificaci&oacute;n y seguimiento del SGC &mdash; {{ $periodo->anio }}</h1>
     <div class="report-meta iso-subtitle">
         <span>Generado {{ now()->format('d/m/Y H:i') }}</span><span>Por {{ auth()->user()->name }}</span><span>Estado del per&iacute;odo: <strong>{{ ucfirst($periodo->estado) }}</strong></span>

@@ -34,12 +34,12 @@ class InformeFlowTest extends TestCase
         ]);
 
         $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo2026->id, 'tipo' => 'resumido']))
-            ->assertOk()->assertSee('Informe para auditor&iacute;a &middot; Resumido', false)
+            ->assertOk()->assertSee('Informe de gesti&oacute;n de calidad &middot; Resumido', false)
             ->assertSee('Proveedor temporal')->assertSee('Pendiente en 2026')
             ->assertDontSee('Evaluacion futura que no corresponde a 2026.');
 
         $this->actingAs($admin)->get(route('planificacion.informes.index', ['periodo' => $periodo2026->id, 'tipo' => 'detallado']))
-            ->assertOk()->assertSee('Informe para auditor&iacute;a &middot; Detallado', false)
+            ->assertOk()->assertSee('Informe de gesti&oacute;n de calidad &middot; Detallado', false)
             ->assertSee('Sin selecci&oacute;n registrada hasta el cierre del per&iacute;odo.', false)
             ->assertSee('Sin evaluaci&oacute;n registrada para 2026.', false)
             ->assertDontSee('Seleccion futura que no corresponde a 2026.')

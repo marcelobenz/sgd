@@ -110,6 +110,8 @@ class DocumentoController extends Controller
             'archivo' => $this->reglasArchivoDocumento(),
             'id_categoria' => 'required|exists:categorias,id',
             'permisos' => 'array',
+            'permisos.*' => 'array',
+            'contenido' => 'required|string',
         ]);
 
         $file = $request->file('archivo');
@@ -160,7 +162,11 @@ class DocumentoController extends Controller
                     ]
                 );
 
-                if (isset($permisos['puede_aprobar']) && $permisos['puede_aprobar']) {
+                if (
+                    $documento->estado === 'pendiente de aprobación' &&
+                    isset($permisos['puede_aprobar']) &&
+                    $permisos['puede_aprobar']
+                ) {
                     $user->notify(new DocumentoPendienteAprobacion($documento));
                 }
             }
@@ -365,6 +371,7 @@ class DocumentoController extends Controller
             'titulo' => 'required|string|max:255',
             'id_categoria' => 'required|exists:categorias,id',
             'permisos' => 'array',
+            'permisos.*' => 'array',
         ]);
 
         // === Manejo de "No requiere aprobación" ===
@@ -398,6 +405,14 @@ class DocumentoController extends Controller
         }
 
         $documento->save();
+
+        // Recordar quiénes ya eran aprobadores para no volver a avisarles por
+        // cambios de título, categoría u otros permisos.
+        $aprobadoresAnteriores = DocumentoPermiso::where('documento_id', $documento->id)
+            ->where('puede_aprobar', true)
+            ->pluck('user_id')
+            ->map(fn ($userId) => (int) $userId)
+            ->all();
 
         // === Gestionar permisos ===
         DocumentoPermiso::where('documento_id', $documento->id)->delete();
@@ -439,7 +454,8 @@ class DocumentoController extends Controller
             if (
                 isset($permisos['puede_aprobar']) &&
                 $permisos['puede_aprobar'] &&
-                $documento->estado === 'pendiente de aprobación'
+                $documento->estado === 'pendiente de aprobación' &&
+                ! in_array((int) $userId, $aprobadoresAnteriores, true)
             ) {
                 $user = User::find($userId);
                 if ($user) {
