@@ -14,12 +14,21 @@
                 <div class="col-lg-8">
                     <form action="{{ route('documentos.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
+                        <input type="hidden" name="_documento_form" value="1">
+
+                        @if ($errors->any())
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+                                </ul>
+                            </div>
+                        @endif
 
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="titulo">Título</label>
-                                    <input type="text" name="titulo" id="titulo" class="form-control" required>
+                                    <input type="text" name="titulo" id="titulo" class="form-control" value="{{ old('titulo') }}" required>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -43,49 +52,14 @@
 
                         <div class="form-group">
                             <label for="contenido">Contenido</label>
-                            <textarea name="contenido" id="contenido" class="form-control" required></textarea>
+                        <textarea name="contenido" id="contenido" class="form-control" required>{{ old('contenido') }}</textarea>
                         </div>
 
                         <div class="form-group form-check mt-2">
-                            <input type="checkbox" name="sin_aprobacion" id="sin_aprobacion" class="form-check-input">
-                            <label for="sin_aprobacion" class="form-check-label">No requiere aprobación</label>
+                            <input type="checkbox" name="sin_aprobacion" id="sin_aprobacion" class="form-check-input" {{ old('sin_aprobacion') ? 'checked' : '' }}>
+                            <label for="sin_aprobacion" class="form-check-label">Este documento no requiere aprobación</label>
                         </div>
-
-                        <button class="btn btn-primary" type="button" data-toggle="collapse"
-                            data-target="#collapsePermisos" aria-expanded="false" aria-controls="collapsePermisos">
-                            Asignar Permisos
-                        </button>
-
-                        <div class="collapse" id="collapsePermisos">
-                            <div class="form-group">
-                                <table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Usuario (Correo)</th>
-                                            <th>Leer</th>
-                                            <th>Escribir</th>
-                                            <th>Aprobar</th>
-                                            <th>Eliminar</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($usuarios as $usuario)
-                                            <tr>
-                                                <td>{{ $usuario->email }}</td>
-                                                <td><input type="checkbox" name="permisos[{{ $usuario->id }}][puede_leer]">
-                                                </td>
-                                                <td><input type="checkbox"
-                                                        name="permisos[{{ $usuario->id }}][puede_escribir]"></td>
-                                                <td><input type="checkbox"
-                                                        name="permisos[{{ $usuario->id }}][puede_aprobar]"></td>
-                                                <td><input type="checkbox"
-                                                        name="permisos[{{ $usuario->id }}][puede_eliminar]"></td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        @include('documentos._permisos')
 
                         <button type="submit" class="btn btn-primary">Guardar</button>
                         <button type="button" class="btn btn-secondary" onclick="confirmAndRedirect();">Volver</button>
