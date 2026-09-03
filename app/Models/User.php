@@ -21,6 +21,9 @@ class User extends Authenticatable
         'avatar_tipo',
         'avatar_valor',
         'avatar_foto_path',
+        'fecha_ingreso',
+        'area',
+        'jefe_id',
     ];
 
     protected $hidden = [
@@ -33,6 +36,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'habilitado' => 'boolean',
         'preferencias' => 'array',
+        'fecha_ingreso' => 'date',
     ];
 
     public static function boot()
@@ -79,6 +83,26 @@ class User extends Authenticatable
     public function permisoIso()
     {
         return $this->hasOne(\App\Models\Iso\UsuarioPermiso::class, 'user_id');
+    }
+
+    public function jefe()
+    {
+        return $this->belongsTo(self::class, 'jefe_id');
+    }
+
+    public function colaboradores()
+    {
+        return $this->hasMany(self::class, 'jefe_id');
+    }
+
+    public function solicitudesVacaciones()
+    {
+        return $this->hasMany(VacacionesSolicitud::class);
+    }
+
+    public function puedeGestionarVacaciones(): bool
+    {
+        return $this->isAdmin() || $this->colaboradores()->where('habilitado', true)->exists();
     }
 
     public function puedeVerPlanificacion(): bool

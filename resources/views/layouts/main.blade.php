@@ -226,6 +226,11 @@
                     Recordatorios
                 </a>
 
+                <a class="nav-link {{ request()->routeIs('vacaciones.*') ? 'active' : '' }}"
+                    href="{{ route('vacaciones.index') }}">
+                    Vacaciones
+                </a>
+
                 @if (auth()->user()->puedeVerPlanificacion())
                     <a class="nav-link {{ request()->routeIs('planificacion.*') ? 'active' : '' }}"
                         href="{{ route('planificacion.index') }}">

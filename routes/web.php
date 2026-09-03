@@ -11,6 +11,7 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DocumentoRecordatorioController;
 use App\Http\Controllers\PendienteController;
+use App\Http\Controllers\VacacionesController;
 
 Route::get('/go', GoController::class)->name('go');
 
@@ -58,6 +59,16 @@ Route::middleware(['auth', 'usuario.habilitado'])->group(function () {
     Route::view('/','layouts/main')->name('main');
     Route::get('/documentos', [DocumentoController::class, 'index'])->name('documentos.index');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/vacaciones', [VacacionesController::class, 'index'])->name('vacaciones.index');
+    Route::get('/vacaciones/solicitud-estado', [VacacionesController::class, 'mis'])->name('vacaciones.mis');
+    Route::get('/vacaciones/admin-licencias', [VacacionesController::class, 'admin'])->name('vacaciones.admin');
+    Route::get('/vacaciones/configuracion-laboral', [VacacionesController::class, 'configuracion'])->name('vacaciones.configuracion');
+    Route::post('/vacaciones', [VacacionesController::class, 'store'])->name('vacaciones.store');
+    Route::patch('/vacaciones/{solicitud}/aprobar', [VacacionesController::class, 'aprobar'])->name('vacaciones.aprobar');
+    Route::patch('/vacaciones/{solicitud}/rechazar', [VacacionesController::class, 'rechazar'])->name('vacaciones.rechazar');
+    Route::patch('/vacaciones/{solicitud}/desaprobar', [VacacionesController::class, 'desaprobar'])->name('vacaciones.desaprobar');
+    Route::patch('/vacaciones/{solicitud}/cancelar', [VacacionesController::class, 'cancelar'])->name('vacaciones.cancelar');
+    Route::patch('/vacaciones/usuarios/{user}', [VacacionesController::class, 'actualizarUsuario'])->name('vacaciones.usuarios.update');
     Route::get('/mis-pendientes', [PendienteController::class, 'index'])->name('pendientes.index');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     #Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

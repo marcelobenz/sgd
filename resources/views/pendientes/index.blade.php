@@ -17,7 +17,7 @@
     </section>
 
     <form class="inbox-filters" method="get">
-        <div><label for="grupo">Origen</label><select id="grupo" name="grupo" class="form-control"><option value="">Todos</option><option value="iso" @selected(request('grupo')==='iso')>Planificación ISO</option><option value="documentos" @selected(request('grupo')==='documentos')>Documentos</option></select></div>
+        <div><label for="grupo">Origen</label><select id="grupo" name="grupo" class="form-control"><option value="">Todos</option><option value="iso" @selected(request('grupo')==='iso')>Planificación ISO</option><option value="documentos" @selected(request('grupo')==='documentos')>Documentos</option><option value="vacaciones" @selected(request('grupo')==='vacaciones')>Vacaciones</option></select></div>
         <div><label for="prioridad">Vencimiento</label><select id="prioridad" name="prioridad" class="form-control"><option value="">Todos</option><option value="vencida" @selected(request('prioridad')==='vencida')>Vencidas</option><option value="hoy" @selected(request('prioridad')==='hoy')>Hoy</option><option value="proxima" @selected(request('prioridad')==='proxima')>Próximos {{ $preferencias['horizonte_dias'] }} días</option><option value="futura" @selected(request('prioridad')==='futura')>Posteriores</option><option value="sin_fecha" @selected(request('prioridad')==='sin_fecha')>Sin fecha</option></select></div>
         <div><label for="estado">Estado</label><select id="estado" name="estado" class="form-control"><option value="">Todos</option><option value="pendiente" @selected(request('estado')==='pendiente')>Pendiente</option><option value="en-proceso" @selected(request('estado')==='en-proceso')>En proceso</option><option value="postergada" @selected(request('estado')==='postergada')>Postergada</option></select></div>
         <button class="btn btn-primary"><i class="fa-solid fa-filter"></i> Aplicar</button>
@@ -29,7 +29,7 @@
         @forelse($pendientes as $pendiente)
             <article class="inbox-row">
                 <div class="task-main"><span class="task-icon {{ $pendiente['prioridad'] }}"><i class="fa-solid {{ $pendiente['icono'] }}"></i></span><div><strong>{{ $pendiente['titulo'] }}</strong><small>{{ $pendiente['descripcion'] }}</small></div></div>
-                <div class="task-origin"><span class="origin-pill {{ $pendiente['grupo'] }}">{{ $pendiente['grupo']==='iso'?'ISO':'Documentos' }}</span><small>{{ $pendiente['origen'] }}</small></div>
+                <div class="task-origin"><span class="origin-pill {{ $pendiente['grupo'] }}">{{ $pendiente['grupo']==='iso'?'ISO':($pendiente['grupo']==='vacaciones'?'Vacaciones':'Documentos') }}</span><small>{{ $pendiente['origen'] }}</small></div>
                 <div class="task-date {{ $pendiente['prioridad'] }}">@if($pendiente['fecha'])<strong>{{ $pendiente['fecha']->format('d/m/Y') }}</strong><small>{{ ['vencida'=>'Vencida','hoy'=>'Hoy','proxima'=>'Próxima','futura'=>'Programada'][$pendiente['prioridad']] ?? '' }}</small>@else<strong>Sin fecha</strong><small>Requiere decisión</small>@endif</div>
                 <div><span class="status-pill">{{ $pendiente['estado'] }}</span></div>
                 <a class="task-open" href="{{ $pendiente['url'] }}" title="Abrir acción" aria-label="Abrir {{ $pendiente['titulo'] }}"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>

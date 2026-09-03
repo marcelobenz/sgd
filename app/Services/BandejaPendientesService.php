@@ -10,6 +10,7 @@ use App\Models\Iso\ProveedorAccion;
 use App\Models\Iso\Riesgo;
 use App\Models\RecordatorioEjecucion;
 use App\Models\User;
+use App\Models\VacacionesSolicitud;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
@@ -19,7 +20,8 @@ class BandejaPendientesService
     {
         $pendientes = collect()
             ->concat($this->aprobacionesDocumentales($user))
-            ->concat($this->revisionesDocumentales($user));
+            ->concat($this->revisionesDocumentales($user))
+            ->concat($this->solicitudesVacaciones($user));
 
         if ($user->puedeGestionarPlanificacion()) {
             $pendientes = $pendientes
@@ -50,6 +52,7 @@ class BandejaPendientesService
             'sin_fecha' => $pendientes->where('prioridad', 'sin_fecha')->count(),
             'iso' => $pendientes->where('grupo', 'iso')->count(),
             'documentos' => $pendientes->where('grupo', 'documentos')->count(),
+            'vacaciones' => $pendientes->where('grupo', 'vacaciones')->count(),
         ];
     }
 
@@ -103,6 +106,28 @@ class BandejaPendientesService
                     'icono' => 'fa-clipboard-check',
                 ];
             });
+    }
+
+    private function solicitudesVacaciones(User $user): Collection
+    {
+        return VacacionesSolicitud::query()
+            ->with('usuario')
+            ->where('estado', 'pendiente')
+            ->when(! $user->isAdmin(), fn ($query) => $query->whereHas('usuario', fn ($empleado) => $empleado->where('jefe_id', $user->id)))
+            ->orderBy('fecha_desde')
+            ->get()
+            ->map(fn (VacacionesSolicitud $solicitud) => [
+                'clave' => "vacaciones-aprobar-{$solicitud->id}",
+                'grupo' => 'vacaciones',
+                'tipo' => 'aprobacion_vacaciones',
+                'origen' => 'Administración de licencias',
+                'titulo' => 'Solicitud de '.$solicitud->usuario?->name,
+                'descripcion' => $solicitud->fecha_desde->format('d/m/Y').' al '.$solicitud->fecha_hasta->format('d/m/Y').' · '.$solicitud->dias.' días',
+                'fecha' => $solicitud->fecha_desde,
+                'estado' => 'Pendiente',
+                'url' => route('vacaciones.admin'),
+                'icono' => 'fa-calendar-check',
+            ]);
     }
 
     private function accionesDeRiesgo(User $user, ?Periodo $periodo): Collection
