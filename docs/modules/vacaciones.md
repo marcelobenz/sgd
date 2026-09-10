@@ -44,7 +44,14 @@ días corridos, observaciones, estado, revisor y motivo de rechazo. No se guarda
 un saldo mutable: el resumen se deriva de las solicitudes aprobadas y
 pendientes, evitando desajustes por ediciones manuales.
 
-La primera versión no contempla todavía saldos transferidos, licencias
-proporcionales por días efectivamente trabajados, feriados especiales,
-notificaciones específicas ni liquidación al egreso. Esos casos deben
+Los saldos pendientes de períodos anteriores se cargan desde Configuración
+laboral en `vacaciones_saldos`, identificados por empleado y año. Las nuevas
+solicitudes se distribuyen automáticamente comenzando por el saldo más antiguo
+y la distribución queda registrada en `vacaciones_solicitud_periodos`. De esta
+forma el resumen muestra el saldo anterior, el total disponible y el detalle
+por período. La carga inicial debe realizarse con los saldos informados por
+RRHH; el módulo no reconstruye automáticamente períodos históricos.
+
+Todavía no contempla licencias proporcionales por días efectivamente
+trabajados, feriados especiales ni liquidación al egreso. Esos casos deben
 incorporarse antes de usar el módulo como fuente única de liquidación laboral.

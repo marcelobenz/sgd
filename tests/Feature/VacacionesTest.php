@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\VacacionesSolicitud;
+use App\Models\VacacionesSaldo;
 use App\Notifications\VacacionesSolicitudActualizada;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -220,5 +221,45 @@ class VacacionesTest extends TestCase
             ->assertDontSee($empleado->name);
         $this->actingAs($jefe)->patch("/vacaciones/{$solicitud->id}/aprobar")
             ->assertForbidden();
+    }
+
+    public function test_admin_can_load_previous_period_balance_and_request_consumes_oldest_balance_first(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $empleado = User::factory()->create(['fecha_ingreso' => '2018-01-01']);
+
+        $this->actingAs($admin)->patch("/vacaciones/usuarios/{$empleado->id}/saldo", [
+            'anio' => 2025,
+            'dias_pendientes' => 6,
+            'observaciones' => 'Saldo informado por RRHH',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->actingAs($empleado)->get('/vacaciones/solicitud-estado?anio=2026')
+            ->assertOk()
+            ->assertSee('Saldo anterior')
+            ->assertSee('Total disponible')
+            ->assertSee('2025');
+
+        $this->actingAs($empleado)->post('/vacaciones', [
+            'fecha_desde' => '2026-02-02',
+            'fecha_hasta' => '2026-02-09',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $solicitud = VacacionesSolicitud::query()->latest('id')->first();
+        $this->assertDatabaseHas('vacaciones_solicitud_periodos', [
+            'vacaciones_solicitud_id' => $solicitud->id,
+            'anio' => 2025,
+            'dias' => 6,
+        ]);
+        $this->assertDatabaseHas('vacaciones_solicitud_periodos', [
+            'vacaciones_solicitud_id' => $solicitud->id,
+            'anio' => 2026,
+            'dias' => 2,
+        ]);
+        $this->assertDatabaseHas('vacaciones_saldos', [
+            'user_id' => $empleado->id,
+            'anio' => 2025,
+            'dias_pendientes' => 6,
+        ]);
     }
 }

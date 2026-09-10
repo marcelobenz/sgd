@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\VacacionesSaldo;
 use App\Models\VacacionesSolicitud;
 use App\Notifications\VacacionesSolicitudActualizada;
 use App\Services\VacacionesService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class VacacionesController extends Controller
@@ -45,9 +47,9 @@ class VacacionesController extends Controller
 
         $usuario = $request->user()->load('jefe');
         $resumen = $this->vacaciones->resumen($usuario, $anio);
-        $solicitudes = $usuario->solicitudesVacaciones()->whereYear('fecha_desde', $anio)->latest('fecha_desde')->get();
+        $solicitudes = $usuario->solicitudesVacaciones()->with('periodos')->whereYear('fecha_desde', $anio)->latest('fecha_desde')->get();
 
-        $paraAprobar = VacacionesSolicitud::with('usuario')
+        $paraAprobar = VacacionesSolicitud::with(['usuario', 'periodos'])
             ->whereYear('fecha_desde', $anio)
             ->where(function ($query) {
                 $query->where('estado', 'pendiente')
@@ -80,7 +82,7 @@ class VacacionesController extends Controller
             $filtroEmpleado = null;
         }
 
-        $historialQuery = VacacionesSolicitud::with(['usuario', 'revisor'])
+        $historialQuery = VacacionesSolicitud::with(['usuario', 'revisor', 'periodos'])
             ->whereIn('user_id', $equipo->pluck('id'))
             ->whereYear('fecha_desde', $anio)
             ->when($filtroEmpleado, fn ($query) => $query->where('user_id', $filtroEmpleado))
@@ -126,16 +128,19 @@ class VacacionesController extends Controller
         abort_if($solapa, 422, 'El período se superpone con otra solicitud vigente.');
 
         $resumen = $this->vacaciones->resumen($usuario, $desde->year);
-        abort_if($resumen['total'] !== null && $resumen['total'] < $resumen['usados'] + $resumen['reservados'] + $dias, 422, 'La solicitud supera los días disponibles.');
+        abort_if($resumen['total_disponible'] !== null && $resumen['total_disponible'] < $resumen['usados'] + $resumen['reservados'] + $dias, 422, 'La solicitud supera los días disponibles.');
 
-        VacacionesSolicitud::create([
-            'user_id' => $usuario->id,
-            'creada_por' => $usuario->id,
-            'fecha_desde' => $desde,
-            'fecha_hasta' => $hasta,
-            'dias' => $dias,
-            'observaciones' => $data['observaciones'] ?? null,
-        ]);
+        DB::transaction(function () use ($usuario, $desde, $hasta, $dias, $data) {
+            $solicitud = VacacionesSolicitud::create([
+                'user_id' => $usuario->id,
+                'creada_por' => $usuario->id,
+                'fecha_desde' => $desde,
+                'fecha_hasta' => $hasta,
+                'dias' => $dias,
+                'observaciones' => $data['observaciones'] ?? null,
+            ]);
+            $this->vacaciones->asignarPeriodos($solicitud);
+        });
 
         return back()->with('success', 'Solicitud de vacaciones enviada al jefe del área.');
     }
@@ -145,7 +150,7 @@ class VacacionesController extends Controller
         $this->autorizar($request, $solicitud);
         abort_if($solicitud->estado !== 'pendiente', 422, 'Sólo se pueden aprobar solicitudes pendientes.');
         $resumen = $this->vacaciones->resumen($solicitud->usuario, $solicitud->fecha_desde->year);
-        abort_if($resumen['total'] !== null && $resumen['total'] < $resumen['usados'] + $solicitud->dias, 422, 'La aprobación supera los días disponibles.');
+        abort_if($resumen['total_disponible'] !== null && $resumen['total_disponible'] < $resumen['usados'] + $solicitud->dias, 422, 'La aprobación supera los días disponibles.');
 
         $solicitud->update(['estado' => 'aprobada', 'revisada_por' => $request->user()->id, 'revisada_at' => now()]);
         $solicitud->usuario->notify(new VacacionesSolicitudActualizada($solicitud, 'aprobada'));
@@ -202,6 +207,25 @@ class VacacionesController extends Controller
         $user->update($data);
 
         return back()->with('success', 'Datos laborales actualizados.');
+    }
+
+    public function actualizarSaldo(Request $request, User $user)
+    {
+        abort_unless($request->user()->isAdmin(), 403, 'No autorizado.');
+        $data = $request->validate([
+            'anio' => ['required', 'integer', 'between:2020,2100'],
+            'dias_pendientes' => ['required', 'integer', 'between:0,365'],
+            'observaciones' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        abort_if((int) $data['anio'] >= now()->year, 422, 'El saldo pendiente debe corresponder a un período anterior.');
+
+        VacacionesSaldo::updateOrCreate(
+            ['user_id' => $user->id, 'anio' => $data['anio']],
+            ['dias_pendientes' => $data['dias_pendientes'], 'observaciones' => $data['observaciones'] ?? null]
+        );
+
+        return back()->with('success', 'Saldo pendiente actualizado.');
     }
 
     private function autorizar(Request $request, VacacionesSolicitud $solicitud): void

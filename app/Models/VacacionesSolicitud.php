@@ -33,4 +33,9 @@ class VacacionesSolicitud extends Model
     {
         return $this->belongsTo(User::class, 'revisada_por');
     }
+
+    public function periodos()
+    {
+        return $this->hasMany(VacacionesSolicitudPeriodo::class, 'vacaciones_solicitud_id');
+    }
 }

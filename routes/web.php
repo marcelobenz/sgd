@@ -69,6 +69,7 @@ Route::middleware(['auth', 'usuario.habilitado'])->group(function () {
     Route::patch('/vacaciones/{solicitud}/desaprobar', [VacacionesController::class, 'desaprobar'])->name('vacaciones.desaprobar');
     Route::patch('/vacaciones/{solicitud}/cancelar', [VacacionesController::class, 'cancelar'])->name('vacaciones.cancelar');
     Route::patch('/vacaciones/usuarios/{user}', [VacacionesController::class, 'actualizarUsuario'])->name('vacaciones.usuarios.update');
+    Route::patch('/vacaciones/usuarios/{user}/saldo', [VacacionesController::class, 'actualizarSaldo'])->name('vacaciones.usuarios.saldo');
     Route::get('/mis-pendientes', [PendienteController::class, 'index'])->name('pendientes.index');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     #Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
