@@ -262,4 +262,21 @@ class VacacionesTest extends TestCase
             'dias_pendientes' => 6,
         ]);
     }
+
+    public function test_current_year_balance_can_be_loaded_for_next_year_planning(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $empleado = User::factory()->create(['fecha_ingreso' => '2018-01-01']);
+        $anioActual = now()->year;
+
+        $this->actingAs($admin)->patch("/vacaciones/usuarios/{$empleado->id}/saldo", [
+            'anio' => $anioActual,
+            'dias_pendientes' => 5,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->actingAs($empleado)->get('/vacaciones/solicitud-estado?anio='.($anioActual + 1))
+            ->assertOk()
+            ->assertSee((string) $anioActual)
+            ->assertSee('Saldo anterior');
+    }
 }

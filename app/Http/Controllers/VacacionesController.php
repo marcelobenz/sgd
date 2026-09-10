@@ -218,7 +218,7 @@ class VacacionesController extends Controller
             'observaciones' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        abort_if((int) $data['anio'] >= now()->year, 422, 'El saldo pendiente debe corresponder a un período anterior.');
+        abort_if((int) $data['anio'] > now()->year, 422, 'El saldo no puede corresponder a un período futuro.');
 
         VacacionesSaldo::updateOrCreate(
             ['user_id' => $user->id, 'anio' => $data['anio']],
