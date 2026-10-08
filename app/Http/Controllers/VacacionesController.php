@@ -6,11 +6,13 @@ use App\Models\User;
 use App\Models\VacacionesSaldo;
 use App\Models\VacacionesSolicitud;
 use App\Notifications\VacacionesSolicitudActualizada;
+use App\Notifications\VacacionesSolicitudParaJefe;
 use App\Services\VacacionesService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class VacacionesController extends Controller
 {
@@ -107,7 +109,11 @@ class VacacionesController extends Controller
     public function store(Request $request)
     {
         $usuario = $request->user();
-        abort_unless($usuario->fecha_ingreso, 422, 'Tu perfil laboral todavía no tiene fecha de ingreso.');
+        if (! $usuario->fecha_ingreso) {
+            throw ValidationException::withMessages([
+                'fecha_desde' => 'Tu perfil laboral todavía no tiene fecha de ingreso configurada.',
+            ]);
+        }
 
         $data = $request->validate([
             'fecha_desde' => ['required', 'date'],
@@ -117,7 +123,11 @@ class VacacionesController extends Controller
 
         $desde = Carbon::parse($data['fecha_desde']);
         $hasta = Carbon::parse($data['fecha_hasta']);
-        abort_unless($desde->year === $hasta->year, 422, 'La solicitud debe estar dentro del mismo año.');
+        if ($desde->year !== $hasta->year) {
+            throw ValidationException::withMessages([
+                'fecha_hasta' => 'La solicitud debe estar dentro del mismo año.',
+            ]);
+        }
 
         $dias = $this->vacaciones->diasEntre($desde, $hasta);
         $solapa = VacacionesSolicitud::where('user_id', $usuario->id)
@@ -125,12 +135,20 @@ class VacacionesController extends Controller
             ->whereDate('fecha_desde', '<=', $hasta)
             ->whereDate('fecha_hasta', '>=', $desde)
             ->exists();
-        abort_if($solapa, 422, 'El período se superpone con otra solicitud vigente.');
+        if ($solapa) {
+            throw ValidationException::withMessages([
+                'fecha_desde' => 'El período se superpone con otra solicitud vigente.',
+            ]);
+        }
 
         $resumen = $this->vacaciones->resumen($usuario, $desde->year);
-        abort_if($resumen['total_disponible'] !== null && $resumen['total_disponible'] < $resumen['usados'] + $resumen['reservados'] + $dias, 422, 'La solicitud supera los días disponibles.');
+        if ($resumen['total_disponible'] !== null && $resumen['total_disponible'] < $resumen['usados'] + $resumen['reservados'] + $dias) {
+            throw ValidationException::withMessages([
+                'fecha_desde' => 'La solicitud supera los días disponibles.',
+            ]);
+        }
 
-        DB::transaction(function () use ($usuario, $desde, $hasta, $dias, $data) {
+        $solicitud = DB::transaction(function () use ($usuario, $desde, $hasta, $dias, $data) {
             $solicitud = VacacionesSolicitud::create([
                 'user_id' => $usuario->id,
                 'creada_por' => $usuario->id,
@@ -140,7 +158,13 @@ class VacacionesController extends Controller
                 'observaciones' => $data['observaciones'] ?? null,
             ]);
             $this->vacaciones->asignarPeriodos($solicitud);
+
+            return $solicitud;
         });
+
+        if ($jefe = $usuario->jefe) {
+            $jefe->notify(new VacacionesSolicitudParaJefe($solicitud, 'creada'));
+        }
 
         return back()->with('success', 'Solicitud de vacaciones enviada al jefe del área.');
     }
@@ -191,6 +215,10 @@ class VacacionesController extends Controller
         abort_unless($solicitud->user_id === $request->user()->id, 403, 'Sólo podés cancelar tus propias solicitudes.');
         abort_if($solicitud->estado !== 'pendiente', 422, 'Sólo se pueden cancelar solicitudes pendientes.');
         $solicitud->update(['estado' => 'cancelada']);
+
+        if ($jefe = $request->user()->jefe) {
+            $jefe->notify(new VacacionesSolicitudParaJefe($solicitud, 'cancelada'));
+        }
 
         return back()->with('success', 'Solicitud cancelada.');
     }

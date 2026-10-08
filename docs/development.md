@@ -85,7 +85,7 @@ vendor/bin/pint --test
 npm run build
 ```
 
-Usar Pint para PHP. La compilación de Vite valida imports, Tailwind y los puntos de entrada frontend. No confirmar `public/build/` salvo que el flujo de despliegue lo requiera expresamente.
+Usar Pint para PHP. La compilación de Vite valida imports, Tailwind y los puntos de entrada frontend. Este repositorio versiona `public/build/`: el flujo de despliegue requiere confirmar los assets de cada entrega según `docs/deployment.md`.
 
 ## Comandos operativos
 
@@ -106,5 +106,7 @@ Las importaciones deben simularse primero. La reversión real exige `--confirmar
 - Si una ruta ISO devuelve 403, revisar usuario habilitado, rol global y `iso_usuario_permisos`.
 
 ## Entrega
+
+Para preparar un pasaje a producción, utilizar `scripts/prepare-deployment.ps1` y seguir [la guía de despliegue](deployment.md). El script productivo versionado está en `scripts/sgd.sh`.
 
 Revisar `git diff` y `git diff --check`, ejecutar validaciones proporcionales y comunicar con precisión qué se modificó y qué no pudo comprobarse. Actualizar la documentación cuando cambien arquitectura, reglas transversales, operación o alcance funcional.

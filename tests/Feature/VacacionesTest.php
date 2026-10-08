@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\VacacionesSolicitud;
-use App\Models\VacacionesSaldo;
 use App\Notifications\VacacionesSolicitudActualizada;
+use App\Notifications\VacacionesSolicitudParaJefe;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -69,6 +69,26 @@ class VacacionesTest extends TestCase
         $this->assertDatabaseHas('vacaciones_solicitudes', ['id' => $solicitud->id, 'estado' => 'cancelada']);
     }
 
+    public function test_overlapping_request_returns_to_form_with_validation_message(): void
+    {
+        $user = User::factory()->create(['fecha_ingreso' => '2020-01-15']);
+        VacacionesSolicitud::create([
+            'user_id' => $user->id,
+            'creada_por' => $user->id,
+            'fecha_desde' => '2026-12-01',
+            'fecha_hasta' => '2026-12-05',
+            'dias' => 5,
+        ]);
+
+        $this->actingAs($user)->post('/vacaciones', [
+            'fecha_desde' => '2026-12-03',
+            'fecha_hasta' => '2026-12-07',
+        ])->assertRedirect()
+            ->assertSessionHasErrors(['fecha_desde' => 'El período se superpone con otra solicitud vigente.']);
+
+        $this->assertDatabaseCount('vacaciones_solicitudes', 1);
+    }
+
     public function test_manager_can_reverse_a_future_approval(): void
     {
         $jefe = User::factory()->create();
@@ -114,6 +134,26 @@ class VacacionesTest extends TestCase
 
         $this->actingAs($jefe)->patch("/vacaciones/{$solicitud->id}/rechazar", ['motivo_rechazo' => 'No hay cobertura suficiente.']);
         Notification::assertSentTo($empleado, VacacionesSolicitudActualizada::class, fn ($notification) => $notification->resultado === 'rechazada');
+    }
+
+    public function test_manager_receives_email_when_employee_creates_or_cancels_a_request(): void
+    {
+        Notification::fake();
+        $jefe = User::factory()->create();
+        $empleado = User::factory()->create(['fecha_ingreso' => '2018-01-01', 'jefe_id' => $jefe->id]);
+
+        $this->actingAs($empleado)->post('/vacaciones', [
+            'fecha_desde' => '2026-12-01',
+            'fecha_hasta' => '2026-12-05',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($jefe, VacacionesSolicitudParaJefe::class, fn ($notification) => $notification->evento === 'creada');
+
+        $solicitud = VacacionesSolicitud::query()->latest('id')->firstOrFail();
+        $this->actingAs($empleado)->patch("/vacaciones/{$solicitud->id}/cancelar")
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($jefe, VacacionesSolicitudParaJefe::class, fn ($notification) => $notification->evento === 'cancelada');
     }
 
     public function test_employee_and_manager_have_separate_access_areas(): void
